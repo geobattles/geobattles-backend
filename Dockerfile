@@ -15,8 +15,6 @@ RUN go build -o ./out/go-geo-server
 FROM alpine:latest
 
 COPY --from=builder /app/out/go-geo-server /app/go-geo-server
-# temp fix for .env
-COPY --from=builder /app/.env /
 
 EXPOSE 8080
 

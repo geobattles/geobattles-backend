@@ -19,10 +19,11 @@ var pool = websocket.NewPool()
 func main() {
 	//set seed for rand function
 	rand.Seed(time.Now().UnixNano())
-	//try to read .env file
+	// try to read .env file
+	// in docker we just use ENV variables and this WILL throw error
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Println("Error loading .env file")
 	}
 
 	router := gin.Default()

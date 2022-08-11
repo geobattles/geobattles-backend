@@ -29,7 +29,8 @@ func GenerateRndLocation() Coordinates {
 	var status string
 	var location Coordinates
 	// alternative for do while, runs until a valid location is generated
-	for next := true; next; next = (status != "OK") {
+	// TODO propperly handle all posible API responses
+	for next := true; next; next = (status == "ZERO_RESULTS") {
 		var lat = rand.Float64()*(48-44) + 44
 		var lng = rand.Float64() * 7
 		fmt.Println("generated coordinates; ", lat, lng)
