@@ -1,8 +1,8 @@
 package websocket
 
 import (
+	"example/web-service-gin/pkg/logic"
 	"fmt"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -18,29 +18,27 @@ type Message struct {
 	Body string `json:"body"`
 }
 
-// func (c *Client) Read(context *gin.Context) {
 func (c *Client) Read() {
 	defer func() {
-		fmt.Printf("Unregister funkcija")
 		c.Pool.Unregister <- c
 		c.Conn.Close()
 	}()
-	fmt.Printf("reading")
+
+	fmt.Println("reading")
 	for {
-		//var clientReq logic.ClientReq
-		fmt.Printf("reading inside for")
-		time.Sleep(2000)
+		var clientReq logic.ClientReq
+		err := c.Conn.ReadJSON(&clientReq)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(clientReq)
 
-		// if err := context.BindJSON(&clientReq); err != nil {
-		// 	return
-		// }
-		// fmt.Println(clientReq)
-		// if clientReq.Message == "start" {
-		// 	message := logic.ResponseMsg{Status: "OK", Location: logic.GenerateRndLocation()}
-		// 	c.Pool.Broadcast <- message
-		// 	fmt.Printf("Message Received: %+v\n", message)
-
-		// }
-
+		if clientReq.Message == "start" {
+			logic.LastSentLoc = logic.GenerateRndLocation()
+			message := logic.ResponseMsg{Status: "OK", Location: logic.LastSentLoc}
+			fmt.Println(message)
+			c.Pool.Broadcast <- message
+		}
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"os"
 )
 
+// calculates distance between 2 Coordinates using haversine formula
 func CalcDistance(loc_1 Coordinates, loc_2 Coordinates) float64 {
 	const R = 6371e3
 	var fi_1 float64 = loc_1.Latitude * math.Pi / 180
