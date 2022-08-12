@@ -14,9 +14,6 @@ import (
 )
 
 func serveRndLocation(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, OPTIONS")
 	fmt.Println("WebSocket Endpoint Hit")
 	conn, err := websocket.Upgrade(w, r)
 	if err != nil {
@@ -33,6 +30,15 @@ func serveRndLocation(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 }
 
 func serveGetDistance(w http.ResponseWriter, r *http.Request) {
+	// deal with CORS
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	if r.Method == "OPTIONS" {
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	var guessLocation logic.Coordinates
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -46,11 +52,6 @@ func serveGetDistance(w http.ResponseWriter, r *http.Request) {
 
 	var distance = logic.CalcDistance(logic.LastSentLoc, guessLocation)
 	fmt.Println("Real loc: ", logic.LastSentLoc, ", Guess loc: ", guessLocation, ", Dist: ", distance)
-
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, OPTIONS")
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(struct {
 		Distance float64 `json:"distance"`
@@ -79,67 +80,3 @@ func main() {
 	setupRoutes()
 	http.ListenAndServe("0.0.0.0:8080", nil)
 }
-
-// func main() {
-// 	//set seed for rand function
-// 	rand.Seed(time.Now().UnixNano())
-// 	// try to read .env file
-// 	// in docker we just use ENV variables and this WILL throw error
-// 	err := godotenv.Load()
-// 	if err != nil {
-// 		log.Println("Error loading .env file")
-// 	}
-
-// 	router := gin.Default()
-// 	go pool.Start()
-// 	router.GET("/getRndLocation", getRndLocation)
-// 	router.POST("/getDistance", getDistance)
-
-// 	router.Use(cors.New(cors.Config{
-// 		AllowOrigins: []string{"*"},
-// 		AllowMethods: []string{"GET", "POST", "OPTIONS"},
-// 		AllowHeaders: []string{"*"},
-// 		//ExposeHeaders:    []string{"Content-Length"},
-// 		//MaxAge: 12 * time.Hour,
-// 	}))
-// 	router.Run("0.0.0.0:8080")
-// }
-
-// // sends random valid coordinates
-// func getRndLocation(c *gin.Context) {
-// 	fmt.Println("WebSocket Endpoint Hit")
-// 	c.Header("Access-Control-Allow-Origin", "*")
-
-// 	conn, err := websocket.Upgrade(c.Writer, c.Request)
-// 	if err != nil {
-// 		fmt.Fprintf(c.Writer, "%+v\n", err)
-// 	}
-
-// 	client := &websocket.Client{
-// 		Conn: conn,
-// 		Pool: pool,
-// 	}
-
-// 	pool.Register <- client
-// 	client.Read()
-// }
-
-// getDistance reads guess coordinates and calculates distance to the right ones
-// responds with distance in JSON
-// func getDistance(c *gin.Context) {
-// 	var guessLocation logic.Coordinates
-
-// 	if err := c.BindJSON(&guessLocation); err != nil {
-// 		return
-// 	}
-
-// 	fmt.Println("correst location; guess: ", logic.LastSentLoc, guessLocation)
-
-// 	var distance float64 = logic.CalcDistance(logic.LastSentLoc, guessLocation)
-// 	fmt.Println("distance response: ", fmt.Sprintf(`{"distance": %f}`, distance))
-// 	c.Header("Access-Control-Allow-Headers", "*")
-
-// 	c.Header("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, OPTIONS")
-// 	c.Header("Access-Control-Allow-Origin", "*")
-// 	c.IndentedJSON(http.StatusOK, fmt.Sprintf(`{"distance": %f}`, distance))
-// }
