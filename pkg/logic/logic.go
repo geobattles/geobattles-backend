@@ -33,9 +33,9 @@ func GenerateRndLocation() Coordinates {
 	for next := true; next; next = (status == "ZERO_RESULTS") {
 		var lat = rand.Float64()*(48-44) + 44
 		var lng = rand.Float64() * 7
-		fmt.Println("generated coordinates; ", lat, lng)
+		// fmt.Println("generated coordinates; ", lat, lng)
 		location, status = validateLocation(lat, lng)
-		fmt.Println("api response: ", status, " pano location: ", location)
+		// fmt.Println("api response: ", status, " pano location: ", location)
 	}
 	return location
 }

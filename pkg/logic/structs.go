@@ -20,4 +20,5 @@ type ClientReq struct {
 type ResponseMsg struct {
 	Status   string      `json:"status"`
 	Location Coordinates `json:"location"`
+	Room     string      `json:"room_id"`
 }

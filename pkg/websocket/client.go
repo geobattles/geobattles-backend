@@ -11,11 +11,13 @@ type Client struct {
 	ID   string
 	Conn *websocket.Conn
 	Pool *Pool
+	Room string
 }
 
 type Message struct {
 	Type int    `json:"type"`
 	Body string `json:"body"`
+	Room string `json:"room"`
 }
 
 func (c *Client) Read() {
@@ -36,7 +38,7 @@ func (c *Client) Read() {
 
 		if clientReq.Message == "start" {
 			logic.LastSentLoc = logic.GenerateRndLocation()
-			message := logic.ResponseMsg{Status: "OK", Location: logic.LastSentLoc}
+			message := logic.ResponseMsg{Status: "OK", Location: logic.LastSentLoc, Room: c.Room}
 			fmt.Println(message)
 			c.Pool.Broadcast <- message
 		}

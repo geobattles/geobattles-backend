@@ -14,6 +14,10 @@ import (
 )
 
 func serveRndLocation(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
+
+	id := r.URL.Query().Get("id")
+	fmt.Println("id =>", id)
+
 	fmt.Println("WebSocket Endpoint Hit")
 	conn, err := websocket.Upgrade(w, r)
 	if err != nil {
@@ -23,9 +27,13 @@ func serveRndLocation(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 	client := &websocket.Client{
 		Conn: conn,
 		Pool: pool,
+		Room: id,
 	}
+	fmt.Println("HELLO FROM BEFORE REGISTER")
 
 	pool.Register <- client
+	fmt.Println("HELLO FROM AFTER REGISTER")
+
 	client.Read()
 }
 
@@ -61,7 +69,6 @@ func serveGetDistance(w http.ResponseWriter, r *http.Request) {
 func setupRoutes() {
 	pool := websocket.NewPool()
 	go pool.Start()
-
 	http.HandleFunc("/getRndLocation", func(w http.ResponseWriter, r *http.Request) {
 		serveRndLocation(pool, w, r)
 	})
@@ -78,5 +85,7 @@ func main() {
 		fmt.Println("Error loading .env file")
 	}
 	setupRoutes()
+
+	fmt.Println("hello world")
 	http.ListenAndServe("0.0.0.0:8080", nil)
 }
