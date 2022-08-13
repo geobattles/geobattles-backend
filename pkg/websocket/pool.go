@@ -28,8 +28,6 @@ func (pool *Pool) Start() {
 		select {
 		case client := <-pool.Register:
 
-			fmt.Println("HELLO FROM REGISTER")
-			// pool.Clients[client] = true
 			connections := pool.Rooms[client.Room]
 
 			if connections == nil {
@@ -39,9 +37,7 @@ func (pool *Pool) Start() {
 			pool.Rooms[client.Room][client.Conn] = true
 			fmt.Println(pool.Rooms)
 
-			// bs, _ := json.Marshal(pool.Rooms)
-			// fmt.Println(string(bs))
-
+			// pool.Clients[client] = true
 			// fmt.Println("Register, Size of Connection Pool: ", len(pool.Rooms[id]))
 			// for client, _ := range pool.Clients {
 			// 	fmt.Println(client)
@@ -58,7 +54,6 @@ func (pool *Pool) Start() {
 			// }
 			break
 		case message := <-pool.Broadcast:
-			fmt.Println("BROADCASTING")
 			fmt.Println(message)
 			fmt.Println("Broadcast, Sending message to all clients in Pool")
 			for client, _ := range pool.Rooms[message.Room] {

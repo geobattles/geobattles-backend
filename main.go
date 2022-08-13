@@ -15,8 +15,9 @@ import (
 
 func serveRndLocation(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
 
+	// Added query parameter reader for id of lobby
 	id := r.URL.Query().Get("id")
-	fmt.Println("id =>", id)
+	fmt.Println("logging ROOM id =>", id)
 
 	fmt.Println("WebSocket Endpoint Hit")
 	conn, err := websocket.Upgrade(w, r)
@@ -29,10 +30,8 @@ func serveRndLocation(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 		Pool: pool,
 		Room: id,
 	}
-	fmt.Println("HELLO FROM BEFORE REGISTER")
 
 	pool.Register <- client
-	fmt.Println("HELLO FROM AFTER REGISTER")
 
 	client.Read()
 }
