@@ -11,43 +11,87 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
 
-// var Lobbies []lobby.Lobby
-var Lobbies = []lobby.Lobby{
-	{Name: "prvi lobby", ID: 45192, MaxPlayers: 8, NumPlayers: 0},
-	{Name: "LOBBY #2", ID: 12334, MaxPlayers: 6, NumPlayers: 2},
+//var LobbyList []lobby.Lobby
+
+var LobbyList = []lobby.Lobby{
+	{Name: "prvi lobby", ID: "U4YPR6", MaxPlayers: 8, NumPlayers: 0},
+	{Name: "LOBBY #2", ID: "8CKXRG", MaxPlayers: 6, NumPlayers: 2},
 }
 
-func serveGetLobby(w http.ResponseWriter, r *http.Request) {
+func serveLobby(w http.ResponseWriter, r *http.Request) {
+	// deal with CORS
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	if r.Method == "OPTIONS" {
+		return
+	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
+	id := r.URL.Query().Get("id")
+	fmt.Println(id)
+	switch r.Method {
+	case http.MethodGet:
+		json.NewEncoder(w).Encode(LobbyList)
+		fmt.Println("Sent lobby list")
+	case http.MethodPost:
+		var lobby lobby.Lobby
+		reqBody, err := io.ReadAll(r.Body)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		if err = json.Unmarshal(reqBody, &lobby); err != nil {
+			fmt.Println(err)
+			return
+		}
+		lobby.ID = logic.GenerateRndID(6)
+		LobbyList = append(LobbyList, lobby)
+		fmt.Println("Created lobby ", lobby.ID)
+		json.NewEncoder(w).Encode(LobbyList)
+	case http.MethodDelete:
+		for index, lobby := range LobbyList {
+			if lobby.ID == id {
+				LobbyList = append(LobbyList[:index], LobbyList[index+1:]...)
+				fmt.Println("Deleted lobby ", id)
+			}
+		}
+	}
 
-	json.NewEncoder(w).Encode(Lobbies)
 }
 
 func serveRndLocation(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
 
 	// Added query parameter reader for id of lobby
 	id := r.URL.Query().Get("id")
-	fmt.Println("logging ROOM id =>", id)
+	fmt.Println("WebSocket Endpoint Hit, room ID: ", id)
+	// only connect to ws if lobby exists
+	if func() bool {
+		for _, value := range LobbyList {
+			if value.ID == id {
+				return true
+			}
+		}
+		return false
+	}() {
+		conn, err := websocket.Upgrade(w, r)
+		if err != nil {
+			fmt.Fprintf(w, "%+v\n", err)
+		}
 
-	fmt.Println("WebSocket Endpoint Hit")
-	conn, err := websocket.Upgrade(w, r)
-	if err != nil {
-		fmt.Fprintf(w, "%+v\n", err)
+		client := &websocket.Client{
+			Conn: conn,
+			Pool: pool,
+			Room: id,
+		}
+		pool.Register <- client
+
+		client.Read()
 	}
-
-	client := &websocket.Client{
-		Conn: conn,
-		Pool: pool,
-		Room: id,
-	}
-
-	pool.Register <- client
-
-	client.Read()
 }
 
 func serveGetDistance(w http.ResponseWriter, r *http.Request) {
@@ -79,14 +123,14 @@ func serveGetDistance(w http.ResponseWriter, r *http.Request) {
 	}{distance})
 }
 
-func setupRoutes() {
+func setupRoutes(r *mux.Router) {
 	pool := websocket.NewPool()
 	go pool.Start()
-	http.HandleFunc("/getRndLocation", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/getRndLocation", func(w http.ResponseWriter, r *http.Request) {
 		serveRndLocation(pool, w, r)
 	})
-	http.HandleFunc("/getDistance", serveGetDistance)
-	http.HandleFunc("/getLobby", serveGetLobby)
+	r.HandleFunc("/getDistance", serveGetDistance)
+	r.HandleFunc("/lobby", serveLobby)
 }
 
 func main() {
@@ -98,6 +142,7 @@ func main() {
 	if err != nil {
 		fmt.Println("Error loading .env file")
 	}
-	setupRoutes()
-	http.ListenAndServe("0.0.0.0:8080", nil)
+	router := mux.NewRouter()
+	setupRoutes(router)
+	http.ListenAndServe("0.0.0.0:8080", router)
 }

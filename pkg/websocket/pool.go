@@ -47,8 +47,8 @@ func (pool *Pool) Start() {
 		case client := <-pool.Unregister:
 			fmt.Println("UNREGISTERING")
 			fmt.Println(client)
-			// delete(pool.Clients, client)
-			// fmt.Println("Unregister, Size of Connection Pool: ", len(pool.Clients))
+			delete(pool.Rooms[client.Room], client.Conn)
+			fmt.Println("Unregister, Size of Connection Pool: ", len(pool.Rooms[client.Room]))
 			// for client, _ := range pool.Clients {
 			// 	client.Conn.WriteJSON(Message{Type: 1, Body: "User Disconnected..."})
 			// }
