@@ -2,16 +2,30 @@ package main
 
 import (
 	"encoding/json"
+	"example/web-service-gin/pkg/lobby"
 	"example/web-service-gin/pkg/logic"
 	"example/web-service-gin/pkg/websocket"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"net/http"
 	"time"
 
 	"github.com/joho/godotenv"
 )
+
+// var Lobbies []lobby.Lobby
+var Lobbies = []lobby.Lobby{
+	{Name: "prvi lobby", ID: 45192, MaxPlayers: 8, NumPlayers: 0},
+	{Name: "LOBBY #2", ID: 12334, MaxPlayers: 6, NumPlayers: 2},
+}
+
+func serveGetLobby(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(Lobbies)
+}
 
 func serveRndLocation(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
 
@@ -47,7 +61,7 @@ func serveGetDistance(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	var guessLocation logic.Coordinates
-	reqBody, err := ioutil.ReadAll(r.Body)
+	reqBody, err := io.ReadAll(r.Body)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -72,6 +86,7 @@ func setupRoutes() {
 		serveRndLocation(pool, w, r)
 	})
 	http.HandleFunc("/getDistance", serveGetDistance)
+	http.HandleFunc("/getLobby", serveGetLobby)
 }
 
 func main() {
@@ -84,7 +99,5 @@ func main() {
 		fmt.Println("Error loading .env file")
 	}
 	setupRoutes()
-
-	fmt.Println("hello world")
 	http.ListenAndServe("0.0.0.0:8080", nil)
 }
