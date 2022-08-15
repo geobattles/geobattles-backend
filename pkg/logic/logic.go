@@ -3,12 +3,14 @@ package logic
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math"
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 )
 
 // calculates distance between 2 Coordinates using haversine formula
@@ -33,9 +35,9 @@ func GenerateRndLocation() Coordinates {
 	for next := true; next; next = (status == "ZERO_RESULTS") {
 		var lat = rand.Float64()*(48-44) + 44
 		var lng = rand.Float64() * 7
-		fmt.Println("generated coordinates; ", lat, lng)
+		// fmt.Println("generated coordinates; ", lat, lng)
 		location, status = validateLocation(lat, lng)
-		fmt.Println("api response: ", status, " pano location: ", location)
+		// fmt.Println("api response: ", status, " pano location: ", location)
 	}
 	return location
 }
@@ -47,7 +49,7 @@ func validateLocation(lat float64, lng float64) (Coordinates, string) {
 		log.Fatal(err)
 	}
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,4 +57,26 @@ func validateLocation(lat float64, lng float64) (Coordinates, string) {
 	var response MetadataResponse
 	json.Unmarshal(body, &response)
 	return response.Location, response.Status
+}
+
+const letterBytes = "123456789ABCDEFGHJKLMNPRSTUVWXYZ"
+
+var src = rand.NewSource(time.Now().UnixNano())
+
+// Generates n long string (max 12) using 32 different characters from letterBytes
+// src.Int63() generates 63 random bits, we use the last 5 as letterBytes index
+// shift 5 places right & repeat; Simplified #7 from https://stackoverflow.com/a/31832326
+// TODO verify unique ID
+func GenerateRndID(n int) string {
+	sb := strings.Builder{}
+	sb.Grow(n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache := n-1, src.Int63(); i >= 0; {
+		idx := int(cache & 31)
+		sb.WriteByte(letterBytes[idx])
+		i--
+		cache >>= 5
+	}
+
+	return sb.String()
 }
