@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"example/web-service-gin/pkg/lobby"
 	"example/web-service-gin/pkg/logic"
 	"fmt"
 
@@ -24,9 +25,14 @@ func NewPool() *Pool {
 }
 
 func (pool *Pool) Start() {
+	defer func() {
+		fmt.Println("defer return pool")
+	}()
+
 	for {
 		select {
 		case client := <-pool.Register:
+			fmt.Println("register new client")
 
 			connections := pool.Rooms[client.Room]
 
@@ -35,20 +41,37 @@ func (pool *Pool) Start() {
 				pool.Rooms[client.Room] = connections
 			}
 			pool.Rooms[client.Room][client.Conn] = true
-			fmt.Println(pool.Rooms)
+			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 
 			// pool.Clients[client] = true
 			// fmt.Println("Register, Size of Connection Pool: ", len(pool.Rooms[id]))
-			// for client, _ := range pool.Clients {
-			// 	fmt.Println(client)
-			// 	client.Conn.WriteJSON(Message{Type: 1, Body: "New User Joined..."})
-			// }
+			for clientConn, _ := range pool.Rooms[client.Room] {
+				fmt.Println("looog client", client)
+				for _, value := range lobby.LobbyList {
+					if value.ID == client.Room {
+						clientConn.WriteJSON(value)
+						break
+					}
+				}
+			}
 			break
 		case client := <-pool.Unregister:
 			fmt.Println("UNREGISTERING")
 			fmt.Println(client)
 			delete(pool.Rooms[client.Room], client.Conn)
 			fmt.Println("Unregister, Size of Connection Pool: ", len(pool.Rooms[client.Room]))
+			fmt.Println(client.Room)
+			lobby.RemovePlayerFromLobby(lobby.LobbyList, client.Name, client.Room)
+
+			for clientConn, _ := range pool.Rooms[client.Room] {
+				fmt.Println("looog client", client)
+				for _, value := range lobby.LobbyList {
+					if value.ID == client.Room {
+						clientConn.WriteJSON(value)
+						break
+					}
+				}
+			}
 			// for client, _ := range pool.Clients {
 			// 	client.Conn.WriteJSON(Message{Type: 1, Body: "User Disconnected..."})
 			// }
@@ -58,8 +81,8 @@ func (pool *Pool) Start() {
 			fmt.Println("Broadcast, Sending message to all clients in Pool")
 			for client, _ := range pool.Rooms[message.Room] {
 				if err := client.WriteJSON(message); err != nil {
-					fmt.Println(err)
-					return
+					fmt.Println("error writing broadcast", err)
+					//return
 				}
 			}
 		}
