@@ -47,12 +47,13 @@ func (pool *Pool) Start() {
 			// fmt.Println("Register, Size of Connection Pool: ", len(pool.Rooms[id]))
 			for clientConn, _ := range pool.Rooms[client.Room] {
 				fmt.Println("looog client", client)
-				for _, value := range lobby.LobbyList {
-					if value.ID == client.Room {
-						clientConn.WriteJSON(value)
-						break
-					}
-				}
+				clientConn.WriteJSON(lobby.LobbyMap[client.Room])
+				// for _, value := range lobby.LobbyList {
+				// 	if value.ID == client.Room {
+				// 		clientConn.WriteJSON(value)
+				// 		break
+				// 	}
+				// }
 			}
 			break
 		case client := <-pool.Unregister:
@@ -61,16 +62,19 @@ func (pool *Pool) Start() {
 			delete(pool.Rooms[client.Room], client.Conn)
 			fmt.Println("Unregister, Size of Connection Pool: ", len(pool.Rooms[client.Room]))
 			fmt.Println(client.Room)
-			lobby.RemovePlayerFromLobby(lobby.LobbyList, client.Name, client.Room)
+			lobby.RemovePlayerFromLobby(client.Name, client.Room)
 
 			for clientConn, _ := range pool.Rooms[client.Room] {
 				fmt.Println("looog client", client)
-				for _, value := range lobby.LobbyList {
-					if value.ID == client.Room {
-						clientConn.WriteJSON(value)
-						break
-					}
-				}
+
+				clientConn.WriteJSON(lobby.LobbyMap[client.Room])
+
+				// for _, value := range lobby.LobbyList {
+				// 	if value.ID == client.Room {
+				// 		clientConn.WriteJSON(value)
+				// 		break
+				// 	}
+				// }
 			}
 			// for client, _ := range pool.Clients {
 			// 	client.Conn.WriteJSON(Message{Type: 1, Body: "User Disconnected..."})

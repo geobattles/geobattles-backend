@@ -29,7 +29,7 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(id)
 	switch r.Method {
 	case http.MethodGet:
-		json.NewEncoder(w).Encode(lobby.LobbyList)
+		json.NewEncoder(w).Encode(lobby.LobbyMap)
 		fmt.Println("Sent lobby list")
 	case http.MethodPost:
 		var newLobby lobby.Lobby
@@ -43,17 +43,18 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(err)
 			return
 		}
-		newLobby.ID = logic.GenerateRndID(6)
-		lobby.LobbyList = append(lobby.LobbyList, newLobby)
-		fmt.Println("Created lobby ", newLobby.ID)
-		json.NewEncoder(w).Encode(lobby.LobbyList)
+		lobbyID := logic.GenerateRndID(6)
+		lobby.LobbyMap[lobbyID] = &newLobby
+		fmt.Println("Created lobby ", lobbyID)
+		json.NewEncoder(w).Encode(lobby.LobbyMap[lobbyID])
 	case http.MethodDelete:
-		for index, value := range lobby.LobbyList {
-			if value.ID == id {
-				lobby.LobbyList = append(lobby.LobbyList[:index], lobby.LobbyList[index+1:]...)
-				fmt.Println("Deleted lobby ", id)
-			}
-		}
+		delete(lobby.LobbyMap, id)
+		// for index, value := range lobby.LobbyList {
+		// 	if value.ID == id {
+		// 		lobby.LobbyList = append(lobby.LobbyList[:index], lobby.LobbyList[index+1:]...)
+		// 		fmt.Println("Deleted lobby ", id)
+		// 	}
+		// }
 	}
 }
 
@@ -63,14 +64,15 @@ func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 	userName := r.URL.Query().Get("name")
 	fmt.Println("WebSocket Endpoint Hit, room ID: ", lobbyID, " name: ", userName)
 	// only connect to ws if lobby exists
-	if func() bool {
-		for _, value := range lobby.LobbyList {
-			if value.ID == lobbyID {
-				return true
-			}
-		}
-		return false
-	}() {
+	if _, ok := lobby.LobbyMap[lobbyID]; ok {
+		// if func() bool {
+		// 	for _, value := range lobby.LobbyList {
+		// 		if value.ID == lobbyID {
+		// 			return true
+		// 		}
+		// 	}
+		// 	return false
+		// }() {
 		fmt.Println("correct id, upgrading ws")
 		conn, err := websocket.Upgrade(w, r)
 		if err != nil {
@@ -84,11 +86,11 @@ func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 			Name: userName,
 			ID:   logic.GenerateRndID(8),
 		}
-		lobby.AddPlayerToLobby(lobby.LobbyList, client.Name, lobbyID)
+		lobby.AddPlayerToLobby(client.Name, lobbyID)
 
 		pool.Register <- client
 		fmt.Println("client: ", client)
-		fmt.Println("lobbyList: ", lobby.LobbyList)
+		fmt.Println("lobbyList: ", lobby.LobbyMap)
 
 		client.Read()
 		fmt.Println("po client.read()")

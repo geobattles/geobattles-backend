@@ -56,14 +56,17 @@ func (c *Client) Read() {
 
 			//fmt.Println(message)
 
-			for _, value := range lobby.LobbyList {
-				if value.ID == c.Room {
-					message := logic.ResponseMsg{Status: "OK", Results: value.Results, Room: c.Room}
-					fmt.Println("sending results to whole lobby")
-					c.Pool.Broadcast <- message
-					break
-				}
-			}
+			message := logic.ResponseMsg{Status: "OK", Results: lobby.LobbyMap[c.Room].Results, Room: c.Room}
+			fmt.Println("sending results to whole lobby")
+			c.Pool.Broadcast <- message
+			// for _, value := range lobby.LobbyList {
+			// 	if value.ID == c.Room {
+			// 		message := logic.ResponseMsg{Status: "OK", Results: value.Results, Room: c.Room}
+			// 		fmt.Println("sending results to whole lobby")
+			// 		c.Pool.Broadcast <- message
+			// 		break
+			// 	}
+			// }
 
 		}
 
