@@ -10,7 +10,7 @@ type Lobby struct {
 	//ID              string                       `json:"id"`
 	MaxPlayers      int                          `json:"maxPlayers"`
 	NumPlayers      int                          `json:"numPlayers"`
-	PlayerList      []string                     `json:"playerList"`
+	PlayerList      map[string]string            `json:"playerList"`
 	GameActive      bool                         `json:"gameActive"`
 	CurrentLocation logic.Coordinates            `json:"currentLocation"`
 	CurrentRound    int                          `json:"currentRound"`
@@ -25,16 +25,18 @@ type Lobby struct {
 // }
 
 var LobbyMap = map[string]*Lobby{
-	"U4YPR6": {Name: "prvi lobby", MaxPlayers: 8, NumPlayers: 0, PlayerList: nil, Results: make(map[int]map[string][]float64)},
-	"8CKXRG": {Name: "LOBBY #2", MaxPlayers: 6, NumPlayers: 0, PlayerList: nil, Results: make(map[int]map[string][]float64)},
+	"U4YPR6": {Name: "prvi lobby", MaxPlayers: 8, NumPlayers: 0, PlayerList: make(map[string]string), Results: make(map[int]map[string][]float64)},
+	"8CKXRG": {Name: "LOBBY #2", MaxPlayers: 6, NumPlayers: 0, PlayerList: make(map[string]string), Results: make(map[int]map[string][]float64)},
 }
 
 // var allLobbies = make(map[string]Lobby)
 // 	allLobbies["lobiid"] = Lobby{Name: "prvi lobby", ID: "U4YPR6", MaxPlayers: 8, NumPlayers: 0, PlayerList: nil, Results: make(map[int]map[string][]float64)}
 
-func AddPlayerToLobby(client string, lobbyID string) {
-	LobbyMap[lobbyID].PlayerList = append(LobbyMap[lobbyID].PlayerList, client)
-	LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerList)
+func AddPlayerToLobby(clientID string, clientName string, lobbyID string) {
+	LobbyMap[lobbyID].PlayerList[clientID] = clientName
+
+	// LobbyMap[lobbyID].PlayerList = append(LobbyMap[lobbyID].PlayerList, client)
+	// LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerList)
 
 	// for i := range LobbyList {
 	// 	if LobbyList[i].ID == lobbyID {
@@ -46,14 +48,15 @@ func AddPlayerToLobby(client string, lobbyID string) {
 	// }
 }
 
-func RemovePlayerFromLobby(client string, lobbyID string) {
-	for index, value := range LobbyMap[lobbyID].PlayerList {
-		if value == client {
-			LobbyMap[lobbyID].PlayerList = append(LobbyMap[lobbyID].PlayerList[:index], LobbyMap[lobbyID].PlayerList[index+1:]...)
-			LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerList)
-			break
-		}
-	}
+func RemovePlayerFromLobby(clientID string, lobbyID string) {
+	delete(LobbyMap[lobbyID].PlayerList, clientID)
+	// for index, value := range LobbyMap[lobbyID].PlayerList {
+	// 	if value == client {
+	// 		LobbyMap[lobbyID].PlayerList = append(LobbyMap[lobbyID].PlayerList[:index], LobbyMap[lobbyID].PlayerList[index+1:]...)
+	// 		LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerList)
+	// 		break
+	// 	}
+	// }
 
 	// for i := range LobbyList {
 	// 	if LobbyList[i].ID == lobbyID {

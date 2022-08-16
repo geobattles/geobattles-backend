@@ -34,6 +34,7 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		var newLobby lobby.Lobby
 		newLobby.Results = make(map[int]map[string][]float64)
+		newLobby.PlayerList = make(map[string]string)
 		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			fmt.Println(err)
@@ -86,7 +87,7 @@ func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 			Name: userName,
 			ID:   logic.GenerateRndID(8),
 		}
-		lobby.AddPlayerToLobby(client.Name, lobbyID)
+		lobby.AddPlayerToLobby(client.ID, client.Name, lobbyID)
 
 		pool.Register <- client
 		fmt.Println("client: ", client)

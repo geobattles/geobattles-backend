@@ -62,7 +62,7 @@ func (pool *Pool) Start() {
 			delete(pool.Rooms[client.Room], client.Conn)
 			fmt.Println("Unregister, Size of Connection Pool: ", len(pool.Rooms[client.Room]))
 			fmt.Println(client.Room)
-			lobby.RemovePlayerFromLobby(client.Name, client.Room)
+			lobby.RemovePlayerFromLobby(client.ID, client.Room)
 
 			for clientConn, _ := range pool.Rooms[client.Room] {
 				fmt.Println("looog client", client)
