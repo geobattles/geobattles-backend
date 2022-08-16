@@ -1,6 +1,6 @@
 package logic
 
-var LastSentLoc Coordinates
+//var LastSentLoc Coordinates
 
 type Coordinates struct {
 	Latitude  float64 `json:"lat"`
@@ -14,11 +14,14 @@ type MetadataResponse struct {
 }
 
 type ClientReq struct {
-	Message string `json:"message"`
+	Command  string      `json:"command"`
+	Location Coordinates `json:"location"`
 }
 
 type ResponseMsg struct {
-	Status   string      `json:"status"`
-	Location Coordinates `json:"location"`
-	Room     string      `json:"room_id"`
+	Status   string                       `json:"status"`
+	Location Coordinates                  `json:"location"`
+	Room     string                       `json:"room_id"`
+	Distance float64                      `json:"distance"`
+	Results  map[int]map[string][]float64 `json:"results"`
 }

@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"example/web-service-gin/pkg/lobby"
 	"example/web-service-gin/pkg/logic"
 	"fmt"
 
@@ -32,19 +33,38 @@ func (c *Client) Read() {
 	for {
 		var clientReq logic.ClientReq
 		err := c.Conn.ReadJSON(&clientReq)
+
 		if err != nil {
 			fmt.Println("read json 1", err)
 			return
 		}
 		fmt.Println(clientReq)
 
-		if clientReq.Message == "start" {
+		if clientReq.Command == "start" {
 			fmt.Println("start was read")
-
-			logic.LastSentLoc = logic.GenerateRndLocation()
-			message := logic.ResponseMsg{Status: "OK", Location: logic.LastSentLoc, Room: c.Room}
+			var location logic.Coordinates = logic.GenerateRndLocation()
+			lobby.MarkGameActive(c.Room)
+			lobby.UpdateCurrentLocation(c.Room, location)
+			//logic.LastSentLoc = logic.GenerateRndLocation()
+			message := logic.ResponseMsg{Status: "OK", Location: location, Room: c.Room}
 			fmt.Println(message)
 			c.Pool.Broadcast <- message
+		}
+		if clientReq.Command == "submit_location" {
+			var distance = lobby.CalculateDistance(c.Room, clientReq.Location)
+			lobby.AddToResults(c.Room, c.ID, distance)
+
+			//fmt.Println(message)
+
+			for _, value := range lobby.LobbyList {
+				if value.ID == c.Room {
+					message := logic.ResponseMsg{Status: "OK", Results: value.Results, Room: c.Room}
+					fmt.Println("sending results to whole lobby")
+					c.Pool.Broadcast <- message
+					break
+				}
+			}
+
 		}
 
 	}
