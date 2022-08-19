@@ -31,6 +31,7 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		json.NewEncoder(w).Encode(lobby.LobbyMap)
 		fmt.Println("Sent lobby list")
+		//fmt.Println(runtime.NumGoroutine())
 	case http.MethodPost:
 		var newLobby lobby.Lobby
 		newLobby.Results = make(map[int]map[string][]float64)
@@ -50,12 +51,6 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(lobby.LobbyMap[lobbyID])
 	case http.MethodDelete:
 		delete(lobby.LobbyMap, id)
-		// for index, value := range lobby.LobbyList {
-		// 	if value.ID == id {
-		// 		lobby.LobbyList = append(lobby.LobbyList[:index], lobby.LobbyList[index+1:]...)
-		// 		fmt.Println("Deleted lobby ", id)
-		// 	}
-		// }
 	}
 }
 
@@ -66,15 +61,6 @@ func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 	fmt.Println("WebSocket Endpoint Hit, room ID: ", lobbyID, " name: ", userName)
 	// only connect to ws if lobby exists
 	if _, ok := lobby.LobbyMap[lobbyID]; ok {
-		// if func() bool {
-		// 	for _, value := range lobby.LobbyList {
-		// 		if value.ID == lobbyID {
-		// 			return true
-		// 		}
-		// 	}
-		// 	return false
-		// }() {
-		fmt.Println("correct id, upgrading ws")
 		conn, err := websocket.Upgrade(w, r)
 		if err != nil {
 			fmt.Fprintf(w, "%+v\n", err)
@@ -90,41 +76,11 @@ func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 		lobby.AddPlayerToLobby(client.ID, client.Name, lobbyID)
 
 		pool.Register <- client
-		fmt.Println("client: ", client)
 		fmt.Println("lobbyList: ", lobby.LobbyMap)
 
-		client.Read()
-		fmt.Println("po client.read()")
+		go client.Read()
 	}
 }
-
-// func serveGetDistance(w http.ResponseWriter, r *http.Request) {
-// 	// deal with CORS
-// 	w.Header().Set("Access-Control-Allow-Origin", "*")
-// 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-// 	w.Header().Set("Access-Control-Allow-Headers", "*")
-// 	if r.Method == "OPTIONS" {
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-// 	var guessLocation logic.Coordinates
-// 	reqBody, err := io.ReadAll(r.Body)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return
-// 	}
-// 	if err = json.Unmarshal(reqBody, &guessLocation); err != nil {
-// 		fmt.Println(err)
-// 		return
-// 	}
-// var distance = logic.CalcDistance(logic.LastSentLoc, guessLocation)
-// fmt.Println("Real loc: ", logic.LastSentLoc, ", Guess loc: ", guessLocation, ", Dist: ", distance)
-// w.WriteHeader(http.StatusOK)
-// json.NewEncoder(w).Encode(struct {
-// 	Distance float64 `json:"distance"`
-// }{distance})
-// }
 
 func setupRoutes(r *mux.Router) {
 	pool := websocket.NewPool()
@@ -132,7 +88,6 @@ func setupRoutes(r *mux.Router) {
 	r.HandleFunc("/lobbySocket", func(w http.ResponseWriter, r *http.Request) {
 		serveLobbySocket(pool, w, r)
 	})
-	//r.HandleFunc("/getDistance", serveGetDistance)
 	r.HandleFunc("/lobby", serveLobby)
 }
 

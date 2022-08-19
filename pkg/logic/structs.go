@@ -20,8 +20,8 @@ type ClientReq struct {
 
 type ResponseMsg struct {
 	Status   string                       `json:"status"`
-	Location Coordinates                  `json:"location"`
-	Room     string                       `json:"room_id"`
-	Distance float64                      `json:"distance"`
-	Results  map[int]map[string][]float64 `json:"results"`
+	Location Coordinates                  `json:"location,omitempty"`
+	Room     string                       `json:"-"`
+	Distance float64                      `json:"distance,omitempty"`
+	Results  map[int]map[string][]float64 `json:"results,omitempty"`
 }

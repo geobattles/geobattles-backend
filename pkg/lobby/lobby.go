@@ -17,116 +17,45 @@ type Lobby struct {
 	Results         map[int]map[string][]float64 `json:"results"`
 }
 
-//lobbyMap["test"] = {Name: "prvi lobby", ID: "U4YPR6", MaxPlayers: 8, NumPlayers: 0, PlayerList: nil, Results: make(map[int]map[string][]float64)}
-
-// var LobbyList = []Lobby{
-// 	{Name: "prvi lobby", ID: "U4YPR6", MaxPlayers: 8, NumPlayers: 0, PlayerList: nil, Results: make(map[int]map[string][]float64)},
-// 	{Name: "LOBBY #2", ID: "8CKXRG", MaxPlayers: 6, NumPlayers: 0, PlayerList: nil, Results: make(map[int]map[string][]float64)},
-// }
-
+// initial lobbz list for debugging
 var LobbyMap = map[string]*Lobby{
 	"U4YPR6": {Name: "prvi lobby", MaxPlayers: 8, NumPlayers: 0, PlayerList: make(map[string]string), Results: make(map[int]map[string][]float64)},
 	"8CKXRG": {Name: "LOBBY #2", MaxPlayers: 6, NumPlayers: 0, PlayerList: make(map[string]string), Results: make(map[int]map[string][]float64)},
 }
 
-// var allLobbies = make(map[string]Lobby)
-// 	allLobbies["lobiid"] = Lobby{Name: "prvi lobby", ID: "U4YPR6", MaxPlayers: 8, NumPlayers: 0, PlayerList: nil, Results: make(map[int]map[string][]float64)}
-
+// adds player as map[id]name to playerlist in lobby
 func AddPlayerToLobby(clientID string, clientName string, lobbyID string) {
 	LobbyMap[lobbyID].PlayerList[clientID] = clientName
-
-	// LobbyMap[lobbyID].PlayerList = append(LobbyMap[lobbyID].PlayerList, client)
-	// LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerList)
-
-	// for i := range LobbyList {
-	// 	if LobbyList[i].ID == lobbyID {
-	// 		fmt.Println("lobby matches adding name ", client)
-	// 		LobbyList[i].PlayerList = append(LobbyList[i].PlayerList, client)
-	// 		LobbyList[i].NumPlayers = len(LobbyList[i].PlayerList)
-	// 		break
-	// 	}
-	// }
 }
 
+// removes player map from playerlist in lobby
 func RemovePlayerFromLobby(clientID string, lobbyID string) {
 	delete(LobbyMap[lobbyID].PlayerList, clientID)
-	// for index, value := range LobbyMap[lobbyID].PlayerList {
-	// 	if value == client {
-	// 		LobbyMap[lobbyID].PlayerList = append(LobbyMap[lobbyID].PlayerList[:index], LobbyMap[lobbyID].PlayerList[index+1:]...)
-	// 		LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerList)
-	// 		break
-	// 	}
-	// }
-
-	// for i := range LobbyList {
-	// 	if LobbyList[i].ID == lobbyID {
-	// 		fmt.Println("lobby matches adding name ", client)
-	// 		for index, value := range LobbyList[i].PlayerList {
-	// 			if value == client {
-	// 				LobbyList[i].PlayerList = append(LobbyList[i].PlayerList[:index], LobbyList[i].PlayerList[index+1:]...)
-	// 				LobbyList[i].NumPlayers = len(LobbyList[i].PlayerList)
-	// 				break
-	// 			}
-	// 		}
-
-	// 	}
-	// }
 }
+
+// TODO: could use round number instead, use 0 or -1 as inactive
 func MarkGameActive(lobbyID string) {
-	fmt.Println("req mark game started")
+	fmt.Println("Lobby starting: ", lobbyID)
 	LobbyMap[lobbyID].GameActive = true
-
-	// for i := range LobbyList {
-	// 	if LobbyList[i].ID == lobbyID {
-	// 		fmt.Println("lobby found, marking true ", LobbyList[i].ID)
-	// 		LobbyList[i].GameActive = true
-	// 		break
-	// 	}
-	// }
 }
 
+// keeps track of the location of the currently active game in lobby
 func UpdateCurrentLocation(lobbyID string, location logic.Coordinates) {
-	fmt.Println("req update current loc")
+	fmt.Println("updating lobby loaction: ", lobbyID, location)
 	LobbyMap[lobbyID].CurrentLocation = location
-
-	// for i := range LobbyList {
-	// 	if LobbyList[i].ID == lobbyID {
-	// 		fmt.Println("lobby found, marking true ", LobbyList[i].ID)
-	// 		LobbyList[i].CurrentLocation = location
-	// 		break
-	// 	}
-	// }
 }
 
+// calculates distance/score between correct and user submited coordinates
 func CalculateDistance(lobbyID string, userLocation logic.Coordinates) float64 {
 	fmt.Println("req calculate distance")
 	return logic.CalcDistance(LobbyMap[lobbyID].CurrentLocation, userLocation)
-
-	// for i := range LobbyList {
-	// 	if LobbyList[i].ID == lobbyID {
-	// 		return logic.CalcDistance(LobbyList[i].CurrentLocation, userLocation)
-	// 	}
-	// }
-	// return 99999
 }
 
+// adds result to map of all results in lobby
 func AddToResults(lobbyID string, clientID string, result float64) {
+	// if user currently doesnt have a result in this round create new map
 	if LobbyMap[lobbyID].Results[0] == nil {
-		fmt.Println("map se ne obstaja, ustvarjam")
 		LobbyMap[lobbyID].Results[0] = make(map[string][]float64)
 	}
 	LobbyMap[lobbyID].Results[0][clientID] = append(LobbyMap[lobbyID].Results[0][clientID], result)
-
-	// for i := range LobbyList {
-	// 	if LobbyList[i].ID == lobbyID {
-	// 		fmt.Println("pred lobby z dodanim rezultatom", LobbyList[i])
-	// 		fmt.Println("pred lobby samo map", LobbyList[i].Results[0][clientID])
-	// 		if LobbyList[i].Results[0] == nil {
-	// 			fmt.Println("mapa se ne obstaja, ustvarjam")
-	// 			LobbyList[i].Results[0] = make(map[string][]float64)
-	// 		}
-	// 		LobbyList[i].Results[0][clientID] = append(LobbyList[i].Results[0][clientID], result)
-	// 		fmt.Println("lobby z dodanim rezultatom", LobbyList[i])
-	// 	}
-	// }
 }

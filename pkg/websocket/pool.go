@@ -35,55 +35,38 @@ func (pool *Pool) Start() {
 			fmt.Println("register new client")
 
 			connections := pool.Rooms[client.Room]
-
+			// if room doesnt exist yet create it, otherwise just add client to it
 			if connections == nil {
+				fmt.Println("creating new connection room")
 				connections = make(map[*websocket.Conn]bool)
 				pool.Rooms[client.Room] = connections
 			}
 			pool.Rooms[client.Room][client.Conn] = true
-			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
+			//fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 
-			// pool.Clients[client] = true
-			// fmt.Println("Register, Size of Connection Pool: ", len(pool.Rooms[id]))
-			for clientConn, _ := range pool.Rooms[client.Room] {
-				fmt.Println("looog client", client)
+			// send updated list of players to every member of the lobby
+			for clientConn := range pool.Rooms[client.Room] {
+				//fmt.Println("sending updated client list", client)
 				clientConn.WriteJSON(lobby.LobbyMap[client.Room])
-				// for _, value := range lobby.LobbyList {
-				// 	if value.ID == client.Room {
-				// 		clientConn.WriteJSON(value)
-				// 		break
-				// 	}
-				// }
 			}
 			break
+
 		case client := <-pool.Unregister:
 			fmt.Println("UNREGISTERING")
-			fmt.Println(client)
 			delete(pool.Rooms[client.Room], client.Conn)
-			fmt.Println("Unregister, Size of Connection Pool: ", len(pool.Rooms[client.Room]))
-			fmt.Println(client.Room)
 			lobby.RemovePlayerFromLobby(client.ID, client.Room)
 
-			for clientConn, _ := range pool.Rooms[client.Room] {
-				fmt.Println("looog client", client)
-
+			// send updated list of players to every member of the lobby
+			for clientConn := range pool.Rooms[client.Room] {
+				//fmt.Println("sending updated client list", client)
 				clientConn.WriteJSON(lobby.LobbyMap[client.Room])
 
-				// for _, value := range lobby.LobbyList {
-				// 	if value.ID == client.Room {
-				// 		clientConn.WriteJSON(value)
-				// 		break
-				// 	}
-				// }
 			}
-			// for client, _ := range pool.Clients {
-			// 	client.Conn.WriteJSON(Message{Type: 1, Body: "User Disconnected..."})
-			// }
 			break
+
 		case message := <-pool.Broadcast:
-			fmt.Println(message)
-			fmt.Println("Broadcast, Sending message to all clients in Pool")
-			for client, _ := range pool.Rooms[message.Room] {
+			fmt.Println("msg to broadcast: ", message)
+			for client := range pool.Rooms[message.Room] {
 				if err := client.WriteJSON(message); err != nil {
 					fmt.Println("error writing broadcast", err)
 					//return
