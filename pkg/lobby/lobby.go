@@ -6,8 +6,8 @@ import (
 )
 
 type Lobby struct {
-	Name string `json:"name"`
-	//ID              string                       `json:"id"`
+	Name            string                       `json:"name"`
+	Admin           string                       `json:"admin"`
 	MaxPlayers      int                          `json:"maxPlayers"`
 	NumPlayers      int                          `json:"numPlayers"`
 	PlayerList      map[string]string            `json:"playerList"`
@@ -25,12 +25,26 @@ var LobbyMap = map[string]*Lobby{
 
 // adds player as map[id]name to playerlist in lobby
 func AddPlayerToLobby(clientID string, clientName string, lobbyID string) {
+	// if there is no lobby admin make this user one
+	if LobbyMap[lobbyID].Admin == "" {
+		LobbyMap[lobbyID].Admin = clientID
+	}
 	LobbyMap[lobbyID].PlayerList[clientID] = clientName
 }
 
 // removes player map from playerlist in lobby
 func RemovePlayerFromLobby(clientID string, lobbyID string) {
 	delete(LobbyMap[lobbyID].PlayerList, clientID)
+	// if removed player was admin & there are other players left
+	// select one of them as new admin, otherwise make admin empty
+	if LobbyMap[lobbyID].Admin == clientID && len(LobbyMap[lobbyID].PlayerList) != 0 {
+		for id := range LobbyMap[lobbyID].PlayerList {
+			LobbyMap[lobbyID].Admin = id
+			break
+		}
+	} else {
+		LobbyMap[lobbyID].Admin = ""
+	}
 }
 
 // TODO: could use round number instead, use 0 or -1 as inactive
