@@ -6,13 +6,13 @@ import (
 )
 
 type Lobby struct {
-	Name            string                       `json:"name"`
-	Admin           string                       `json:"admin"`
-	MaxPlayers      int                          `json:"maxPlayers"`
-	NumPlayers      int                          `json:"numPlayers"`
-	PlayerList      map[string]string            `json:"playerList"`
-	GameActive      bool                         `json:"gameActive"`
-	CurrentLocation logic.Coordinates            `json:"currentLocation"`
+	Name       string            `json:"name"`
+	Admin      string            `json:"admin"`
+	MaxPlayers int               `json:"maxPlayers"`
+	NumPlayers int               `json:"numPlayers"`
+	PlayerList map[string]string `json:"playerList"`
+	//GameActive      bool                         `json:"gameActive"`
+	CurrentLocation logic.Coordinates            `json:"-"`
 	CurrentRound    int                          `json:"currentRound"`
 	Results         map[int]map[string][]float64 `json:"results"`
 }
@@ -48,15 +48,18 @@ func RemovePlayerFromLobby(clientID string, lobbyID string) {
 }
 
 // TODO: could use round number instead, use 0 or -1 as inactive
-func MarkGameActive(lobbyID string) {
-	fmt.Println("Lobby starting: ", lobbyID)
-	LobbyMap[lobbyID].GameActive = true
-}
+// func MarkGameActive(lobbyID string) {
+// 	fmt.Println("Lobby starting: ", lobbyID)
+// 	LobbyMap[lobbyID].GameActive = true
+// }
 
 // keeps track of the location of the currently active game in lobby
+// increments round counter every call
 func UpdateCurrentLocation(lobbyID string, location logic.Coordinates) {
 	fmt.Println("updating lobby loaction: ", lobbyID, location)
 	LobbyMap[lobbyID].CurrentLocation = location
+	LobbyMap[lobbyID].CurrentRound++
+	//fmt.Println("current round: ", LobbyMap[lobbyID].CurrentRound)
 }
 
 // calculates distance/score between correct and user submited coordinates
@@ -68,8 +71,9 @@ func CalculateDistance(lobbyID string, userLocation logic.Coordinates) float64 {
 // adds result to map of all results in lobby
 func AddToResults(lobbyID string, clientID string, result float64) {
 	// if user currently doesnt have a result in this round create new map
-	if LobbyMap[lobbyID].Results[0] == nil {
-		LobbyMap[lobbyID].Results[0] = make(map[string][]float64)
+	if LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] == nil {
+		LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] = make(map[string][]float64)
 	}
-	LobbyMap[lobbyID].Results[0][clientID] = append(LobbyMap[lobbyID].Results[0][clientID], result)
+	// TODO: split this monstrosity, maybe use variables
+	LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID], result)
 }
