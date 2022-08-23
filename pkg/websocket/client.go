@@ -16,12 +16,6 @@ type Client struct {
 	Name string
 }
 
-// type Message struct {
-// 	Type int    `json:"type"`
-// 	Body string `json:"body"`
-// 	Room string `json:"room"`
-// }
-
 func (c *Client) Read() {
 	defer func() {
 		//fmt.Println("defer read unregister")
@@ -39,19 +33,46 @@ func (c *Client) Read() {
 		}
 		fmt.Println("Client msg: ", clientReq)
 
-		if clientReq.Command == "start" {
-			var location logic.Coordinates = logic.GenerateRndLocation()
-			lobby.MarkGameActive(c.Room)
-			lobby.UpdateCurrentLocation(c.Room, location)
-			message := logic.ResponseMsg{Status: "OK", Location: location}
-			c.Pool.Broadcast <- message
-		}
-		if clientReq.Command == "submit_location" {
+		switch clientReq.Command {
+		case "start":
+			// if user is lobby admin send coordinates, otherwise return error
+			if c.ID == lobby.LobbyMap[c.Room].Admin {
+				fmt.Println("USER IS ADMIN")
+				var location logic.Coordinates = logic.GenerateRndLocation()
+				//lobby.MarkGameActive(c.Room)
+				lobby.UpdateCurrentLocation(c.Room, location)
+				message := logic.ResponseMsg{Status: "OK", Location: location}
+				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+			} else {
+				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "NOT_ADMIN"}}
+			}
+
+		case "submit_location":
 			var distance = lobby.CalculateDistance(c.Room, clientReq.Location)
 			lobby.AddToResults(c.Room, c.ID, distance)
 
+			c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "OK", Distance: distance}}
+			// TODO: only send results of current round
 			message := logic.ResponseMsg{Status: "OK", Results: lobby.LobbyMap[c.Room].Results}
-			c.Pool.Broadcast <- message
+
+			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 		}
+		// if clientReq.Command == "start" {
+		// 	if c.ID == lobby.LobbyMap[c.Room].Admin {
+		// 		fmt.Println("USER IS ADMIN")
+		// 	}
+		// 	var location logic.Coordinates = logic.GenerateRndLocation()
+		// 	lobby.MarkGameActive(c.Room)
+		// 	lobby.UpdateCurrentLocation(c.Room, location)
+		// 	message := logic.ResponseMsg{Status: "OK", Location: location}
+		// 	c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+		// }
+		// if clientReq.Command == "submit_location" {
+		// 	var distance = lobby.CalculateDistance(c.Room, clientReq.Location)
+		// 	lobby.AddToResults(c.Room, c.ID, distance)
+
+		// 	message := logic.ResponseMsg{Status: "OK", Results: lobby.LobbyMap[c.Room].Results}
+		// 	c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+		// }
 	}
 }

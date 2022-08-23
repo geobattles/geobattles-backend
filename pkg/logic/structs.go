@@ -1,6 +1,8 @@
 package logic
 
-//var LastSentLoc Coordinates
+import (
+	"github.com/gorilla/websocket"
+)
 
 type Coordinates struct {
 	Latitude  float64 `json:"lat"`
@@ -18,10 +20,20 @@ type ClientReq struct {
 	Location Coordinates `json:"location"`
 }
 
+// either Conn or Room must be provided
+// if Conn is set Data will be sent to this connection
+// else it will be broadcast to the entire Room
+// Conn takes precedence over Room
+type Message struct {
+	Conn *websocket.Conn
+	Room string
+	Data ResponseMsg
+}
+
 type ResponseMsg struct {
-	Status   string                       `json:"status"`
-	Location Coordinates                  `json:"location,omitempty"`
-	Room     string                       `json:"-"`
+	Status   string      `json:"status"`
+	Location Coordinates `json:"location,omitempty"`
+	//Room     string                       `json:"-"`
 	Distance float64                      `json:"distance,omitempty"`
 	Results  map[int]map[string][]float64 `json:"results,omitempty"`
 }

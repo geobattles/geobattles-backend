@@ -12,7 +12,7 @@ type Pool struct {
 	Register   chan *Client
 	Unregister chan *Client
 	Rooms      map[string]map[*websocket.Conn]bool
-	Broadcast  chan logic.ResponseMsg
+	Transmit   chan logic.Message
 }
 
 func NewPool() *Pool {
@@ -20,7 +20,7 @@ func NewPool() *Pool {
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 		Rooms:      make(map[string]map[*websocket.Conn]bool),
-		Broadcast:  make(chan logic.ResponseMsg),
+		Transmit:   make(chan logic.Message),
 	}
 }
 
@@ -42,7 +42,7 @@ func (pool *Pool) Start() {
 				pool.Rooms[client.Room] = connections
 			}
 			pool.Rooms[client.Room][client.Conn] = true
-			//fmt.Println("pool.rooms LOOOG ", pool.Rooms)
+			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 
 			// send updated list of players to every member of the lobby
 			for clientConn := range pool.Rooms[client.Room] {
@@ -55,6 +55,7 @@ func (pool *Pool) Start() {
 			fmt.Println("UNREGISTERING")
 			delete(pool.Rooms[client.Room], client.Conn)
 			lobby.RemovePlayerFromLobby(client.ID, client.Room)
+			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 
 			// send updated list of players to every member of the lobby
 			for clientConn := range pool.Rooms[client.Room] {
@@ -64,12 +65,19 @@ func (pool *Pool) Start() {
 			}
 			break
 
-		case message := <-pool.Broadcast:
-			fmt.Println("msg to broadcast: ", message)
-			for client := range pool.Rooms[message.Room] {
-				if err := client.WriteJSON(message); err != nil {
-					fmt.Println("error writing broadcast", err)
-					//return
+		case message := <-pool.Transmit:
+			fmt.Println("msg to send: ", message)
+			// if message doesnt have connection field broadcast it
+			// otherwise only send it to the connection given
+			if message.Conn == nil {
+				for client := range pool.Rooms[message.Room] {
+					if err := client.WriteJSON(message.Data); err != nil {
+						fmt.Println("error writing broadcast", err)
+					}
+				}
+			} else {
+				if err := message.Conn.WriteJSON(message.Data); err != nil {
+					fmt.Println("error writing unicast", err)
 				}
 			}
 		}
