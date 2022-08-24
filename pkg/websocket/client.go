@@ -49,7 +49,7 @@ func (c *Client) Read() {
 
 		case "submit_location":
 			var distance = lobby.CalculateDistance(c.Room, clientReq.Location)
-			lobby.AddToResults(c.Room, c.ID, distance)
+			lobby.AddToResults(c.Room, c.ID, clientReq.Location, distance)
 
 			c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "OK", Distance: distance}}
 			// TODO: only send results of current round

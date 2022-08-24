@@ -3,6 +3,7 @@ package lobby
 import (
 	"example/web-service-gin/pkg/logic"
 	"fmt"
+	"math"
 )
 
 type Lobby struct {
@@ -12,15 +13,16 @@ type Lobby struct {
 	NumPlayers int               `json:"numPlayers"`
 	PlayerList map[string]string `json:"playerList"`
 	//GameActive      bool                         `json:"gameActive"`
-	CurrentLocation logic.Coordinates            `json:"-"`
-	CurrentRound    int                          `json:"currentRound"`
-	Results         map[int]map[string][]float64 `json:"results"`
+	CurrentLocation logic.Coordinates                  `json:"-"`
+	ScoreFactor     int                                `json:"scoreFactor"`
+	CurrentRound    int                                `json:"currentRound"`
+	Results         map[int]map[string][]logic.Results `json:"results"`
 }
 
 // initial lobbz list for debugging
 var LobbyMap = map[string]*Lobby{
-	"U4YPR6": {Name: "prvi lobby", MaxPlayers: 8, NumPlayers: 0, PlayerList: make(map[string]string), Results: make(map[int]map[string][]float64)},
-	"8CKXRG": {Name: "LOBBY #2", MaxPlayers: 6, NumPlayers: 0, PlayerList: make(map[string]string), Results: make(map[int]map[string][]float64)},
+	"U4YPR6": {Name: "prvi lobby", MaxPlayers: 8, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 100, Results: make(map[int]map[string][]logic.Results)},
+	"8CKXRG": {Name: "LOBBY #2", MaxPlayers: 6, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 100, Results: make(map[int]map[string][]logic.Results)},
 }
 
 // adds player as map[id]name to playerlist in lobby
@@ -68,12 +70,28 @@ func CalculateDistance(lobbyID string, userLocation logic.Coordinates) float64 {
 	return logic.CalcDistance(LobbyMap[lobbyID].CurrentLocation, userLocation)
 }
 
+// calculate score based on distance and scorefactor
+// scorefactor determines how fast score drops off
+// for example a low scorefactor means if your guess is 100km off you only get 100 points
+// it also means you get full points for distance closer that scorefactor
+func scoreDistance(x float64, a float64) int {
+	//return int(5000 * math.Pow(0.999, (x/1000-a/1000)*(0.25+150*(math.Pow(0.62, math.Sqrt(a))))))
+	score := int(5000 * math.Pow(0.999, (x/1000-a/1000)*(0.2+30*(math.Pow(0.98, 10*math.Pow(a, 0.6))))))
+
+	if score > 5000 {
+		return 5000
+	}
+	return score
+}
+
 // adds result to map of all results in lobby
-func AddToResults(lobbyID string, clientID string, result float64) {
+func AddToResults(lobbyID string, clientID string, location logic.Coordinates, distance float64) {
 	// if user currently doesnt have a result in this round create new map
 	if LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] == nil {
-		LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] = make(map[string][]float64)
+		LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] = make(map[string][]logic.Results)
 	}
+	score := scoreDistance(distance, float64(LobbyMap[lobbyID].ScoreFactor))
+	fmt.Println("SCORE IS: ", score)
 	// TODO: split this monstrosity, maybe use variables
-	LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID], result)
+	LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Location: location, Distance: distance, Score: score})
 }

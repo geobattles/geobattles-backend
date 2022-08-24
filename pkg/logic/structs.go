@@ -9,6 +9,12 @@ type Coordinates struct {
 	Longitude float64 `json:"lng"`
 }
 
+type Results struct {
+	Location Coordinates `json:"location"`
+	Distance float64     `json:"distance"`
+	Score    int         `json:"score"`
+}
+
 // response from google maps metadata api
 type MetadataResponse struct {
 	Location Coordinates `json:"location"`
@@ -35,5 +41,5 @@ type ResponseMsg struct {
 	Location Coordinates `json:"location,omitempty"`
 	//Room     string                       `json:"-"`
 	Distance float64                      `json:"distance,omitempty"`
-	Results  map[int]map[string][]float64 `json:"results,omitempty"`
+	Results  map[int]map[string][]Results `json:"results,omitempty"`
 }
