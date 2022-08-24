@@ -1,28 +1,71 @@
 package lobby
 
 import (
+	"example/web-service-gin/pkg/defaults"
 	"example/web-service-gin/pkg/logic"
 	"fmt"
 	"math"
 )
 
 type Lobby struct {
-	Name       string            `json:"name"`
-	Admin      string            `json:"admin"`
-	MaxPlayers int               `json:"maxPlayers"`
-	NumPlayers int               `json:"numPlayers"`
-	PlayerList map[string]string `json:"playerList"`
-	//GameActive      bool                         `json:"gameActive"`
+	Name            string                             `json:"name"`
+	Admin           string                             `json:"admin"`
+	MaxPlayers      int                                `json:"maxPlayers"`
+	NumPlayers      int                                `json:"numPlayers"`
+	PlayerList      map[string]string                  `json:"playerList"`
+	NumAttempt      int                                `json:"numAttempt"`
+	RoundTime       int                                `json:"roundTime"`
 	CurrentLocation logic.Coordinates                  `json:"-"`
 	ScoreFactor     int                                `json:"scoreFactor"`
 	CurrentRound    int                                `json:"currentRound"`
 	Results         map[int]map[string][]logic.Results `json:"results"`
 }
 
-// initial lobbz list for debugging
+// initial lobby list for debugging
 var LobbyMap = map[string]*Lobby{
-	"U4YPR6": {Name: "prvi lobby", MaxPlayers: 8, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 100, Results: make(map[int]map[string][]logic.Results)},
-	"8CKXRG": {Name: "LOBBY #2", MaxPlayers: 6, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 100, Results: make(map[int]map[string][]logic.Results)},
+	"U4YPR6": {Name: "prvi lobby", MaxPlayers: 8, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 100, NumAttempt: 3, RoundTime: 60, Results: make(map[int]map[string][]logic.Results)},
+	"8CKXRG": {Name: "LOBBY #2", MaxPlayers: 6, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 60, NumAttempt: 2, RoundTime: 40, Results: make(map[int]map[string][]logic.Results)},
+}
+
+// validates values and creates new lobby
+func CreateLobby(name string, maxPlayers int, numAttempt int, scoreFactor int, roundTime int) *Lobby {
+	var newLobby Lobby
+	newLobby.PlayerList = make(map[string]string)
+	newLobby.Results = make(map[int]map[string][]logic.Results)
+	lobbyID := logic.GenerateRndID(6)
+	// validate values and set defaults otherwise
+	if name == "" {
+		newLobby.Name = lobbyID
+	} else {
+		newLobby.Name = name
+	}
+
+	if maxPlayers <= 0 {
+		newLobby.MaxPlayers = defaults.MaxPlayers
+	} else {
+		newLobby.MaxPlayers = maxPlayers
+	}
+
+	if numAttempt <= 0 {
+		newLobby.NumAttempt = defaults.NumOfTries
+	} else {
+		newLobby.NumAttempt = numAttempt
+	}
+
+	if scoreFactor == 0 || scoreFactor < defaults.ScoreFactorLow || scoreFactor > defaults.ScoreFactorHigh {
+		newLobby.ScoreFactor = defaults.ScoreFactor
+	} else {
+		newLobby.ScoreFactor = scoreFactor
+	}
+
+	if roundTime <= 0 {
+		newLobby.RoundTime = defaults.RoundTime
+	} else {
+		newLobby.RoundTime = roundTime
+	}
+
+	LobbyMap[lobbyID] = &newLobby
+	return LobbyMap[lobbyID]
 }
 
 // adds player as map[id]name to playerlist in lobby

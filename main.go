@@ -34,8 +34,6 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 		//fmt.Println(runtime.NumGoroutine())
 	case http.MethodPost:
 		var newLobby lobby.Lobby
-		newLobby.Results = make(map[int]map[string][]logic.Results)
-		newLobby.PlayerList = make(map[string]string)
 		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			fmt.Println(err)
@@ -47,18 +45,7 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		switch {
-		case newLobby.ScoreFactor < 0:
-			newLobby.ScoreFactor = 1
-		case newLobby.ScoreFactor > 500:
-			newLobby.ScoreFactor = 500
-		case newLobby.ScoreFactor == 0:
-			newLobby.ScoreFactor = 100
-		}
-		lobbyID := logic.GenerateRndID(6)
-		lobby.LobbyMap[lobbyID] = &newLobby
-		fmt.Println("Created lobby ", lobbyID)
-		json.NewEncoder(w).Encode(lobby.LobbyMap[lobbyID])
+		json.NewEncoder(w).Encode(lobby.CreateLobby(newLobby.Name, newLobby.MaxPlayers, newLobby.NumAttempt, newLobby.ScoreFactor, newLobby.RoundTime))
 	case http.MethodDelete:
 		delete(lobby.LobbyMap, id)
 	}
