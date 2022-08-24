@@ -46,6 +46,7 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 		}
 
 		json.NewEncoder(w).Encode(lobby.CreateLobby(newLobby.Name, newLobby.MaxPlayers, newLobby.NumAttempt, newLobby.ScoreFactor, newLobby.RoundTime))
+	// TODO: only allow admin? to delete lobby
 	case http.MethodDelete:
 		delete(lobby.LobbyMap, id)
 	}

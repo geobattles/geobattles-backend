@@ -1,6 +1,7 @@
 package lobby
 
 import (
+	"errors"
 	"example/web-service-gin/pkg/defaults"
 	"example/web-service-gin/pkg/logic"
 	"fmt"
@@ -19,6 +20,7 @@ type Lobby struct {
 	ScoreFactor     int                                `json:"scoreFactor"`
 	CurrentRound    int                                `json:"currentRound"`
 	Results         map[int]map[string][]logic.Results `json:"results"`
+	Timer           bool
 }
 
 // initial lobby list for debugging
@@ -92,18 +94,17 @@ func RemovePlayerFromLobby(clientID string, lobbyID string) {
 	}
 }
 
-// TODO: could use round number instead, use 0 or -1 as inactive
-// func MarkGameActive(lobbyID string) {
-// 	fmt.Println("Lobby starting: ", lobbyID)
-// 	LobbyMap[lobbyID].GameActive = true
-// }
-
 // keeps track of the location of the currently active game in lobby
 // increments round counter every call
 func UpdateCurrentLocation(lobbyID string, location logic.Coordinates) {
 	fmt.Println("updating lobby loaction: ", lobbyID, location)
 	LobbyMap[lobbyID].CurrentLocation = location
 	LobbyMap[lobbyID].CurrentRound++
+	LobbyMap[lobbyID].Timer = true
+	// time.AfterFunc(time.Second*time.Duration(LobbyMap[lobbyID].RoundTime), func() {
+	// 	LobbyMap[lobbyID].Timer = false
+	// 	fmt.Println("times up")
+	// })
 	//fmt.Println("current round: ", LobbyMap[lobbyID].CurrentRound)
 }
 
@@ -128,13 +129,21 @@ func scoreDistance(x float64, a float64) int {
 }
 
 // adds result to map of all results in lobby
-func AddToResults(lobbyID string, clientID string, location logic.Coordinates, distance float64) {
+func AddToResults(lobbyID string, clientID string, location logic.Coordinates, distance float64) error {
 	// if user currently doesnt have a result in this round create new map
 	if LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] == nil {
 		LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] = make(map[string][]logic.Results)
 	}
+	// if all attempts have been used up throw error
+	if len(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID]) >= LobbyMap[lobbyID].NumAttempt {
+		return errors.New("NO_MORE_ATTEMPTS")
+	}
+	// if time has expired throw an error
+	if !LobbyMap[lobbyID].Timer {
+		return errors.New("TIMES_UP")
+	}
 	score := scoreDistance(distance, float64(LobbyMap[lobbyID].ScoreFactor))
-	fmt.Println("SCORE IS: ", score)
 	// TODO: split this monstrosity, maybe use variables
 	LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Location: location, Distance: distance, Score: score})
+	return nil
 }

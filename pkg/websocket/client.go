@@ -4,6 +4,7 @@ import (
 	"example/web-service-gin/pkg/lobby"
 	"example/web-service-gin/pkg/logic"
 	"fmt"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -41,6 +42,13 @@ func (c *Client) Read() {
 				var location logic.Coordinates = logic.GenerateRndLocation()
 				//lobby.MarkGameActive(c.Room)
 				lobby.UpdateCurrentLocation(c.Room, location)
+
+				time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].RoundTime), func() {
+					lobby.LobbyMap[c.Room].Timer = false
+					fmt.Println("times up")
+					c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "TIMES_UP"}}
+				})
+
 				message := logic.ResponseMsg{Status: "OK", Location: location}
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 			} else {
@@ -49,8 +57,11 @@ func (c *Client) Read() {
 
 		case "submit_location":
 			var distance = lobby.CalculateDistance(c.Room, clientReq.Location)
-			lobby.AddToResults(c.Room, c.ID, clientReq.Location, distance)
-
+			err := lobby.AddToResults(c.Room, c.ID, clientReq.Location, distance)
+			if err != nil {
+				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: err.Error()}}
+				break
+			}
 			c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "OK", Distance: distance}}
 			// TODO: only send results of current round
 			message := logic.ResponseMsg{Status: "OK", Results: lobby.LobbyMap[c.Room].Results}

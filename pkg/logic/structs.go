@@ -5,8 +5,8 @@ import (
 )
 
 type Coordinates struct {
-	Latitude  float64 `json:"lat"`
-	Longitude float64 `json:"lng"`
+	Latitude  float64 `json:"lat,omitempty"`
+	Longitude float64 `json:"lng,omitempty"`
 }
 
 type Results struct {
