@@ -45,10 +45,11 @@ func (pool *Pool) Start() {
 			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 
 			// send updated list of players to every member of the lobby
-			for clientConn := range pool.Rooms[client.Room] {
-				//fmt.Println("sending updated client list", client)
-				clientConn.WriteJSON(lobby.LobbyMap[client.Room])
-			}
+			pool.Transmit <- logic.Message{Room: client.Room, Data: logic.ResponseMsg{Status: "OK", Type: "JOINED_LOBBY", Lobby: lobby.LobbyMap[client.Room]}}
+			// for clientConn := range pool.Rooms[client.Room] {
+			// 	//fmt.Println("sending updated client list", client)
+			// 	clientConn.WriteJSON(lobby.LobbyMap[client.Room])
+			// }
 			break
 
 		case client := <-pool.Unregister:
@@ -56,13 +57,14 @@ func (pool *Pool) Start() {
 			delete(pool.Rooms[client.Room], client.Conn)
 			lobby.RemovePlayerFromLobby(client.ID, client.Room)
 			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
+			pool.Transmit <- logic.Message{Room: client.Room, Data: logic.ResponseMsg{Status: "OK", Type: "LEFT_LOBBY", Lobby: lobby.LobbyMap[client.Room]}}
 
 			// send updated list of players to every member of the lobby
-			for clientConn := range pool.Rooms[client.Room] {
-				//fmt.Println("sending updated client list", client)
-				clientConn.WriteJSON(lobby.LobbyMap[client.Room])
+			// for clientConn := range pool.Rooms[client.Room] {
+			// 	//fmt.Println("sending updated client list", client)
+			// 	clientConn.WriteJSON(lobby.LobbyMap[client.Room])
 
-			}
+			// }
 			break
 
 		case message := <-pool.Transmit:

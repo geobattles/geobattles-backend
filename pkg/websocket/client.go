@@ -46,25 +46,25 @@ func (c *Client) Read() {
 				time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].RoundTime), func() {
 					lobby.LobbyMap[c.Room].Timer = false
 					fmt.Println("times up")
-					c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "TIMES_UP"}}
+					c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "WRN", Type: "TIMES_UP"}}
 				})
 
-				message := logic.ResponseMsg{Status: "OK", Location: location}
+				message := logic.ResponseMsg{Status: "OK", Type: "START_ROUND", Location: &location}
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 			} else {
-				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "NOT_ADMIN"}}
+				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "ERR", Type: "NOT_ADMIN"}}
 			}
 
 		case "submit_location":
-			var distance = lobby.CalculateDistance(c.Room, clientReq.Location)
-			err := lobby.AddToResults(c.Room, c.ID, clientReq.Location, distance)
+			dist, score, err := lobby.SubmitResult(c.Room, c.ID, clientReq.Location)
+			//err := lobby.AddToResults(c.Room, c.ID, clientReq.Location, distance)
 			if err != nil {
-				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: err.Error()}}
+				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "ERR", Type: err.Error()}}
 				break
 			}
-			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "OK", Distance: distance}}
-			// TODO: only send results of current round
-			message := logic.ResponseMsg{Status: "OK", Results: lobby.LobbyMap[c.Room].Results}
+			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "OK", Type: "NEW_RESULT", User: c.ID, Distance: dist, Score: score}}
+			// TODO: only send results of current round, only at the end of round
+			message := logic.ResponseMsg{Status: "OK", Type: "ALL_RESULTS", Results: lobby.LobbyMap[c.Room].Results}
 
 			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 		}

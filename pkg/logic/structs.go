@@ -37,9 +37,27 @@ type Message struct {
 }
 
 type ResponseMsg struct {
-	Status   string      `json:"status"`
-	Location Coordinates `json:"location,omitempty"`
-	//Room     string                       `json:"-"`
+	Status   string                       `json:"status"`
+	Type     string                       `json:"type"`
+	Location *Coordinates                 `json:"location,omitempty"`
+	User     string                       `json:"user,omitempty"`
 	Distance float64                      `json:"distance,omitempty"`
+	Score    int                          `json:"score,omitempty"`
 	Results  map[int]map[string][]Results `json:"results,omitempty"`
+	Lobby    *Lobby                       `json:"lobby,omitempty"`
+}
+
+type Lobby struct {
+	Name            string                       `json:"name"`
+	Admin           string                       `json:"admin"`
+	MaxPlayers      int                          `json:"maxPlayers"`
+	NumPlayers      int                          `json:"numPlayers"`
+	PlayerList      map[string]string            `json:"playerList"`
+	NumAttempt      int                          `json:"numAttempt"`
+	RoundTime       int                          `json:"roundTime"`
+	CurrentLocation Coordinates                  `json:"-"`
+	ScoreFactor     int                          `json:"scoreFactor"`
+	CurrentRound    int                          `json:"currentRound"`
+	Results         map[int]map[string][]Results `json:"results"`
+	Timer           bool
 }
