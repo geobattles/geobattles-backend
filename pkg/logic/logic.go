@@ -41,6 +41,29 @@ func GenerateRndLocation() Coordinates {
 	return location
 }
 
+func RndPointWithinBox(b Bound) Point {
+	lng := rand.Float64()*(b.Max[0]-b.Min[0]) + b.Min[0]
+	lat := rand.Float64()*(b.Max[1]-b.Min[1]) + b.Min[1]
+	return Point{lng, lat}
+}
+
+// checks if pano exists near requested location, returns exact location and status code
+func CheckStreetViewExists(loc Point, radius int) (Coordinates, string) {
+	res, err := http.Get(fmt.Sprintf("https://maps.googleapis.com/maps/api/streetview/metadata?location=%f,%f&key=%s&radius=%d", loc[1], loc[0], os.Getenv("GMAPS_API"), radius))
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var response MetadataResponse
+	json.Unmarshal(body, &response)
+	return response.Location, response.Status
+}
+
 // checks if pano exists near requested location, returns exact location and status code
 func validateLocation(lat float64, lng float64) (Coordinates, string) {
 	res, err := http.Get(fmt.Sprintf("https://maps.googleapis.com/maps/api/streetview/metadata?location=%f,%f&key=%s&radius=500", lat, lng, os.Getenv("GMAPS_API")))
