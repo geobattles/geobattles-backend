@@ -39,7 +39,7 @@ func (c *Client) Read() {
 			// if user is lobby admin send coordinates, otherwise return error
 			if c.ID == lobby.LobbyMap[c.Room].Admin {
 				fmt.Println("USER IS ADMIN")
-				var location logic.Coordinates = logic.GenerateRndLocation()
+				var location logic.Coordinates = logic.RndLocation()
 				//lobby.MarkGameActive(c.Room)
 				lobby.UpdateCurrentLocation(c.Room, location)
 
@@ -62,7 +62,7 @@ func (c *Client) Read() {
 				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: err.Error()}}
 				break
 			}
-			c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "OK", Distance: distance}}
+			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "OK", Distance: distance}}
 			// TODO: only send results of current round
 			message := logic.ResponseMsg{Status: "OK", Results: lobby.LobbyMap[c.Room].Results}
 
