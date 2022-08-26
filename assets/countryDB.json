@@ -1,0 +1,19 @@
+{
+    "countries": {
+        "AX":{
+            "name": "Åland",
+            "ccode": "AX",
+            "size": 2502
+        },
+        "AL":{
+            "name": "Albania",
+            "ccode": "AL",
+            "size": 23766
+        },
+        "AS":{
+            "name": "American Samoa",
+            "ccode": "AS",
+            "size": 254
+        }
+    }
+}
