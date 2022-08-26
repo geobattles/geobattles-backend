@@ -1,8 +1,10 @@
 package websocket
 
 import (
+	"example/web-service-gin/pkg/lobby"
 	"example/web-service-gin/pkg/logic"
 	"fmt"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -15,37 +17,73 @@ type Client struct {
 	Name string
 }
 
-type Message struct {
-	Type int    `json:"type"`
-	Body string `json:"body"`
-	Room string `json:"room"`
-}
-
 func (c *Client) Read() {
 	defer func() {
-		fmt.Println("defer read unregister")
+		//fmt.Println("defer read unregister")
 		c.Pool.Unregister <- c
 		c.Conn.Close()
 	}()
 
-	fmt.Println("reading")
 	for {
 		var clientReq logic.ClientReq
 		err := c.Conn.ReadJSON(&clientReq)
+
 		if err != nil {
-			fmt.Println("read json 1", err)
+			fmt.Println("error reading client json: ", err)
 			return
 		}
-		fmt.Println(clientReq)
+		fmt.Println("Client msg: ", clientReq)
 
-		if clientReq.Message == "start" {
-			fmt.Println("start was read")
+		switch clientReq.Command {
+		case "start":
+			// if user is lobby admin send coordinates, otherwise return error
+			if c.ID == lobby.LobbyMap[c.Room].Admin {
+				fmt.Println("USER IS ADMIN")
+				var location logic.Coordinates = logic.GenerateRndLocation()
+				//lobby.MarkGameActive(c.Room)
+				lobby.UpdateCurrentLocation(c.Room, location)
 
-			logic.LastSentLoc = logic.GenerateRndLocation()
-			message := logic.ResponseMsg{Status: "OK", Location: logic.LastSentLoc, Room: c.Room}
-			fmt.Println(message)
-			c.Pool.Broadcast <- message
+				time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].RoundTime), func() {
+					lobby.LobbyMap[c.Room].Timer = false
+					fmt.Println("times up")
+					c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "TIMES_UP"}}
+				})
+
+				message := logic.ResponseMsg{Status: "OK", Location: location}
+				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+			} else {
+				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "NOT_ADMIN"}}
+			}
+
+		case "submit_location":
+			var distance = lobby.CalculateDistance(c.Room, clientReq.Location)
+			err := lobby.AddToResults(c.Room, c.ID, clientReq.Location, distance)
+			if err != nil {
+				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: err.Error()}}
+				break
+			}
+			c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "OK", Distance: distance}}
+			// TODO: only send results of current round
+			message := logic.ResponseMsg{Status: "OK", Results: lobby.LobbyMap[c.Room].Results}
+
+			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 		}
+		// if clientReq.Command == "start" {
+		// 	if c.ID == lobby.LobbyMap[c.Room].Admin {
+		// 		fmt.Println("USER IS ADMIN")
+		// 	}
+		// 	var location logic.Coordinates = logic.GenerateRndLocation()
+		// 	lobby.MarkGameActive(c.Room)
+		// 	lobby.UpdateCurrentLocation(c.Room, location)
+		// 	message := logic.ResponseMsg{Status: "OK", Location: location}
+		// 	c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+		// }
+		// if clientReq.Command == "submit_location" {
+		// 	var distance = lobby.CalculateDistance(c.Room, clientReq.Location)
+		// 	lobby.AddToResults(c.Room, c.ID, distance)
 
+		// 	message := logic.ResponseMsg{Status: "OK", Results: lobby.LobbyMap[c.Room].Results}
+		// 	c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+		// }
 	}
 }
