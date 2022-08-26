@@ -33,7 +33,7 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Sent lobby list")
 		//fmt.Println(runtime.NumGoroutine())
 	case http.MethodPost:
-		var newLobby lobby.Lobby
+		var newLobby logic.Lobby
 		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			fmt.Println(err)

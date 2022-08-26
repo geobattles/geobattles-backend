@@ -8,30 +8,15 @@ import (
 	"math"
 )
 
-type Lobby struct {
-	Name            string                             `json:"name"`
-	Admin           string                             `json:"admin"`
-	MaxPlayers      int                                `json:"maxPlayers"`
-	NumPlayers      int                                `json:"numPlayers"`
-	PlayerList      map[string]string                  `json:"playerList"`
-	NumAttempt      int                                `json:"numAttempt"`
-	RoundTime       int                                `json:"roundTime"`
-	CurrentLocation logic.Coordinates                  `json:"-"`
-	ScoreFactor     int                                `json:"scoreFactor"`
-	CurrentRound    int                                `json:"currentRound"`
-	Results         map[int]map[string][]logic.Results `json:"results"`
-	Timer           bool
-}
-
 // initial lobby list for debugging
-var LobbyMap = map[string]*Lobby{
+var LobbyMap = map[string]*logic.Lobby{
 	"U4YPR6": {Name: "prvi lobby", MaxPlayers: 8, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 100, NumAttempt: 3, RoundTime: 60, Results: make(map[int]map[string][]logic.Results)},
 	"8CKXRG": {Name: "LOBBY #2", MaxPlayers: 6, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 60, NumAttempt: 2, RoundTime: 40, Results: make(map[int]map[string][]logic.Results)},
 }
 
 // validates values and creates new lobby
-func CreateLobby(name string, maxPlayers int, numAttempt int, scoreFactor int, roundTime int) *Lobby {
-	var newLobby Lobby
+func CreateLobby(name string, maxPlayers int, numAttempt int, scoreFactor int, roundTime int) *logic.Lobby {
+	var newLobby logic.Lobby
 	newLobby.PlayerList = make(map[string]string)
 	newLobby.Results = make(map[int]map[string][]logic.Results)
 	lobbyID := logic.GenerateRndID(6)
@@ -109,10 +94,10 @@ func UpdateCurrentLocation(lobbyID string, location logic.Coordinates) {
 }
 
 // calculates distance/score between correct and user submited coordinates
-func CalculateDistance(lobbyID string, userLocation logic.Coordinates) float64 {
-	fmt.Println("req calculate distance")
-	return logic.CalcDistance(LobbyMap[lobbyID].CurrentLocation, userLocation)
-}
+// func calculateDistance(lobbyID string, userLocation logic.Coordinates) float64 {
+// 	fmt.Println("req calculate distance")
+// 	return logic.CalcDistance(LobbyMap[lobbyID].CurrentLocation, userLocation)
+// }
 
 // calculate score based on distance and scorefactor
 // scorefactor determines how fast score drops off
@@ -128,22 +113,28 @@ func scoreDistance(x float64, a float64) int {
 	return score
 }
 
+func SubmitResult(lobbyID string, clientID string, location logic.Coordinates) (float64, int, error) {
+	distance := logic.CalcDistance(LobbyMap[lobbyID].CurrentLocation, location)
+	score, error := addToResults(lobbyID, clientID, location, distance)
+	return distance, score, error
+}
+
 // adds result to map of all results in lobby
-func AddToResults(lobbyID string, clientID string, location logic.Coordinates, distance float64) error {
+func addToResults(lobbyID string, clientID string, location logic.Coordinates, distance float64) (int, error) {
 	// if user currently doesnt have a result in this round create new map
 	if LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] == nil {
 		LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] = make(map[string][]logic.Results)
 	}
 	// if all attempts have been used up throw error
 	if len(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID]) >= LobbyMap[lobbyID].NumAttempt {
-		return errors.New("NO_MORE_ATTEMPTS")
+		return -1, errors.New("NO_MORE_ATTEMPTS")
 	}
 	// if time has expired throw an error
 	if !LobbyMap[lobbyID].Timer {
-		return errors.New("TIMES_UP")
+		return -1, errors.New("TIMES_UP")
 	}
 	score := scoreDistance(distance, float64(LobbyMap[lobbyID].ScoreFactor))
 	// TODO: split this monstrosity, maybe use variables
 	LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Location: location, Distance: distance, Score: score})
-	return nil
+	return score, nil
 }
