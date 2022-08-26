@@ -69,9 +69,8 @@ func RndLocation() Coordinates {
 		}
 		loc, status = CheckStreetViewExists(pt, polygon.Radius)
 		fmt.Println("api check: ", loc, status)
-		return loc
 	}
-	return Coordinates{}
+	return loc
 
 }
 
