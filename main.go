@@ -100,5 +100,6 @@ func main() {
 	}
 	router := mux.NewRouter()
 	setupRoutes(router)
+	logic.InitCountryDB()
 	http.ListenAndServe("0.0.0.0:8080", router)
 }
