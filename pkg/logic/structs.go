@@ -49,6 +49,7 @@ type ResponseMsg struct {
 
 type Lobby struct {
 	Name            string                       `json:"name"`
+	Id              string                       `json:"ID"`
 	Admin           string                       `json:"admin"`
 	MaxPlayers      int                          `json:"maxPlayers"`
 	NumPlayers      int                          `json:"numPlayers"`

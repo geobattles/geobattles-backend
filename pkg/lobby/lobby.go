@@ -20,6 +20,7 @@ func CreateLobby(name string, maxPlayers int, numAttempt int, scoreFactor int, r
 	newLobby.PlayerList = make(map[string]string)
 	newLobby.Results = make(map[int]map[string][]logic.Results)
 	lobbyID := logic.GenerateRndID(6)
+	newLobby.Id = lobbyID
 	// validate values and set defaults otherwise
 	if name == "" {
 		newLobby.Name = lobbyID
