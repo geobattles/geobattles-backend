@@ -24,6 +24,7 @@ type MetadataResponse struct {
 type ClientReq struct {
 	Command  string      `json:"command"`
 	Location Coordinates `json:"location"`
+	Lobby    *Lobby      `json:"lobby,omitempty"`
 }
 
 // either Conn or Room must be provided
@@ -49,7 +50,7 @@ type ResponseMsg struct {
 
 type Lobby struct {
 	Name            string                       `json:"name"`
-	Id              string                       `json:"ID"`
+	ID              string                       `json:"ID"`
 	Admin           string                       `json:"admin"`
 	MaxPlayers      int                          `json:"maxPlayers"`
 	NumPlayers      int                          `json:"numPlayers"`

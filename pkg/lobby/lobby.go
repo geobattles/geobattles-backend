@@ -20,7 +20,7 @@ func CreateLobby(name string, maxPlayers int, numAttempt int, scoreFactor int, r
 	newLobby.PlayerList = make(map[string]string)
 	newLobby.Results = make(map[int]map[string][]logic.Results)
 	lobbyID := logic.GenerateRndID(6)
-	newLobby.Id = lobbyID
+	newLobby.ID = lobbyID
 	// validate values and set defaults otherwise
 	if name == "" {
 		newLobby.Name = lobbyID
@@ -54,6 +54,30 @@ func CreateLobby(name string, maxPlayers int, numAttempt int, scoreFactor int, r
 
 	LobbyMap[lobbyID] = &newLobby
 	return LobbyMap[lobbyID]
+}
+
+// update existing lobby settings
+func UpdateLobby(clientID string, ID string, lobby *logic.Lobby) (*logic.Lobby, error) {
+	if clientID != LobbyMap[ID].Admin {
+		return nil, errors.New("NOT_ADMIN")
+	}
+
+	if lobby.Name != "" {
+		LobbyMap[ID].Name = lobby.Name
+	}
+	if lobby.MaxPlayers > 0 {
+		LobbyMap[ID].MaxPlayers = lobby.MaxPlayers
+	}
+	if lobby.NumAttempt > 0 {
+		LobbyMap[ID].NumAttempt = lobby.NumAttempt
+	}
+	if lobby.ScoreFactor > defaults.ScoreFactorLow && lobby.ScoreFactor < defaults.ScoreFactorHigh {
+		LobbyMap[ID].ScoreFactor = lobby.ScoreFactor
+	}
+	if lobby.RoundTime > 0 {
+		LobbyMap[ID].RoundTime = lobby.RoundTime
+	}
+	return LobbyMap[ID], nil
 }
 
 // adds player as map[id]name to playerlist in lobby

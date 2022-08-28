@@ -30,11 +30,19 @@ func (c *Client) Read() {
 
 		if err != nil {
 			fmt.Println("error reading client json: ", err)
+			c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "ERR", Type: err.Error()}}
 			return
 		}
 		fmt.Println("Client msg: ", clientReq)
 
 		switch clientReq.Command {
+		case "update_lobby_settings":
+			lobby, err := lobby.UpdateLobby(c.ID, c.Room, clientReq.Lobby)
+			if err != nil {
+				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "ERR", Type: err.Error()}}
+			} else {
+				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "OK", Type: "UPDATED_LOBBY", Lobby: lobby}}
+			}
 		case "start":
 			// if user is lobby admin send coordinates, otherwise return error
 			if c.ID == lobby.LobbyMap[c.Room].Admin {
