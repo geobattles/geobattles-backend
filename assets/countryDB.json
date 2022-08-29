@@ -14,6 +14,16 @@
             "name": "American Samoa",
             "ccode": "AS",
             "size": 254
+        },
+        "AD":{
+            "name": "Andorra",
+            "ccode": "AD",
+            "size": 384
+        },
+        "AR":{
+            "name": "Argentina",
+            "ccode": "AR",
+            "size": 2549684
         }
     }
 }
