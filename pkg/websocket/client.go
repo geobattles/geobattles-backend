@@ -76,22 +76,5 @@ func (c *Client) Read() {
 
 			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 		}
-		// if clientReq.Command == "start" {
-		// 	if c.ID == lobby.LobbyMap[c.Room].Admin {
-		// 		fmt.Println("USER IS ADMIN")
-		// 	}
-		// 	var location logic.Coordinates = logic.GenerateRndLocation()
-		// 	lobby.MarkGameActive(c.Room)
-		// 	lobby.UpdateCurrentLocation(c.Room, location)
-		// 	message := logic.ResponseMsg{Status: "OK", Location: location}
-		// 	c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
-		// }
-		// if clientReq.Command == "submit_location" {
-		// 	var distance = lobby.CalculateDistance(c.Room, clientReq.Location)
-		// 	lobby.AddToResults(c.Room, c.ID, distance)
-
-		// 	message := logic.ResponseMsg{Status: "OK", Results: lobby.LobbyMap[c.Room].Results}
-		// 	c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
-		// }
 	}
 }

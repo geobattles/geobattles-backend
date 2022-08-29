@@ -10,46 +10,52 @@ import (
 
 // initial lobby list for debugging
 var LobbyMap = map[string]*logic.Lobby{
-	"U4YPR6": {Name: "prvi lobby", MaxPlayers: 8, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 100, NumAttempt: 3, RoundTime: 60, Results: make(map[int]map[string][]logic.Results)},
-	"8CKXRG": {Name: "LOBBY #2", MaxPlayers: 6, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 60, NumAttempt: 2, RoundTime: 40, Results: make(map[int]map[string][]logic.Results)},
+	"U4YPR6": {ID: "U4YPR6", Name: "prvi lobby", MaxPlayers: 8, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 60, Results: make(map[int]map[string][]logic.Results)},
+	"8CKXRG": {ID: "8CKXRG", Name: "LOBBY #2", MaxPlayers: 6, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 60, NumAttempt: 2, NumRounds: 4, RoundTime: 40, Results: make(map[int]map[string][]logic.Results)},
 }
 
 // validates values and creates new lobby
-func CreateLobby(name string, maxPlayers int, numAttempt int, scoreFactor int, roundTime int) *logic.Lobby {
+func CreateLobby(lobby *logic.Lobby) *logic.Lobby {
 	var newLobby logic.Lobby
 	newLobby.PlayerList = make(map[string]string)
 	newLobby.Results = make(map[int]map[string][]logic.Results)
 	lobbyID := logic.GenerateRndID(6)
 	newLobby.ID = lobbyID
 	// validate values and set defaults otherwise
-	if name == "" {
+	if lobby.Name == "" {
 		newLobby.Name = lobbyID
 	} else {
-		newLobby.Name = name
+		newLobby.Name = lobby.Name
 	}
 
-	if maxPlayers <= 0 {
+	if lobby.MaxPlayers <= 0 {
 		newLobby.MaxPlayers = defaults.MaxPlayers
 	} else {
-		newLobby.MaxPlayers = maxPlayers
+		newLobby.MaxPlayers = lobby.MaxPlayers
 	}
 
-	if numAttempt <= 0 {
+	if lobby.NumAttempt <= 0 {
 		newLobby.NumAttempt = defaults.NumOfTries
 	} else {
-		newLobby.NumAttempt = numAttempt
+		newLobby.NumAttempt = lobby.NumAttempt
 	}
 
-	if scoreFactor == 0 || scoreFactor < defaults.ScoreFactorLow || scoreFactor > defaults.ScoreFactorHigh {
+	if lobby.NumRounds <= 0 {
+		newLobby.NumRounds = defaults.NumOfRounds
+	} else {
+		newLobby.NumRounds = lobby.NumRounds
+	}
+
+	if lobby.ScoreFactor == 0 || lobby.ScoreFactor < defaults.ScoreFactorLow || lobby.ScoreFactor > defaults.ScoreFactorHigh {
 		newLobby.ScoreFactor = defaults.ScoreFactor
 	} else {
-		newLobby.ScoreFactor = scoreFactor
+		newLobby.ScoreFactor = lobby.ScoreFactor
 	}
 
-	if roundTime <= 0 {
+	if lobby.RoundTime <= 0 {
 		newLobby.RoundTime = defaults.RoundTime
 	} else {
-		newLobby.RoundTime = roundTime
+		newLobby.RoundTime = lobby.RoundTime
 	}
 
 	LobbyMap[lobbyID] = &newLobby
@@ -70,6 +76,9 @@ func UpdateLobby(clientID string, ID string, lobby *logic.Lobby) (*logic.Lobby, 
 	}
 	if lobby.NumAttempt > 0 {
 		LobbyMap[ID].NumAttempt = lobby.NumAttempt
+	}
+	if lobby.NumRounds > 0 {
+		LobbyMap[ID].NumRounds = lobby.NumRounds
 	}
 	if lobby.ScoreFactor > defaults.ScoreFactorLow && lobby.ScoreFactor < defaults.ScoreFactorHigh {
 		LobbyMap[ID].ScoreFactor = lobby.ScoreFactor
