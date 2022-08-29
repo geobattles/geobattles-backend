@@ -29,6 +29,31 @@
             "name": "Australia",
             "ccode": "AU",
             "size": 5556274
+        },
+        "AT":{
+            "name": "Austria",
+            "ccode": "AT",
+            "size": 80909
+        },
+        "BD":{
+            "name": "Bangladesh",
+            "ccode": "BD",
+            "size": 116776
+        },
+        "BY":{
+            "name": "Belarus",
+            "ccode": "BY",
+            "size": 1000
+        },
+        "BE":{
+            "name": "Belgium",
+            "ccode": "BE",
+            "size": 29064
+        },
+        "BM":{
+            "name": "Bermuda",
+            "ccode": "BM",
+            "size": 78
         }
     }
 }
