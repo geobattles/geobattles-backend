@@ -24,6 +24,11 @@
             "name": "Argentina",
             "ccode": "AR",
             "size": 2549684
+        },
+        "AU":{
+            "name": "Australia",
+            "ccode": "AU",
+            "size": 5556274
         }
     }
 }
