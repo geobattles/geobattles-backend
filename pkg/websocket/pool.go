@@ -4,6 +4,7 @@ import (
 	"example/web-service-gin/pkg/lobby"
 	"example/web-service-gin/pkg/logic"
 	"fmt"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -13,6 +14,7 @@ type Pool struct {
 	Unregister chan *Client
 	Rooms      map[string]map[*websocket.Conn]bool
 	Transmit   chan logic.Message
+	Timer      *time.Timer
 }
 
 func NewPool() *Pool {
@@ -21,6 +23,7 @@ func NewPool() *Pool {
 		Unregister: make(chan *Client),
 		Rooms:      make(map[string]map[*websocket.Conn]bool),
 		Transmit:   make(chan logic.Message),
+		Timer:      &time.Timer{},
 	}
 }
 
@@ -59,6 +62,7 @@ func (pool *Pool) Start() {
 			// delete connection room if empty
 			if len(pool.Rooms[client.Room]) == 0 {
 				fmt.Println("deleting connection room")
+				pool.Timer.Stop()
 				delete(pool.Rooms, client.Room)
 			}
 			lobby.RemovePlayerFromLobby(client.ID, client.Room)

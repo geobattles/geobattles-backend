@@ -58,15 +58,13 @@ func (c *Client) Read() {
 			fmt.Println("USER IS ADMIN")
 			var location logic.Coordinates = logic.RndLocation()
 			lobby.UpdateCurrentLocation(c.Room, location)
-
-			time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime), func() {
-				if lobby.LobbyMap[c.Room].Timer == false {
-					return
-				}
-				lobby.LobbyMap[c.Room].Timer = false
+			fmt.Println("start timer")
+			c.Pool.Timer = time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime), func() {
 				fmt.Println("times up")
+				lobby.LobbyMap[c.Room].Timer = false
+
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "WRN", Type: "TIMES_UP"}}
-				message := logic.ResponseMsg{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].Results[len(lobby.LobbyMap[c.Room].Results)]}
+				message := logic.ResponseMsg{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound]}
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 			})
 			message := logic.ResponseMsg{Status: "OK", Type: "START_ROUND", Location: &location}
@@ -82,15 +80,16 @@ func (c *Client) Read() {
 				break
 			}
 			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "OK", Type: "NEW_RESULT", User: c.ID, Distance: dist, Score: score, Location: clientReq.Location}}
-			// TODO: only send results of current round, only at the end of round
+
 			// message := logic.ResponseMsg{Status: "OK", Type: "ALL_RESULTS", Results: lobby.LobbyMap[c.Room].Results}
 			// c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 			// if round is finished notify lobby
-			fmt.Println("pred round finished check")
 			if err != nil && err.Error() == "ROUND_FINISHED" {
 				lobby.LobbyMap[c.Room].Timer = false
+				fmt.Println("STOP TIMER")
+				c.Pool.Timer.Stop()
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "WRN", Type: err.Error()}}
-				message := logic.ResponseMsg{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].Results[len(lobby.LobbyMap[c.Room].Results)]}
+				message := logic.ResponseMsg{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound]}
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 			}
 		}

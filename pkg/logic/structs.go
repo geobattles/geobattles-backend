@@ -59,20 +59,14 @@ type LobbyConf struct {
 }
 
 type Lobby struct {
-	//Name  string `json:"name"`
-	ID    string `json:"ID"`
-	Admin string `json:"admin"`
-	//MaxPlayers      int                          `json:"maxPlayers"`
-	Conf       *LobbyConf        `json:"conf"`
-	NumPlayers int               `json:"numPlayers"`
-	PlayerList map[string]string `json:"playerList"`
-	//NumAttempt      int                          `json:"numAttempt"`
-	//NumRounds       int                          `json:"numRounds"`
-	//RoundTime       int                          `json:"roundTime"`
-	CurrentLocation *Coordinates `json:"-"`
-	//ScoreFactor     int                          `json:"scoreFactor"`
-	CurrentRound  int                          `json:"currentRound"`
-	Results       map[int]map[string][]Results `json:"results"`
-	Timer         bool                         `json:"-"`
-	UsersFinished int                          `json:"-"`
+	ID              string                       `json:"ID"`
+	Admin           string                       `json:"admin"`
+	Conf            *LobbyConf                   `json:"conf"`
+	NumPlayers      int                          `json:"numPlayers"`
+	PlayerList      map[string]string            `json:"playerList"`
+	CurrentLocation *Coordinates                 `json:"-"`
+	CurrentRound    int                          `json:"currentRound"`
+	Results         map[int]map[string][]Results `json:"results"`
+	Timer           bool                         `json:"-"`
+	UsersFinished   int                          `json:"-"`
 }
