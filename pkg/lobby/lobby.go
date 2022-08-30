@@ -97,6 +97,7 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string) {
 		LobbyMap[lobbyID].Admin = clientID
 	}
 	LobbyMap[lobbyID].PlayerList[clientID] = clientName
+	LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerList)
 }
 
 // removes player map from playerlist in lobby
@@ -104,14 +105,16 @@ func RemovePlayerFromLobby(clientID string, lobbyID string) {
 	delete(LobbyMap[lobbyID].PlayerList, clientID)
 	// if removed player was admin & there are other players left
 	// select one of them as new admin, otherwise make admin empty
+	// if there are no players left delete lobby
 	if LobbyMap[lobbyID].Admin == clientID && len(LobbyMap[lobbyID].PlayerList) != 0 {
 		for id := range LobbyMap[lobbyID].PlayerList {
 			LobbyMap[lobbyID].Admin = id
 			break
 		}
-	} else {
+
+	} else if len(LobbyMap[lobbyID].PlayerList) == 0 {
+		fmt.Println("deleting lobby")
 		delete(LobbyMap, lobbyID)
-		//LobbyMap[lobbyID].Admin = ""
 	}
 }
 

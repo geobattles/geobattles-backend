@@ -56,6 +56,11 @@ func (pool *Pool) Start() {
 		case client := <-pool.Unregister:
 			fmt.Println("UNREGISTERING")
 			delete(pool.Rooms[client.Room], client.Conn)
+			// delete connection room if empty
+			if len(pool.Rooms[client.Room]) == 0 {
+				fmt.Println("deleting connection room")
+				delete(pool.Rooms, client.Room)
+			}
 			lobby.RemovePlayerFromLobby(client.ID, client.Room)
 			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 			// client.Pool.Transmit <- logic.Message{Room: client.Room, Data: logic.ResponseMsg{Status: "OK", Type: "LEFT_LOBBY", Lobby: lobby.LobbyMap[client.Room]}}
