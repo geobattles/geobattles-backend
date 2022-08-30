@@ -45,6 +45,7 @@ type ResponseMsg struct {
 	Distance float64                      `json:"distance,omitempty"`
 	Score    int                          `json:"score,omitempty"`
 	Results  map[int]map[string][]Results `json:"results,omitempty"`
+	RoundRes map[string][]Results         `json:"roundRes,omitempty"`
 	Lobby    *Lobby                       `json:"lobby,omitempty"`
 }
 

@@ -46,22 +46,31 @@ func (c *Client) Read() {
 			}
 		case "start":
 			// if user is lobby admin send coordinates, otherwise return error
-			if c.ID == lobby.LobbyMap[c.Room].Admin {
-				fmt.Println("USER IS ADMIN")
-				var location logic.Coordinates = logic.RndLocation()
-				//lobby.MarkGameActive(c.Room)
-				lobby.UpdateCurrentLocation(c.Room, location)
-
-				time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime), func() {
-					lobby.LobbyMap[c.Room].Timer = false
-					fmt.Println("times up")
-					c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "WRN", Type: "TIMES_UP"}}
-				})
-				message := logic.ResponseMsg{Status: "OK", Type: "START_ROUND", Location: &location}
-				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
-			} else {
+			if c.ID != lobby.LobbyMap[c.Room].Admin {
 				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "ERR", Type: "NOT_ADMIN"}}
+				break
 			}
+			if lobby.LobbyMap[c.Room].Timer == true {
+				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "ERR", Type: "ALREADY_ACTIVE"}}
+				break
+			}
+
+			fmt.Println("USER IS ADMIN")
+			var location logic.Coordinates = logic.RndLocation()
+			lobby.UpdateCurrentLocation(c.Room, location)
+
+			time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime), func() {
+				if lobby.LobbyMap[c.Room].Timer == false {
+					return
+				}
+				lobby.LobbyMap[c.Room].Timer = false
+				fmt.Println("times up")
+				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "WRN", Type: "TIMES_UP"}}
+				message := logic.ResponseMsg{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].Results[len(lobby.LobbyMap[c.Room].Results)]}
+				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+			})
+			message := logic.ResponseMsg{Status: "OK", Type: "START_ROUND", Location: &location}
+			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 
 		case "submit_location":
 			fmt.Println(*clientReq.Location)
@@ -74,12 +83,15 @@ func (c *Client) Read() {
 			}
 			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "OK", Type: "NEW_RESULT", User: c.ID, Distance: dist, Score: score, Location: clientReq.Location}}
 			// TODO: only send results of current round, only at the end of round
-			message := logic.ResponseMsg{Status: "OK", Type: "ALL_RESULTS", Results: lobby.LobbyMap[c.Room].Results}
-			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+			// message := logic.ResponseMsg{Status: "OK", Type: "ALL_RESULTS", Results: lobby.LobbyMap[c.Room].Results}
+			// c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 			// if round is finished notify lobby
 			fmt.Println("pred round finished check")
 			if err != nil && err.Error() == "ROUND_FINISHED" {
+				lobby.LobbyMap[c.Room].Timer = false
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "WRN", Type: err.Error()}}
+				message := logic.ResponseMsg{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].Results[len(lobby.LobbyMap[c.Room].Results)]}
+				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 			}
 		}
 	}
