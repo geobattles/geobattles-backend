@@ -22,9 +22,9 @@ type MetadataResponse struct {
 }
 
 type ClientReq struct {
-	Command  string      `json:"command"`
-	Location Coordinates `json:"location"`
-	Lobby    *Lobby      `json:"lobby,omitempty"`
+	Command  string       `json:"command"`
+	Location *Coordinates `json:"location"`
+	Conf     *LobbyConf   `json:"conf,omitempty"`
 }
 
 // either Conn or Room must be provided
@@ -48,19 +48,30 @@ type ResponseMsg struct {
 	Lobby    *Lobby                       `json:"lobby,omitempty"`
 }
 
+type LobbyConf struct {
+	Name        string `json:"name"`
+	MaxPlayers  int    `json:"maxPlayers"`
+	NumAttempt  int    `json:"numAttempt"`
+	NumRounds   int    `json:"numRounds"`
+	RoundTime   int    `json:"roundTime"`
+	ScoreFactor int    `json:"scoreFactor"`
+}
+
 type Lobby struct {
-	Name            string                       `json:"name"`
-	ID              string                       `json:"ID"`
-	Admin           string                       `json:"admin"`
-	MaxPlayers      int                          `json:"maxPlayers"`
-	NumPlayers      int                          `json:"numPlayers"`
-	PlayerList      map[string]string            `json:"playerList"`
-	NumAttempt      int                          `json:"numAttempt"`
-	NumRounds       int                          `json:"numRounds"`
-	RoundTime       int                          `json:"roundTime"`
-	CurrentLocation Coordinates                  `json:"-"`
-	ScoreFactor     int                          `json:"scoreFactor"`
-	CurrentRound    int                          `json:"currentRound"`
-	Results         map[int]map[string][]Results `json:"results"`
-	Timer           bool                         `json:"-"`
+	//Name  string `json:"name"`
+	ID    string `json:"ID"`
+	Admin string `json:"admin"`
+	//MaxPlayers      int                          `json:"maxPlayers"`
+	Conf       *LobbyConf        `json:"conf"`
+	NumPlayers int               `json:"numPlayers"`
+	PlayerList map[string]string `json:"playerList"`
+	//NumAttempt      int                          `json:"numAttempt"`
+	//NumRounds       int                          `json:"numRounds"`
+	//RoundTime       int                          `json:"roundTime"`
+	CurrentLocation *Coordinates `json:"-"`
+	//ScoreFactor     int                          `json:"scoreFactor"`
+	CurrentRound  int                          `json:"currentRound"`
+	Results       map[int]map[string][]Results `json:"results"`
+	Timer         bool                         `json:"-"`
+	UsersFinished int                          `json:"-"`
 }

@@ -32,18 +32,17 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Sent lobby list")
 		//fmt.Println(runtime.NumGoroutine())
 	case http.MethodPost:
-		var newLobby *logic.Lobby
+		var lobbyConf *logic.LobbyConf
 		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		if err = json.Unmarshal(reqBody, &newLobby); err != nil {
+		if err = json.Unmarshal(reqBody, &lobbyConf); err != nil {
 			fmt.Println(err)
 			return
 		}
-
-		json.NewEncoder(w).Encode(lobby.CreateLobby(newLobby))
+		json.NewEncoder(w).Encode(lobby.CreateLobby(lobbyConf))
 	// TODO: only allow admin? to delete lobby
 	case http.MethodDelete:
 		delete(lobby.LobbyMap, id)
