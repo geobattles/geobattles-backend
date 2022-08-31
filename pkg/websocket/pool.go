@@ -62,7 +62,10 @@ func (pool *Pool) Start() {
 			// delete connection room if empty
 			if len(pool.Rooms[client.Room]) == 0 {
 				fmt.Println("deleting connection room")
-				pool.Timer.Stop()
+				if pool.Timer != nil {
+					fmt.Println("stopping timer")
+					pool.Timer.Stop()
+				}
 				delete(pool.Rooms, client.Room)
 			}
 			lobby.RemovePlayerFromLobby(client.ID, client.Room)
