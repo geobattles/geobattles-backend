@@ -61,14 +61,25 @@ func RndLocation() Coordinates {
 	var status string
 	var loc Coordinates
 	var pt Point
+
 	//fmt.Println("_START NEW LOCATION_")
-	for apiOK := true; apiOK; apiOK = (status == "ZERO_RESULTS") {
+
+	for apiOK, failCount := true, 0; apiOK; apiOK = (status == "ZERO_RESULTS") {
+		// failsafe, if location repeatedly fails select different one
+		if failCount >= 4 {
+			fmt.Println("FAILSAFE ACTIVATED!")
+			failCount = 0
+			polygon = SelectRndArea()
+			bbox = polygon.Rings[0].Bound()
+		}
+
 		for polyOK := true; polyOK; polyOK = !polygonContains(polygon.Rings, pt) {
 			pt = RndPointWithinBox(bbox)
 			fmt.Println("polygon contains: ", pt, polygonContains(polygon.Rings, pt))
 		}
 		loc, status = CheckStreetViewExists(pt, polygon.Radius)
 		fmt.Println("api check: ", loc, status)
+		failCount++
 	}
 	return loc
 
@@ -77,13 +88,14 @@ func RndLocation() Coordinates {
 // returns random area name within random country
 func SelectRndArea() Polygon {
 	ccode := SelectRandomCountry()
+	fmt.Println("Selected country: ", ccode)
 	// for _, polygon := range countryDB.Countries[ccode].Areas.SearchArea {
 	// 	fmt.Println(polygon)
 	// }
 	rnd := rand.Intn(countryDB.Countries[ccode].Areas.InnerSize)
-	for _, polygon := range countryDB.Countries[ccode].Areas.SearchArea {
+	for area, polygon := range countryDB.Countries[ccode].Areas.SearchArea {
 		if rnd <= polygon.Size {
-
+			fmt.Println("Izbran polygon: ", area)
 			return *polygon
 		}
 		rnd -= polygon.Size
