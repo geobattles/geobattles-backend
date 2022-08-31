@@ -122,6 +122,7 @@ func RemovePlayerFromLobby(clientID string, lobbyID string) {
 // increments round counter every call
 func UpdateCurrentLocation(lobbyID string, location logic.Coordinates) {
 	fmt.Println("updating lobby loaction: ", lobbyID, location)
+	LobbyMap[lobbyID].UsersFinished = 0
 	LobbyMap[lobbyID].CurrentLocation = &location
 	LobbyMap[lobbyID].CurrentRound++
 	LobbyMap[lobbyID].Timer = true
