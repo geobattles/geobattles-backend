@@ -61,6 +61,10 @@ func (c *Client) Read() {
 			fmt.Println("start timer")
 			c.Pool.Timer = time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime), func() {
 				fmt.Println("times up")
+				if lobby.LobbyMap[c.Room] == nil {
+					fmt.Println("LOBBY ne obstaja vec")
+					return
+				}
 				lobby.LobbyMap[c.Room].Timer = false
 
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "WRN", Type: "TIMES_UP"}}

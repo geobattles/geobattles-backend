@@ -63,8 +63,10 @@ func (pool *Pool) Start() {
 			if len(pool.Rooms[client.Room]) == 0 {
 				fmt.Println("deleting connection room")
 				if pool.Timer != nil {
-					fmt.Println("stopping timer")
-					pool.Timer.Stop()
+					fmt.Println("TIMER NI NIL")
+					//pool.Timer.Stop()
+				} else {
+					fmt.Println("TIMER JE NIL")
 				}
 				delete(pool.Rooms, client.Room)
 			}
