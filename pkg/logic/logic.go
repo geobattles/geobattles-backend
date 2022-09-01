@@ -13,13 +13,13 @@ import (
 )
 
 // calculates distance between 2 Coordinates using haversine formula
-func CalcDistance(loc_1 Coordinates, loc_2 Coordinates) float64 {
+func CalcDistance(loc_1 Coords, loc_2 Coords) float64 {
 	//fmt.Println("_REAL_LOC, USER LOC: ", loc_1, loc_2)
 	const R = 6371e3
-	var fi_1 float64 = loc_1.Latitude * math.Pi / 180
-	var fi_2 float64 = loc_2.Latitude * math.Pi / 180
-	var delta_fi float64 = (loc_2.Latitude - loc_1.Latitude) * math.Pi / 180
-	var delta_lambda float64 = (loc_2.Longitude - loc_1.Longitude) * math.Pi / 180
+	var fi_1 float64 = loc_1.Lat * math.Pi / 180
+	var fi_2 float64 = loc_2.Lat * math.Pi / 180
+	var delta_fi float64 = (loc_2.Lat - loc_1.Lat) * math.Pi / 180
+	var delta_lambda float64 = (loc_2.Lng - loc_1.Lng) * math.Pi / 180
 
 	var a float64 = math.Pow(math.Sin(delta_fi/2), 2) + math.Cos(fi_1)*math.Cos(fi_2)*math.Pow(math.Sin(delta_lambda/2), 2)
 	var c = 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
@@ -49,7 +49,7 @@ func RndPointWithinBox(b Bound) Point {
 }
 
 // checks if pano exists near requested location, returns exact location and status code
-func CheckStreetViewExists(loc Point, radius int) (Coordinates, string) {
+func CheckStreetViewExists(loc Point, radius int) (Coords, string) {
 	res, err := http.Get(fmt.Sprintf("https://maps.googleapis.com/maps/api/streetview/metadata?location=%f,%f&key=%s&radius=%d&source=outdoor", loc[1], loc[0], os.Getenv("GMAPS_API"), radius))
 	if err != nil {
 		fmt.Println(err)
@@ -60,9 +60,9 @@ func CheckStreetViewExists(loc Point, radius int) (Coordinates, string) {
 		fmt.Println(err)
 	}
 
-	var response MetadataResponse
+	var response ApiMetaResponse
 	json.Unmarshal(body, &response)
-	return response.Location, response.Status
+	return response.Loc, response.Status
 }
 
 // checks if pano exists near requested location, returns exact location and status code

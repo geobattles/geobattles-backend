@@ -54,12 +54,12 @@ func InitCountryDB() {
 }
 
 // returns valid random street view coordinates
-func RndLocation() Coordinates {
+func RndLocation() Coords {
 	//fmt.Println(SelectRndArea())
 	polygon := SelectRndArea()
 	bbox := polygon.Rings[0].Bound()
 	var status string
-	var loc Coordinates
+	var loc Coords
 	var pt Point
 
 	//fmt.Println("_START NEW LOCATION_")
