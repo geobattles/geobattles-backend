@@ -26,26 +26,23 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	id := r.URL.Query().Get("id")
-	fmt.Println(id)
 	switch r.Method {
 	case http.MethodGet:
 		json.NewEncoder(w).Encode(lobby.LobbyMap)
 		fmt.Println("Sent lobby list")
 		//fmt.Println(runtime.NumGoroutine())
 	case http.MethodPost:
-		var newLobby lobby.Lobby
+		var lobbyConf *logic.LobbyConf
 		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		fmt.Println(reqBody)
-		if err = json.Unmarshal(reqBody, &newLobby); err != nil {
+		if err = json.Unmarshal(reqBody, &lobbyConf); err != nil {
 			fmt.Println(err)
 			return
 		}
-
-		json.NewEncoder(w).Encode(lobby.CreateLobby(newLobby.Name, newLobby.MaxPlayers, newLobby.NumAttempt, newLobby.ScoreFactor, newLobby.RoundTime))
+		json.NewEncoder(w).Encode(lobby.CreateLobby(lobbyConf))
 	// TODO: only allow admin? to delete lobby
 	case http.MethodDelete:
 		delete(lobby.LobbyMap, id)
@@ -100,5 +97,6 @@ func main() {
 	}
 	router := mux.NewRouter()
 	setupRoutes(router)
+	logic.InitCountryDB()
 	http.ListenAndServe("0.0.0.0:8080", router)
 }

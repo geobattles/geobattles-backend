@@ -14,6 +14,7 @@ import (
 
 // calculates distance between 2 Coordinates using haversine formula
 func CalcDistance(loc_1 Coordinates, loc_2 Coordinates) float64 {
+	//fmt.Println("_REAL_LOC, USER LOC: ", loc_1, loc_2)
 	const R = 6371e3
 	var fi_1 float64 = loc_1.Latitude * math.Pi / 180
 	var fi_2 float64 = loc_2.Latitude * math.Pi / 180
@@ -26,24 +27,30 @@ func CalcDistance(loc_1 Coordinates, loc_2 Coordinates) float64 {
 }
 
 // generates random coordinates
-func GenerateRndLocation() Coordinates {
-	var status string
-	var location Coordinates
-	// alternative for do while, runs until a valid location is generated
-	// TODO propperly handle all posible API responses
-	for next := true; next; next = (status == "ZERO_RESULTS") {
-		var lat = rand.Float64()*(48-44) + 44
-		var lng = rand.Float64() * 7
-		// fmt.Println("generated coordinates; ", lat, lng)
-		location, status = validateLocation(lat, lng)
-		// fmt.Println("api response: ", status, " pano location: ", location)
-	}
-	return location
+// func GenerateRndLocation() Coordinates {
+// 	var status string
+// 	var location Coordinates
+// 	// alternative for do while, runs until a valid location is generated
+// 	// TODO propperly handle all posible API responses
+// 	for next := true; next; next = (status == "ZERO_RESULTS") {
+// 		var lat = rand.Float64()*(48-44) + 44
+// 		var lng = rand.Float64() * 7
+// 		// fmt.Println("generated coordinates; ", lat, lng)
+// 		location, status = validateLocation(lat, lng)
+// 		// fmt.Println("api response: ", status, " pano location: ", location)
+// 	}
+// 	return location
+// }
+
+func RndPointWithinBox(b Bound) Point {
+	lng := rand.Float64()*(b.Max[0]-b.Min[0]) + b.Min[0]
+	lat := rand.Float64()*(b.Max[1]-b.Min[1]) + b.Min[1]
+	return Point{lng, lat}
 }
 
 // checks if pano exists near requested location, returns exact location and status code
-func validateLocation(lat float64, lng float64) (Coordinates, string) {
-	res, err := http.Get(fmt.Sprintf("https://maps.googleapis.com/maps/api/streetview/metadata?location=%f,%f&key=%s&radius=500", lat, lng, os.Getenv("GMAPS_API")))
+func CheckStreetViewExists(loc Point, radius int) (Coordinates, string) {
+	res, err := http.Get(fmt.Sprintf("https://maps.googleapis.com/maps/api/streetview/metadata?location=%f,%f&key=%s&radius=%d&source=outdoor", loc[1], loc[0], os.Getenv("GMAPS_API"), radius))
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -57,6 +64,23 @@ func validateLocation(lat float64, lng float64) (Coordinates, string) {
 	json.Unmarshal(body, &response)
 	return response.Location, response.Status
 }
+
+// checks if pano exists near requested location, returns exact location and status code
+// func validateLocation(lat float64, lng float64) (Coordinates, string) {
+// 	res, err := http.Get(fmt.Sprintf("https://maps.googleapis.com/maps/api/streetview/metadata?location=%f,%f&key=%s&radius=500", lat, lng, os.Getenv("GMAPS_API")))
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	defer res.Body.Close()
+// 	body, err := io.ReadAll(res.Body)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+
+// 	var response MetadataResponse
+// 	json.Unmarshal(body, &response)
+// 	return response.Location, response.Status
+// }
 
 const letterBytes = "123456789ABCDEFGHJKLMNPRSTUVWXYZ"
 

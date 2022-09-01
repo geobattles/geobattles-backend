@@ -8,66 +8,86 @@ import (
 	"math"
 )
 
-type Lobby struct {
-	Name            string                             `json:"name"`
-	Admin           string                             `json:"admin"`
-	MaxPlayers      int                                `json:"maxPlayers"`
-	NumPlayers      int                                `json:"numPlayers"`
-	PlayerList      map[string]string                  `json:"playerList"`
-	NumAttempt      int                                `json:"numAttempt"`
-	RoundTime       int                                `json:"roundTime"`
-	CurrentLocation logic.Coordinates                  `json:"-"`
-	ScoreFactor     int                                `json:"scoreFactor"`
-	CurrentRound    int                                `json:"currentRound"`
-	Results         map[int]map[string][]logic.Results `json:"results"`
-	Timer           bool
-}
-
 // initial lobby list for debugging
-var LobbyMap = map[string]*Lobby{
-	"U4YPR6": {Name: "prvi lobby", MaxPlayers: 8, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 100, NumAttempt: 3, RoundTime: 60, Results: make(map[int]map[string][]logic.Results)},
-	"8CKXRG": {Name: "LOBBY #2", MaxPlayers: 6, NumPlayers: 0, PlayerList: make(map[string]string), ScoreFactor: 60, NumAttempt: 2, RoundTime: 40, Results: make(map[int]map[string][]logic.Results)},
+var LobbyMap = map[string]*logic.Lobby{
+	"U4YPR6": {ID: "U4YPR6", Conf: &logic.LobbyConf{Name: "prvi lobby", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30}, NumPlayers: 0, PlayerList: make(map[string]string), Results: make(map[int]map[string][]logic.Results)},
+	"8CKXRG": {ID: "8CKXRG", Conf: &logic.LobbyConf{Name: "LOBBY #2", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 60}, NumPlayers: 0, PlayerList: make(map[string]string), Results: make(map[int]map[string][]logic.Results)},
 }
 
 // validates values and creates new lobby
-func CreateLobby(name string, maxPlayers int, numAttempt int, scoreFactor int, roundTime int) *Lobby {
-	var newLobby Lobby
+func CreateLobby(conf *logic.LobbyConf) *logic.Lobby {
+	var newLobby logic.Lobby
+	newLobby.Conf = &logic.LobbyConf{}
 	newLobby.PlayerList = make(map[string]string)
 	newLobby.Results = make(map[int]map[string][]logic.Results)
 	lobbyID := logic.GenerateRndID(6)
+	newLobby.ID = lobbyID
 	// validate values and set defaults otherwise
-	if name == "" {
-		newLobby.Name = lobbyID
+	if conf.Name == "" {
+		newLobby.Conf.Name = lobbyID
 	} else {
-		newLobby.Name = name
+		newLobby.Conf.Name = conf.Name
 	}
 
-	if maxPlayers <= 0 {
-		newLobby.MaxPlayers = defaults.MaxPlayers
+	if conf.MaxPlayers <= 0 {
+		newLobby.Conf.MaxPlayers = defaults.MaxPlayers
 	} else {
-		newLobby.MaxPlayers = maxPlayers
+		newLobby.Conf.MaxPlayers = conf.MaxPlayers
 	}
 
-	if numAttempt <= 0 {
-		newLobby.NumAttempt = defaults.NumOfTries
+	if conf.NumAttempt <= 0 {
+		newLobby.Conf.NumAttempt = defaults.NumOfTries
 	} else {
-		newLobby.NumAttempt = numAttempt
+		newLobby.Conf.NumAttempt = conf.NumAttempt
 	}
 
-	if scoreFactor == 0 || scoreFactor < defaults.ScoreFactorLow || scoreFactor > defaults.ScoreFactorHigh {
-		newLobby.ScoreFactor = defaults.ScoreFactor
+	if conf.NumRounds <= 0 {
+		newLobby.Conf.NumRounds = defaults.NumOfRounds
 	} else {
-		newLobby.ScoreFactor = scoreFactor
+		newLobby.Conf.NumRounds = conf.NumRounds
 	}
 
-	if roundTime <= 0 {
-		newLobby.RoundTime = defaults.RoundTime
+	if conf.ScoreFactor == 0 || conf.ScoreFactor < defaults.ScoreFactorLow || conf.ScoreFactor > defaults.ScoreFactorHigh {
+		newLobby.Conf.ScoreFactor = defaults.ScoreFactor
 	} else {
-		newLobby.RoundTime = roundTime
+		newLobby.Conf.ScoreFactor = conf.ScoreFactor
+	}
+
+	if conf.RoundTime <= 0 {
+		newLobby.Conf.RoundTime = defaults.RoundTime
+	} else {
+		newLobby.Conf.RoundTime = conf.RoundTime
 	}
 
 	LobbyMap[lobbyID] = &newLobby
 	return LobbyMap[lobbyID]
+}
+
+// update existing lobby settings
+func UpdateLobby(clientID string, ID string, conf *logic.LobbyConf) (*logic.Lobby, error) {
+	if clientID != LobbyMap[ID].Admin {
+		return nil, errors.New("NOT_ADMIN")
+	}
+
+	if conf.Name != "" {
+		LobbyMap[ID].Conf.Name = conf.Name
+	}
+	if conf.MaxPlayers > 0 {
+		LobbyMap[ID].Conf.MaxPlayers = conf.MaxPlayers
+	}
+	if conf.NumAttempt > 0 {
+		LobbyMap[ID].Conf.NumAttempt = conf.NumAttempt
+	}
+	if conf.NumRounds > 0 {
+		LobbyMap[ID].Conf.NumRounds = conf.NumRounds
+	}
+	if conf.ScoreFactor > defaults.ScoreFactorLow && conf.ScoreFactor < defaults.ScoreFactorHigh {
+		LobbyMap[ID].Conf.ScoreFactor = conf.ScoreFactor
+	}
+	if conf.RoundTime > 0 {
+		LobbyMap[ID].Conf.RoundTime = conf.RoundTime
+	}
+	return LobbyMap[ID], nil
 }
 
 // adds player as map[id]name to playerlist in lobby
@@ -77,6 +97,7 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string) {
 		LobbyMap[lobbyID].Admin = clientID
 	}
 	LobbyMap[lobbyID].PlayerList[clientID] = clientName
+	LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerList)
 }
 
 // removes player map from playerlist in lobby
@@ -84,13 +105,16 @@ func RemovePlayerFromLobby(clientID string, lobbyID string) {
 	delete(LobbyMap[lobbyID].PlayerList, clientID)
 	// if removed player was admin & there are other players left
 	// select one of them as new admin, otherwise make admin empty
+	// if there are no players left delete lobby
 	if LobbyMap[lobbyID].Admin == clientID && len(LobbyMap[lobbyID].PlayerList) != 0 {
 		for id := range LobbyMap[lobbyID].PlayerList {
 			LobbyMap[lobbyID].Admin = id
 			break
 		}
-	} else {
-		LobbyMap[lobbyID].Admin = ""
+
+	} else if len(LobbyMap[lobbyID].PlayerList) == 0 {
+		fmt.Println("deleting lobby")
+		delete(LobbyMap, lobbyID)
 	}
 }
 
@@ -98,20 +122,10 @@ func RemovePlayerFromLobby(clientID string, lobbyID string) {
 // increments round counter every call
 func UpdateCurrentLocation(lobbyID string, location logic.Coordinates) {
 	fmt.Println("updating lobby loaction: ", lobbyID, location)
-	LobbyMap[lobbyID].CurrentLocation = location
+	LobbyMap[lobbyID].UsersFinished = 0
+	LobbyMap[lobbyID].CurrentLocation = &location
 	LobbyMap[lobbyID].CurrentRound++
 	LobbyMap[lobbyID].Timer = true
-	// time.AfterFunc(time.Second*time.Duration(LobbyMap[lobbyID].RoundTime), func() {
-	// 	LobbyMap[lobbyID].Timer = false
-	// 	fmt.Println("times up")
-	// })
-	//fmt.Println("current round: ", LobbyMap[lobbyID].CurrentRound)
-}
-
-// calculates distance/score between correct and user submited coordinates
-func CalculateDistance(lobbyID string, userLocation logic.Coordinates) float64 {
-	fmt.Println("req calculate distance")
-	return logic.CalcDistance(LobbyMap[lobbyID].CurrentLocation, userLocation)
 }
 
 // calculate score based on distance and scorefactor
@@ -128,22 +142,36 @@ func scoreDistance(x float64, a float64) int {
 	return score
 }
 
+func SubmitResult(lobbyID string, clientID string, location logic.Coordinates) (float64, int, error) {
+	distance := logic.CalcDistance(*LobbyMap[lobbyID].CurrentLocation, location)
+	score, error := addToResults(lobbyID, clientID, location, distance)
+	return distance, score, error
+}
+
 // adds result to map of all results in lobby
-func AddToResults(lobbyID string, clientID string, location logic.Coordinates, distance float64) error {
+func addToResults(lobbyID string, clientID string, location logic.Coordinates, distance float64) (int, error) {
 	// if user currently doesnt have a result in this round create new map
 	if LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] == nil {
 		LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] = make(map[string][]logic.Results)
 	}
 	// if all attempts have been used up throw error
-	if len(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID]) >= LobbyMap[lobbyID].NumAttempt {
-		return errors.New("NO_MORE_ATTEMPTS")
+	if len(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID]) >= LobbyMap[lobbyID].Conf.NumAttempt {
+		return -1, errors.New("NO_MORE_ATTEMPTS")
 	}
 	// if time has expired throw an error
 	if !LobbyMap[lobbyID].Timer {
-		return errors.New("TIMES_UP")
+		return -1, errors.New("TIMES_UP")
 	}
-	score := scoreDistance(distance, float64(LobbyMap[lobbyID].ScoreFactor))
+	score := scoreDistance(distance, float64(LobbyMap[lobbyID].Conf.ScoreFactor))
 	// TODO: split this monstrosity, maybe use variables
 	LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Location: location, Distance: distance, Score: score})
-	return nil
+
+	// if this is last attempt indicate finished and check if everyone has finished
+	if len(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID]) == LobbyMap[lobbyID].Conf.NumAttempt {
+		LobbyMap[lobbyID].UsersFinished++
+		if LobbyMap[lobbyID].UsersFinished >= LobbyMap[lobbyID].NumPlayers {
+			return score, errors.New("ROUND_FINISHED")
+		}
+	}
+	return score, nil
 }

@@ -4,6 +4,7 @@ import (
 	"example/web-service-gin/pkg/lobby"
 	"example/web-service-gin/pkg/logic"
 	"fmt"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -13,6 +14,7 @@ type Pool struct {
 	Unregister chan *Client
 	Rooms      map[string]map[*websocket.Conn]bool
 	Transmit   chan logic.Message
+	Timer      *time.Timer
 }
 
 func NewPool() *Pool {
@@ -21,6 +23,7 @@ func NewPool() *Pool {
 		Unregister: make(chan *Client),
 		Rooms:      make(map[string]map[*websocket.Conn]bool),
 		Transmit:   make(chan logic.Message),
+		Timer:      &time.Timer{},
 	}
 }
 
@@ -45,22 +48,36 @@ func (pool *Pool) Start() {
 			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 
 			// send updated list of players to every member of the lobby
+			// client.Pool.Transmit <- logic.Message{Room: client.Room, Data: logic.ResponseMsg{Status: "OK", Type: "JOINED_LOBBY"}}
+
 			for clientConn := range pool.Rooms[client.Room] {
 				//fmt.Println("sending updated client list", client)
-				clientConn.WriteJSON(lobby.LobbyMap[client.Room])
+				clientConn.WriteJSON(logic.ResponseMsg{Status: "OK", Type: "JOINED_LOBBY", Lobby: lobby.LobbyMap[client.Room]})
 			}
 			break
 
 		case client := <-pool.Unregister:
 			fmt.Println("UNREGISTERING")
 			delete(pool.Rooms[client.Room], client.Conn)
+			// delete connection room if empty
+			if len(pool.Rooms[client.Room]) == 0 {
+				fmt.Println("deleting connection room")
+				if pool.Timer != nil {
+					fmt.Println("TIMER NI NIL")
+					//pool.Timer.Stop()
+				} else {
+					fmt.Println("TIMER JE NIL")
+				}
+				delete(pool.Rooms, client.Room)
+			}
 			lobby.RemovePlayerFromLobby(client.ID, client.Room)
 			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
+			// client.Pool.Transmit <- logic.Message{Room: client.Room, Data: logic.ResponseMsg{Status: "OK", Type: "LEFT_LOBBY", Lobby: lobby.LobbyMap[client.Room]}}
 
 			// send updated list of players to every member of the lobby
 			for clientConn := range pool.Rooms[client.Room] {
 				//fmt.Println("sending updated client list", client)
-				clientConn.WriteJSON(lobby.LobbyMap[client.Room])
+				clientConn.WriteJSON(logic.ResponseMsg{Status: "OK", Type: "LEFT_LOBBY", Lobby: lobby.LobbyMap[client.Room]})
 
 			}
 			break

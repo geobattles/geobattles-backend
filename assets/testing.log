@@ -1,0 +1,76 @@
+# this file is just for keeping track of polygon/result testing
+
+### AX
+POLYGON:       Åland1
+POLY_ATTEMPT:  237 2.37
+
+POLYGON:       Åland1
+POLY_ATTEMPT:  35 3.5
+API_ATTEMPTS:  12 1.2
+API_FAILS:     0 0
+
+### AL
+POLYGON:       Lezhë
+POLY_ATTEMPT:  204 2.04
+POLYGON:       Durrës
+POLY_ATTEMPT:  591 5.91
+POLYGON:       Tirana
+POLY_ATTEMPT:  184 1.84
+POLYGON:       Elbasan
+POLY_ATTEMPT:  188 1.88
+POLYGON:       Vlora
+POLY_ATTEMPT:  175 1.75
+POLYGON:       Albania1
+POLY_ATTEMPT:  162 1.62
+POLYGON:       Shkoder
+POLY_ATTEMPT:  157 1.57
+
+POLYGON:       Shkoder  
+POLY_ATTEMPT:  16 1.6  
+API_ATTEMPTS:  10 1
+API_FAILS:     0 0
+POLYGON:       Lezhë
+POLY_ATTEMPT:  16 1.6
+API_ATTEMPTS:  10 1
+API_FAILS:     0 0
+POLYGON:       Durrës
+POLY_ATTEMPT:  44 4.4
+API_ATTEMPTS:  13 1.3
+API_FAILS:     0 0
+POLYGON:       Tirana
+POLY_ATTEMPT:  26 2.6
+API_ATTEMPTS:  14 1.4
+API_FAILS:     0 0
+POLYGON:       Elbasan
+POLY_ATTEMPT:  24 2.4
+API_ATTEMPTS:  11 1.1
+API_FAILS:     0 0
+POLYGON:       Vlora
+POLY_ATTEMPT:  25 2.5
+API_ATTEMPTS:  12 1.2
+API_FAILS:     0 0
+POLYGON:       Albania1
+POLY_ATTEMPT:  18 1.8
+API_ATTEMPTS:  12 1.2
+API_FAILS:     0 0
+
+### AS
+POLYGON:       AmericanSamoa1
+POLY_ATTEMPT:  314 3.14
+POLYGON:       AmericanSamoa2
+POLY_ATTEMPT:  116 1.16
+POLYGON:       AmericanSamoa3
+POLY_ATTEMPT:  283 2.83
+
+POLYGON:       AmericanSamoa1
+POLY_ATTEMPT:  29 2.9
+API_ATTEMPTS:  16 1.6
+API_FAILS:     0 0
+POLYGON:       AmericanSamoa2
+POLY_ATTEMPT:  21 2.1
+API_ATTEMPTS:  15 1.5
+API_FAILS:     0 0
+POLYGON:       AmericanSamoa3
+POLY_ATTEMPT:  39 3.9
+API_ATTEMPTS:  12 1.2
+API_FAILS:     0 0
