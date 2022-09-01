@@ -59,6 +59,11 @@
             "name": "Bhutan",
             "ccode": "BT",
             "size": 26444
+        },
+        "BO": {
+            "name": "Bolivia",
+            "ccode": "BO",
+            "size": 224935
         }
     }
 }

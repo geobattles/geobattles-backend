@@ -221,7 +221,7 @@ func main() {
 
 		}
 	case "api":
-		tries := 10
+		tries := 25
 		for i := 0; i < len(polygonList); i++ {
 			polygon := countryDB.Countries[ccode].Areas.SearchArea[polygonList[i]]
 			bbox := polygon.Rings[0].Bound()
@@ -242,7 +242,7 @@ func main() {
 						pt = logic.RndPointWithinBox(bbox)
 						polyAttempt++
 					}
-					time.Sleep(1000 * time.Millisecond)
+					time.Sleep(50 * time.Millisecond)
 					loc, status = logic.CheckStreetViewExists(pt, polygon.Radius)
 					fmt.Println("api check: ", pt, loc, status)
 					failsafe++
