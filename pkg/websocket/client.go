@@ -91,7 +91,7 @@ func (c *Client) Read() {
 				break
 			}
 			//c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "OK", Type: "NEW_RESULT", User: c.ID, Distance: dist, Score: score, Location: clientReq.Location}}
-			c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "OK", Type: "NEW_RESULT", User: c.ID, GuessRes: lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound][c.ID][len(lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound][c.ID])]}}
+			c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "OK", Type: "NEW_RESULT", User: c.ID, GuessRes: lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound][c.ID][len(lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound][c.ID])-1]}}
 
 			// message := logic.ResponseMsg{Status: "OK", Type: "ALL_RESULTS", Results: lobby.LobbyMap[c.Room].Results}
 			// c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
