@@ -68,8 +68,14 @@ func (c *Client) Read() {
 				lobby.LobbyMap[c.Room].Timer = false
 
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "WRN", Type: "TIMES_UP"}}
-				message := logic.ResponseMsg{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound]}
+				message := logic.ResponseMsg{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound}
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+				// send end of game msg and cleanup lobby
+				if lobby.LobbyMap[c.Room].CurrentRound >= lobby.LobbyMap[c.Room].Conf.NumRounds {
+					message := logic.ResponseMsg{Status: "OK", Type: "GAME_END", Results: lobby.LobbyMap[c.Room].Results}
+					c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+					lobby.ResetLobby(c.Room)
+				}
 			})
 			message := logic.ResponseMsg{Status: "OK", Type: "START_ROUND", Location: &location}
 			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
@@ -93,8 +99,14 @@ func (c *Client) Read() {
 				fmt.Println("STOP TIMER")
 				c.Pool.Timer.Stop()
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "WRN", Type: err.Error()}}
-				message := logic.ResponseMsg{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound]}
+				message := logic.ResponseMsg{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound}
 				c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+				// send end of game msg and cleanup lobby
+				if lobby.LobbyMap[c.Room].CurrentRound >= lobby.LobbyMap[c.Room].Conf.NumRounds {
+					message := logic.ResponseMsg{Status: "OK", Type: "GAME_END", Results: lobby.LobbyMap[c.Room].Results}
+					c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
+					lobby.ResetLobby(c.Room)
+				}
 			}
 		}
 	}

@@ -46,6 +46,7 @@ type ResponseMsg struct {
 	Score    int                          `json:"score,omitempty"`
 	Results  map[int]map[string][]Results `json:"results,omitempty"`
 	RoundRes map[string][]Results         `json:"roundRes,omitempty"`
+	Round    int                          `json:"round,omitempty"`
 	Lobby    *Lobby                       `json:"lobby,omitempty"`
 }
 

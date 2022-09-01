@@ -118,6 +118,14 @@ func RemovePlayerFromLobby(clientID string, lobbyID string) {
 	}
 }
 
+func ResetLobby(lobbyID string) {
+	LobbyMap[lobbyID].Results = make(map[int]map[string][]logic.Results)
+	LobbyMap[lobbyID].CurrentLocation = nil
+	LobbyMap[lobbyID].UsersFinished = 0
+	LobbyMap[lobbyID].CurrentRound = 0
+	fmt.Println("Lobby after reset ", LobbyMap[lobbyID])
+}
+
 // keeps track of the location of the currently active game in lobby
 // increments round counter every call
 func UpdateCurrentLocation(lobbyID string, location logic.Coordinates) {
