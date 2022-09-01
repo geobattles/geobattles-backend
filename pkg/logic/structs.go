@@ -4,49 +4,47 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Coordinates struct {
-	Latitude  float64 `json:"lat,omitempty"`
-	Longitude float64 `json:"lng,omitempty"`
+type Coords struct {
+	Lat float64 `json:"lat,omitempty"`
+	Lng float64 `json:"lng,omitempty"`
 }
 
 type Results struct {
-	Location Coordinates `json:"location"`
-	Distance float64     `json:"distance"`
-	Score    int         `json:"score"`
+	Loc   Coords  `json:"location"`
+	Dist  float64 `json:"distance"`
+	Score int     `json:"score"`
 }
 
 // response from google maps metadata api
-type MetadataResponse struct {
-	Location Coordinates `json:"location"`
-	Status   string
+type ApiMetaResponse struct {
+	Loc    Coords `json:"location"`
+	Status string `json:"status"`
 }
 
 type ClientReq struct {
-	Command  string       `json:"command"`
-	Location *Coordinates `json:"location"`
-	Conf     *LobbyConf   `json:"conf,omitempty"`
+	Cmd  string     `json:"command"`
+	Loc  *Coords    `json:"location"`
+	Conf *LobbyConf `json:"conf,omitempty"`
 }
 
-// either Conn or Room must be provided
-// if Conn is set Data will be sent to this connection
-// else it will be broadcast to the entire Room
-// Conn takes precedence over Room
-type Message struct {
+// either Conn or Room must be provided. if Conn is set Data will be sent to this connection
+// else it will be broadcast to the entire Room. Conn takes precedence over Room
+type RouteMsg struct {
 	Conn *websocket.Conn
 	Room string
-	Data ResponseMsg
+	Data ClientResp
 }
 
-type ResponseMsg struct {
-	Status    string                       `json:"status"`
-	Type      string                       `json:"type"`
-	Location  *Coordinates                 `json:"location,omitempty"`
-	User      string                       `json:"user,omitempty"`
-	Results   map[int]map[string][]Results `json:"results,omitempty"`
-	RoundRes  map[string][]Results         `json:"roundRes,omitempty"`
-	PlayerRes Results                      `json:"playerRes,omitempty"`
-	Round     int                          `json:"round,omitempty"`
-	Lobby     *Lobby                       `json:"lobby,omitempty"`
+type ClientResp struct {
+	Status   string                       `json:"status"`
+	Type     string                       `json:"type"`
+	Loc      *Coords                      `json:"location,omitempty"`
+	User     string                       `json:"user,omitempty"`
+	AllRes   map[int]map[string][]Results `json:"results,omitempty"`
+	RoundRes map[string][]Results         `json:"roundRes,omitempty"`
+	GuessRes Results                      `json:"playerRes,omitempty"`
+	Round    int                          `json:"round,omitempty"`
+	Lobby    *Lobby                       `json:"lobby,omitempty"`
 	//Distance float64                      `json:"distance,omitempty"`
 	//Score    int                          `json:"score,omitempty"`
 }
@@ -61,14 +59,14 @@ type LobbyConf struct {
 }
 
 type Lobby struct {
-	ID              string                       `json:"ID"`
-	Admin           string                       `json:"admin"`
-	Conf            *LobbyConf                   `json:"conf"`
-	NumPlayers      int                          `json:"numPlayers"`
-	PlayerList      map[string]string            `json:"playerList"`
-	CurrentLocation *Coordinates                 `json:"-"`
-	CurrentRound    int                          `json:"currentRound"`
-	Results         map[int]map[string][]Results `json:"results"`
-	Timer           bool                         `json:"-"`
-	UsersFinished   int                          `json:"-"`
+	ID            string                       `json:"ID"`
+	Admin         string                       `json:"admin"`
+	Conf          *LobbyConf                   `json:"conf"`
+	NumPlayers    int                          `json:"numPlayers"`
+	PlayerMap     map[string]string            `json:"playerList"`
+	CurrentLoc    *Coords                      `json:"-"`
+	CurrentRound  int                          `json:"currentRound"`
+	Results       map[int]map[string][]Results `json:"results"`
+	Timer         bool                         `json:"-"`
+	UsersFinished int                          `json:"-"`
 }

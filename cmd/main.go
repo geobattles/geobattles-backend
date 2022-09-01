@@ -226,7 +226,7 @@ func main() {
 			polygon := countryDB.Countries[ccode].Areas.SearchArea[polygonList[i]]
 			bbox := polygon.Rings[0].Bound()
 			var status string
-			var loc logic.Coordinates
+			var loc logic.Coords
 			var pt logic.Point
 			var apiFail, apiAttempt, polyAttempt int
 			for j := 0; j < tries; j++ {
