@@ -59,7 +59,8 @@ func (c *Client) Read() {
 			var location logic.Coordinates = logic.RndLocation()
 			lobby.UpdateCurrentLocation(c.Room, location)
 			fmt.Println("start timer")
-			c.Pool.Timer = time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime), func() {
+			// 3 sec added to timer for countdown
+			c.Pool.Timer = time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime)+time.Duration(3), func() {
 				fmt.Println("times up")
 				if lobby.LobbyMap[c.Room] == nil {
 					fmt.Println("LOBBY ne obstaja vec")
