@@ -1,59 +1,64 @@
 {
     "countries": {
-        "AX":{
+        "AX": {
             "name": "Åland",
             "ccode": "AX",
             "size": 2502
         },
-        "AL":{
+        "AL": {
             "name": "Albania",
             "ccode": "AL",
             "size": 23766
         },
-        "AS":{
+        "AS": {
             "name": "American Samoa",
             "ccode": "AS",
             "size": 254
         },
-        "AD":{
+        "AD": {
             "name": "Andorra",
             "ccode": "AD",
             "size": 384
         },
-        "AR":{
+        "AR": {
             "name": "Argentina",
             "ccode": "AR",
             "size": 2549684
         },
-        "AU":{
+        "AU": {
             "name": "Australia",
             "ccode": "AU",
             "size": 5556274
         },
-        "AT":{
+        "AT": {
             "name": "Austria",
             "ccode": "AT",
             "size": 80909
         },
-        "BD":{
+        "BD": {
             "name": "Bangladesh",
             "ccode": "BD",
             "size": 116776
         },
-        "BY":{
+        "BY": {
             "name": "Belarus",
             "ccode": "BY",
             "size": 1000
         },
-        "BE":{
+        "BE": {
             "name": "Belgium",
             "ccode": "BE",
             "size": 29064
         },
-        "BM":{
+        "BM": {
             "name": "Bermuda",
             "ccode": "BM",
             "size": 78
+        },
+        "BT": {
+            "name": "Bhutan",
+            "ccode": "BT",
+            "size": 26444
         }
     }
 }
