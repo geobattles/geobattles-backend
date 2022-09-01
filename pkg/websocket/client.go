@@ -83,14 +83,15 @@ func (c *Client) Read() {
 
 		case "submit_location":
 			fmt.Println(*clientReq.Location)
-			dist, score, err := lobby.SubmitResult(c.Room, c.ID, *clientReq.Location)
+			_, _, err := lobby.SubmitResult(c.Room, c.ID, *clientReq.Location)
 			//err := lobby.AddToResults(c.Room, c.ID, clientReq.Location, distance)
 
 			if err != nil && err.Error() != "ROUND_FINISHED" {
 				c.Pool.Transmit <- logic.Message{Conn: c.Conn, Data: logic.ResponseMsg{Status: "ERR", Type: err.Error()}}
 				break
 			}
-			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "OK", Type: "NEW_RESULT", User: c.ID, Distance: dist, Score: score, Location: clientReq.Location}}
+			//c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "OK", Type: "NEW_RESULT", User: c.ID, Distance: dist, Score: score, Location: clientReq.Location}}
+			c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "OK", Type: "NEW_RESULT", User: c.ID, PlayerRes: lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound][c.ID][len(lobby.LobbyMap[c.Room].Results[lobby.LobbyMap[c.Room].CurrentRound][c.ID])]}}
 
 			// message := logic.ResponseMsg{Status: "OK", Type: "ALL_RESULTS", Results: lobby.LobbyMap[c.Room].Results}
 			// c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
