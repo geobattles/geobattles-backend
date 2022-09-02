@@ -56,7 +56,7 @@ func (c *Client) Read() {
 			}
 
 			fmt.Println("USER IS ADMIN")
-			var location logic.Coords = logic.RndLocation()
+			var location logic.Coords = logic.RndLocation(lobby.LobbyMap[c.Room].Conf.CCList, lobby.LobbyMap[c.Room].CCSize)
 			lobby.UpdateCurrentLocation(c.Room, location)
 			fmt.Println("start timer")
 			// 3 sec added to timer for countdown

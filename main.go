@@ -51,6 +51,12 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func serveCountryList(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(logic.CountryList)
+	fmt.Println("sent country list")
+}
+
 func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
 	// Added query parameter reader for id of lobby
 	lobbyID := r.URL.Query().Get("id")
@@ -86,6 +92,7 @@ func setupRoutes(r *mux.Router) {
 		serveLobbySocket(pool, w, r)
 	})
 	r.HandleFunc("/lobby", serveLobby)
+	r.HandleFunc("/countryList", serveCountryList)
 }
 
 func main() {

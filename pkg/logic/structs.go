@@ -50,12 +50,13 @@ type ClientResp struct {
 }
 
 type LobbyConf struct {
-	Name        string `json:"name"`
-	MaxPlayers  int    `json:"maxPlayers"`
-	NumAttempt  int    `json:"numAttempt"`
-	NumRounds   int    `json:"numRounds"`
-	RoundTime   int    `json:"roundTime"`
-	ScoreFactor int    `json:"scoreFactor"`
+	Name        string   `json:"name"`
+	MaxPlayers  int      `json:"maxPlayers"`
+	NumAttempt  int      `json:"numAttempt"`
+	NumRounds   int      `json:"numRounds"`
+	RoundTime   int      `json:"roundTime"`
+	ScoreFactor int      `json:"scoreFactor"`
+	CCList      []string `json:"ccList"`
 }
 
 type Lobby struct {
@@ -69,4 +70,5 @@ type Lobby struct {
 	Results       map[int]map[string][]Results `json:"results"`
 	Timer         bool                         `json:"-"`
 	UsersFinished int                          `json:"-"`
+	CCSize        float64                      `json:"-"`
 }

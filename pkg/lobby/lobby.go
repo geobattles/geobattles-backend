@@ -10,8 +10,8 @@ import (
 
 // initial lobby list for debugging
 var LobbyMap = map[string]*logic.Lobby{
-	"U4YPR6": {ID: "U4YPR6", Conf: &logic.LobbyConf{Name: "prvi lobby", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30}, NumPlayers: 0, PlayerMap: make(map[string]string), Results: make(map[int]map[string][]logic.Results)},
-	"8CKXRG": {ID: "8CKXRG", Conf: &logic.LobbyConf{Name: "LOBBY #2", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 60}, NumPlayers: 0, PlayerMap: make(map[string]string), Results: make(map[int]map[string][]logic.Results)},
+	"U4YPR6": {ID: "U4YPR6", Conf: &logic.LobbyConf{Name: "prvi lobby", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}}, NumPlayers: 0, PlayerMap: make(map[string]string), Results: make(map[int]map[string][]logic.Results)},
+	"8CKXRG": {ID: "8CKXRG", Conf: &logic.LobbyConf{Name: "LOBBY #2", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 60, CCList: []string{}}, NumPlayers: 0, PlayerMap: make(map[string]string), Results: make(map[int]map[string][]logic.Results)},
 }
 
 // validates values and creates new lobby
@@ -59,6 +59,13 @@ func CreateLobby(conf logic.LobbyConf) *logic.Lobby {
 		newLobby.Conf.RoundTime = conf.RoundTime
 	}
 
+	if len(conf.CCList) == 0 {
+		newLobby.Conf.CCList = []string{}
+	} else {
+		newLobby.Conf.CCList = conf.CCList
+		newLobby.CCSize = logic.SumCCListSize(conf.CCList)
+	}
+
 	LobbyMap[lobbyID] = &newLobby
 	return LobbyMap[lobbyID]
 }
@@ -86,6 +93,11 @@ func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby
 	}
 	if conf.RoundTime > 0 {
 		LobbyMap[ID].Conf.RoundTime = conf.RoundTime
+	}
+
+	if len(conf.CCList) != 0 {
+		LobbyMap[ID].Conf.CCList = conf.CCList
+		LobbyMap[ID].CCSize = logic.SumCCListSize(conf.CCList)
 	}
 	return LobbyMap[ID], nil
 }
@@ -141,7 +153,6 @@ func UpdateCurrentLocation(lobbyID string, location logic.Coords) {
 // for example a low scorefactor means if your guess is 100km off you only get 100 points
 // it also means you get full points for distance closer that scorefactor
 func scoreDistance(x float64, a float64) int {
-	//return int(5000 * math.Pow(0.999, (x/1000-a/1000)*(0.25+150*(math.Pow(0.62, math.Sqrt(a))))))
 	score := int(5000 * math.Pow(0.999, (x/1000-a/1000)*(0.2+30*(math.Pow(0.98, 10*math.Pow(a, 0.6))))))
 
 	if score > 5000 {
@@ -150,6 +161,7 @@ func scoreDistance(x float64, a float64) int {
 	return score
 }
 
+// calculates distance and score and adds them to the results
 func SubmitResult(lobbyID string, clientID string, location logic.Coords) (float64, int, error) {
 	distance := logic.CalcDistance(*LobbyMap[lobbyID].CurrentLoc, location)
 	score, error := addToResults(lobbyID, clientID, location, distance)
