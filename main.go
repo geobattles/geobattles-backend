@@ -24,22 +24,24 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
 	id := r.URL.Query().Get("id")
 	switch r.Method {
 	case http.MethodGet:
+		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(lobby.LobbyMap)
 		fmt.Println("Sent lobby list")
 		//fmt.Println(runtime.NumGoroutine())
 	case http.MethodPost:
-		var lobbyConf *logic.LobbyConf
+		var lobbyConf logic.LobbyConf
 		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			fmt.Println(err)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		if err = json.Unmarshal(reqBody, &lobbyConf); err != nil {
 			fmt.Println(err)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		json.NewEncoder(w).Encode(lobby.CreateLobby(lobbyConf))

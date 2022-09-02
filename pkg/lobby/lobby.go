@@ -15,7 +15,7 @@ var LobbyMap = map[string]*logic.Lobby{
 }
 
 // validates values and creates new lobby
-func CreateLobby(conf *logic.LobbyConf) *logic.Lobby {
+func CreateLobby(conf logic.LobbyConf) *logic.Lobby {
 	var newLobby logic.Lobby
 	newLobby.Conf = &logic.LobbyConf{}
 	newLobby.PlayerMap = make(map[string]string)
@@ -64,7 +64,7 @@ func CreateLobby(conf *logic.LobbyConf) *logic.Lobby {
 }
 
 // update existing lobby settings
-func UpdateLobby(clientID string, ID string, conf *logic.LobbyConf) (*logic.Lobby, error) {
+func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby, error) {
 	if clientID != LobbyMap[ID].Admin {
 		return nil, errors.New("NOT_ADMIN")
 	}

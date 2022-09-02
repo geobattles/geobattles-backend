@@ -22,9 +22,9 @@ type ApiMetaResponse struct {
 }
 
 type ClientReq struct {
-	Cmd  string     `json:"command"`
-	Loc  *Coords    `json:"location"`
-	Conf *LobbyConf `json:"conf,omitempty"`
+	Cmd  string    `json:"command"`
+	Loc  *Coords   `json:"location"`
+	Conf LobbyConf `json:"conf"`
 }
 
 // either Conn or Room must be provided. if Conn is set Data will be sent to this connection
@@ -42,7 +42,7 @@ type ClientResp struct {
 	User     string                       `json:"user,omitempty"`
 	AllRes   map[int]map[string][]Results `json:"results,omitempty"`
 	RoundRes map[string][]Results         `json:"roundRes,omitempty"`
-	GuessRes Results                      `json:"playerRes,omitempty"`
+	GuessRes *Results                     `json:"playerRes,omitempty"`
 	Round    int                          `json:"round,omitempty"`
 	Lobby    *Lobby                       `json:"lobby,omitempty"`
 	//Distance float64                      `json:"distance,omitempty"`
