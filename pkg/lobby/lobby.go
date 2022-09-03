@@ -95,7 +95,7 @@ func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby
 		LobbyMap[ID].Conf.RoundTime = conf.RoundTime
 	}
 
-	if len(conf.CCList) != 0 {
+	if conf.CCList != nil {
 		LobbyMap[ID].Conf.CCList = conf.CCList
 		LobbyMap[ID].CCSize = logic.SumCCListSize(conf.CCList)
 	}
