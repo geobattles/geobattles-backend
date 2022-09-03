@@ -30,8 +30,14 @@ func (c *Client) Read() {
 
 		if err != nil {
 			fmt.Println("error reading client json: ", err)
+			// if connection was closed unregister client, on other error (egwrong json fields) just break current loop
+			if err.Error() == "websocket: close 1001 (going away)" {
+				fmt.Println("ws closed")
+				return
+			}
+
 			c.Pool.Transmit <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: err.Error()}}
-			//return
+			break
 		}
 		fmt.Println("Client msg: ", clientReq)
 
