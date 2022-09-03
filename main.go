@@ -52,6 +52,9 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveCountryList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(logic.CountryList)
 	fmt.Println("sent country list")
