@@ -13,7 +13,7 @@ type Pool struct {
 	Register   chan *Client
 	Unregister chan *Client
 	Rooms      map[string]map[*websocket.Conn]bool
-	Transmit   chan logic.Message
+	Transmit   chan logic.RouteMsg
 	Timer      *time.Timer
 }
 
@@ -22,7 +22,7 @@ func NewPool() *Pool {
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 		Rooms:      make(map[string]map[*websocket.Conn]bool),
-		Transmit:   make(chan logic.Message),
+		Transmit:   make(chan logic.RouteMsg),
 		Timer:      &time.Timer{},
 	}
 }
@@ -48,38 +48,29 @@ func (pool *Pool) Start() {
 			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 
 			// send updated list of players to every member of the lobby
-			// client.Pool.Transmit <- logic.Message{Room: client.Room, Data: logic.ResponseMsg{Status: "OK", Type: "JOINED_LOBBY"}}
+			go func() {
+				client.Pool.Transmit <- logic.RouteMsg{Room: client.Room, Data: logic.ClientResp{Status: "OK", Type: "JOINED_LOBBY", Lobby: lobby.LobbyMap[client.Room]}}
+			}()
 
-			for clientConn := range pool.Rooms[client.Room] {
-				//fmt.Println("sending updated client list", client)
-				clientConn.WriteJSON(logic.ResponseMsg{Status: "OK", Type: "JOINED_LOBBY", Lobby: lobby.LobbyMap[client.Room]})
-			}
+			// for clientConn := range pool.Rooms[client.Room] {
+			// 	//fmt.Println("sending updated client list", client)
+			// 	clientConn.WriteJSON(logic.ResponseMsg{Status: "OK", Type: "JOINED_LOBBY", Lobby: lobby.LobbyMap[client.Room]})
+			// }
 			break
 
 		case client := <-pool.Unregister:
 			fmt.Println("UNREGISTERING")
 			delete(pool.Rooms[client.Room], client.Conn)
-			// delete connection room if empty
-			if len(pool.Rooms[client.Room]) == 0 {
-				fmt.Println("deleting connection room")
-				if pool.Timer != nil {
-					fmt.Println("TIMER NI NIL")
-					//pool.Timer.Stop()
-				} else {
-					fmt.Println("TIMER JE NIL")
-				}
-				delete(pool.Rooms, client.Room)
-			}
 			lobby.RemovePlayerFromLobby(client.ID, client.Room)
-			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
-			// client.Pool.Transmit <- logic.Message{Room: client.Room, Data: logic.ResponseMsg{Status: "OK", Type: "LEFT_LOBBY", Lobby: lobby.LobbyMap[client.Room]}}
+			//fmt.Println("pool.rooms LOOOG ", pool.Rooms)
+			go func() {
+				client.Pool.Transmit <- logic.RouteMsg{Room: client.Room, Data: logic.ClientResp{Status: "OK", Type: "LEFT_LOBBY", Lobby: lobby.LobbyMap[client.Room]}}
+			}()
 
 			// send updated list of players to every member of the lobby
-			for clientConn := range pool.Rooms[client.Room] {
-				//fmt.Println("sending updated client list", client)
-				clientConn.WriteJSON(logic.ResponseMsg{Status: "OK", Type: "LEFT_LOBBY", Lobby: lobby.LobbyMap[client.Room]})
-
-			}
+			// for clientConn := range pool.Rooms[client.Room] {
+			// 	clientConn.WriteJSON(logic.ResponseMsg{Status: "OK", Type: "LEFT_LOBBY", Lobby: lobby.LobbyMap[client.Room]})
+			// }
 			break
 
 		case message := <-pool.Transmit:

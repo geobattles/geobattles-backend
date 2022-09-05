@@ -24,22 +24,24 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
 	id := r.URL.Query().Get("id")
 	switch r.Method {
 	case http.MethodGet:
+		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(lobby.LobbyMap)
 		fmt.Println("Sent lobby list")
 		//fmt.Println(runtime.NumGoroutine())
 	case http.MethodPost:
-		var lobbyConf *logic.LobbyConf
+		var lobbyConf logic.LobbyConf
 		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			fmt.Println(err)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		if err = json.Unmarshal(reqBody, &lobbyConf); err != nil {
 			fmt.Println(err)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		json.NewEncoder(w).Encode(lobby.CreateLobby(lobbyConf))
@@ -47,6 +49,15 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		delete(lobby.LobbyMap, id)
 	}
+}
+
+func serveCountryList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(logic.CountryList)
+	fmt.Println("sent country list")
 }
 
 func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
@@ -84,6 +95,7 @@ func setupRoutes(r *mux.Router) {
 		serveLobbySocket(pool, w, r)
 	})
 	r.HandleFunc("/lobby", serveLobby)
+	r.HandleFunc("/countryList", serveCountryList)
 }
 
 func main() {

@@ -9,8 +9,7 @@ import (
 )
 
 type country struct {
-	Name string
-	//CCode      string
+	Name  string
 	Size  float64
 	Areas MultiPolygon
 }
@@ -19,6 +18,7 @@ var countryDB struct {
 	Countries map[string]*country
 	totalSize float64
 }
+var CountryList []string
 
 func InitCountryDB() {
 	fmt.Println("Populating countriesDB")
@@ -28,12 +28,13 @@ func InitCountryDB() {
 	}
 
 	var sum float64
-	// convert country sizen to 10th root and calculate size sum
+	// convert country size to 10th root and calculate size sum
 	// populate every countries search area
 	for ccode, country := range countryDB.Countries {
 		country.Size = math.Pow(country.Size, 0.1)
 		sum += country.Size
 		buf, _ := os.ReadFile(fmt.Sprintf("assets/basic/%s.json", ccode))
+		CountryList = append(CountryList, ccode)
 
 		if err := json.Unmarshal(buf, &country.Areas); err != nil {
 			fmt.Println(err)
@@ -42,34 +43,25 @@ func InitCountryDB() {
 		for _, polygon := range country.Areas.SearchArea {
 			country.Areas.InnerSize += polygon.Size
 		}
-
-		// fmt.Println(country.Areas)
 	}
 	countryDB.totalSize = sum
-
-	// for i := 0; i < 10; i++ {
-	// 	RndLocation()
-	// 	//fmt.Println(ccode)
-	// }
 }
 
 // returns valid random street view coordinates
-func RndLocation() Coordinates {
+func RndLocation(countryList []string, totalSize float64) Coords {
 	//fmt.Println(SelectRndArea())
-	polygon := SelectRndArea()
+	polygon := SelectRndArea(countryList, totalSize)
 	bbox := polygon.Rings[0].Bound()
 	var status string
-	var loc Coordinates
+	var loc Coords
 	var pt Point
-
-	//fmt.Println("_START NEW LOCATION_")
 
 	for apiOK, failCount := true, 0; apiOK; apiOK = (status == "ZERO_RESULTS") {
 		// failsafe, if location repeatedly fails select different one
 		if failCount >= 4 {
 			fmt.Println("FAILSAFE ACTIVATED!")
 			failCount = 0
-			polygon = SelectRndArea()
+			polygon = SelectRndArea(countryList, totalSize)
 			bbox = polygon.Rings[0].Bound()
 		}
 
@@ -86,32 +78,48 @@ func RndLocation() Coordinates {
 }
 
 // returns random area name within random country
-func SelectRndArea() Polygon {
-	ccode := SelectRandomCountry()
+func SelectRndArea(countryList []string, totalSize float64) Polygon {
+	ccode := SelectRandomCountry(countryList, totalSize)
 	fmt.Println("Selected country: ", ccode)
-	// for _, polygon := range countryDB.Countries[ccode].Areas.SearchArea {
-	// 	fmt.Println(polygon)
-	// }
 	rnd := rand.Intn(countryDB.Countries[ccode].Areas.InnerSize)
 	for area, polygon := range countryDB.Countries[ccode].Areas.SearchArea {
 		if rnd <= polygon.Size {
-			fmt.Println("Izbran polygon: ", area)
+			fmt.Println("Selected polygon: ", area)
 			return *polygon
 		}
 		rnd -= polygon.Size
 	}
 	return Polygon{}
-
 }
 
 // returns country code of a randomly selected country
-func SelectRandomCountry() string {
-	rnd := rand.Float64() * countryDB.totalSize
-	for ccode, country := range countryDB.Countries {
-		if rnd <= country.Size {
-			return ccode
+func SelectRandomCountry(countryList []string, totalSize float64) string {
+	if len(countryList) == 0 {
+		rnd := rand.Float64() * countryDB.totalSize
+		for ccode, country := range countryDB.Countries {
+			if rnd <= country.Size {
+				return ccode
+			}
+			rnd -= country.Size
 		}
-		rnd -= country.Size
+	} else {
+		rnd := rand.Float64() * totalSize
+		for _, ccode := range countryList {
+			if rnd <= countryDB.Countries[ccode].Size {
+				return ccode
+			}
+			rnd -= countryDB.Countries[ccode].Size
+		}
 	}
 	return ""
+}
+
+// returns sum of selected countries size
+func SumCCListSize(countries []string) float64 {
+	var sizeSum float64
+	for _, ccode := range countries {
+		// TODO: fix crash when ccode doesnt exist
+		sizeSum += countryDB.Countries[ccode].Size
+	}
+	return sizeSum
 }
