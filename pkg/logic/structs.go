@@ -59,12 +59,17 @@ type LobbyConf struct {
 	CCList      []string `json:"ccList"`
 }
 
+type Player struct {
+	Name  string `json:"name"`
+	Color string `json:"color"`
+}
+
 type Lobby struct {
 	ID            string                       `json:"ID"`
 	Admin         string                       `json:"admin"`
 	Conf          *LobbyConf                   `json:"conf"`
 	NumPlayers    int                          `json:"numPlayers"`
-	PlayerMap     map[string]string            `json:"playerList"`
+	PlayerMap     map[string]Player            `json:"playerList"`
 	CurrentLoc    *Coords                      `json:"-"`
 	CurrentRound  int                          `json:"currentRound"`
 	Results       map[int]map[string][]Results `json:"results"`
