@@ -49,7 +49,7 @@ func (pool *Pool) Start() {
 
 			// send updated list of players to every member of the lobby
 			go func() {
-				client.Pool.Transmit <- logic.RouteMsg{Room: client.Room, Data: logic.ClientResp{Status: "OK", Type: "JOINED_LOBBY", Lobby: lobby.LobbyMap[client.Room]}}
+				client.Pool.Transmit <- logic.RouteMsg{Room: client.Room, Data: logic.ClientResp{Status: "OK", Type: "JOINED_LOBBY", User: client.ID, Lobby: lobby.LobbyMap[client.Room]}}
 			}()
 
 			// for clientConn := range pool.Rooms[client.Room] {

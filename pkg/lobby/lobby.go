@@ -10,15 +10,17 @@ import (
 
 // initial lobby list for debugging
 var LobbyMap = map[string]*logic.Lobby{
-	"U4YPR6": {ID: "U4YPR6", Conf: &logic.LobbyConf{Name: "prvi lobby", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}}, NumPlayers: 0, PlayerMap: make(map[string]string), Results: make(map[int]map[string][]logic.Results)},
-	"8CKXRG": {ID: "8CKXRG", Conf: &logic.LobbyConf{Name: "LOBBY #2", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 60, CCList: []string{}}, NumPlayers: 0, PlayerMap: make(map[string]string), Results: make(map[int]map[string][]logic.Results)},
+	"U4YPR6": {ID: "U4YPR6", Conf: &logic.LobbyConf{Name: "prvi lobby", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}}, NumPlayers: 0, PlayerMap: make(map[string]logic.Player), Results: make(map[int]map[string][]logic.Results)},
+	"8CKXRG": {ID: "8CKXRG", Conf: &logic.LobbyConf{Name: "LOBBY #2", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 60, CCList: []string{}}, NumPlayers: 0, PlayerMap: make(map[string]logic.Player), Results: make(map[int]map[string][]logic.Results)},
 }
+
+var ColorList = [12]string{"#e6194B", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#000075", "#469990", "#9A6324", "#dcbeff", "#800000"}
 
 // validates values and creates new lobby
 func CreateLobby(conf logic.LobbyConf) *logic.Lobby {
 	var newLobby logic.Lobby
 	newLobby.Conf = &logic.LobbyConf{}
-	newLobby.PlayerMap = make(map[string]string)
+	newLobby.PlayerMap = make(map[string]logic.Player)
 	newLobby.Results = make(map[int]map[string][]logic.Results)
 	lobbyID := logic.GenerateRndID(6)
 	newLobby.ID = lobbyID
@@ -102,29 +104,45 @@ func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby
 	return LobbyMap[ID], nil
 }
 
+func genPlayerColor(lobbyID string) string {
+	var color string
+cycle:
+	for i := 0; i < len(ColorList); i++ {
+		color = ColorList[i]
+		for _, player := range LobbyMap[lobbyID].PlayerMap {
+			if player.Color == color {
+				continue cycle
+			}
+		}
+		break cycle
+	}
+	return color
+}
+
 // adds player as map[id]name to playerlist in lobby
 func AddPlayerToLobby(clientID string, clientName string, lobbyID string) {
 	// if there is no lobby admin make this user one
 	if LobbyMap[lobbyID].Admin == "" {
 		LobbyMap[lobbyID].Admin = clientID
 	}
-	LobbyMap[lobbyID].PlayerMap[clientID] = clientName
+	LobbyMap[lobbyID].PlayerMap[clientID] = logic.Player{Name: clientName, Color: genPlayerColor(lobbyID)}
 	LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerMap)
 }
 
 // removes player map from playerlist in lobby
 func RemovePlayerFromLobby(clientID string, lobbyID string) {
 	delete(LobbyMap[lobbyID].PlayerMap, clientID)
+	LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerMap)
 	// if removed player was admin & there are other players left
 	// select one of them as new admin, otherwise make admin empty
 	// if there are no players left delete lobby
-	if LobbyMap[lobbyID].Admin == clientID && len(LobbyMap[lobbyID].PlayerMap) != 0 {
+	if LobbyMap[lobbyID].Admin == clientID && LobbyMap[lobbyID].NumPlayers != 0 {
 		for id := range LobbyMap[lobbyID].PlayerMap {
 			LobbyMap[lobbyID].Admin = id
 			break
 		}
 
-	} else if len(LobbyMap[lobbyID].PlayerMap) == 0 {
+	} else if LobbyMap[lobbyID].NumPlayers == 0 {
 		fmt.Println("deleting lobby")
 		delete(LobbyMap, lobbyID)
 	}

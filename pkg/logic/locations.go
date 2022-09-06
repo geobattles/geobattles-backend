@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"sort"
 )
 
 type country struct {
@@ -44,6 +45,9 @@ func InitCountryDB() {
 			country.Areas.InnerSize += polygon.Size
 		}
 	}
+	sort.SliceStable(CountryList, func(i, j int) bool {
+		return countryDB.Countries[CountryList[i]].Name < countryDB.Countries[CountryList[j]].Name
+	})
 	countryDB.totalSize = sum
 }
 
