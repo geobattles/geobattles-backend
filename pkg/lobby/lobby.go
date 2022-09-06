@@ -14,7 +14,7 @@ var LobbyMap = map[string]*logic.Lobby{
 	"8CKXRG": {ID: "8CKXRG", Conf: &logic.LobbyConf{Name: "LOBBY #2", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 60, CCList: []string{}}, NumPlayers: 0, PlayerMap: make(map[string]logic.Player), Results: make(map[int]map[string][]logic.Results)},
 }
 
-var ColorList = [10]string{"#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#fabed4"}
+var ColorList = [12]string{"#e6194B", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#000075", "#469990", "#9A6324", "#dcbeff", "#800000"}
 
 // validates values and creates new lobby
 func CreateLobby(conf logic.LobbyConf) *logic.Lobby {
