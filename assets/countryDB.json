@@ -64,6 +64,16 @@
             "name": "Bolivia",
             "ccode": "BO",
             "size": 224935
+        },
+        "BW": {
+            "name": "Botswana",
+            "ccode": "BW",
+            "size": 379237
+        },
+        "BR": {
+            "name": "Brazil",
+            "ccode": "BR",
+            "size": 6380444
         }
     }
 }
