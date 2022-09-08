@@ -74,6 +74,16 @@
             "name": "Brazil",
             "ccode": "BR",
             "size": 6380444
+        },
+        "IO": {
+            "name": "British Indian Ocean Territory",
+            "ccode": "IO",
+            "size": 15
+        },
+        "BG": {
+            "name": "Bulgaria",
+            "ccode": "BG",
+            "size": 108033
         }
     }
 }
