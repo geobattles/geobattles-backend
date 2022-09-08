@@ -109,6 +109,21 @@
             "name": "Cocos Islands",
             "ccode": "CC",
             "size": 54
+        },
+        "CO": {
+            "name": "Colombia",
+            "ccode": "CO",
+            "size": 521286
+        },
+        "CR": {
+            "name": "Costa Rica",
+            "ccode": "CR",
+            "size": 521286
+        },
+        "HR": {
+            "name": "Croatia",
+            "ccode": "HR",
+            "size": 66248
         }
     }
 }
