@@ -84,6 +84,16 @@
             "name": "Bulgaria",
             "ccode": "BG",
             "size": 108033
+        },
+        "KH": {
+            "name": "Cambodia",
+            "ccode": "KH",
+            "size": 179234
+        },
+        "CA": {
+            "name": "Canada",
+            "ccode": "CA",
+            "size": 4756284
         }
     }
 }
