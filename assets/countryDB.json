@@ -94,6 +94,21 @@
             "name": "Canada",
             "ccode": "CA",
             "size": 4756284
+        },
+        "CL": {
+            "name": "Chile",
+            "ccode": "CL",
+            "size": 484250
+        },
+        "CX": {
+            "name": "Christmas Island",
+            "ccode": "CX",
+            "size": 177
+        },
+        "CC": {
+            "name": "Cocos Islands",
+            "ccode": "CC",
+            "size": 54
         }
     }
 }
