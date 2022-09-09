@@ -125,6 +125,16 @@
             "ccode": "HR",
             "size": 66248
         },
+        "CW": {
+            "name": "Curacao",
+            "ccode": "CW",
+            "size": 408
+        },
+        "CZ": {
+            "name": "Czech Republic",
+            "ccode": "CZ",
+            "size": 78350
+        },
         "DK": {
             "name": "Denmark",
             "ccode": "DK",
