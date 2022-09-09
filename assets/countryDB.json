@@ -64,6 +64,86 @@
             "name": "Bolivia",
             "ccode": "BO",
             "size": 224935
+        },
+        "BW": {
+            "name": "Botswana",
+            "ccode": "BW",
+            "size": 379237
+        },
+        "BR": {
+            "name": "Brazil",
+            "ccode": "BR",
+            "size": 6380444
+        },
+        "IO": {
+            "name": "British Indian Ocean Territory",
+            "ccode": "IO",
+            "size": 15
+        },
+        "BG": {
+            "name": "Bulgaria",
+            "ccode": "BG",
+            "size": 108033
+        },
+        "KH": {
+            "name": "Cambodia",
+            "ccode": "KH",
+            "size": 179234
+        },
+        "CA": {
+            "name": "Canada",
+            "ccode": "CA",
+            "size": 4756284
+        },
+        "CL": {
+            "name": "Chile",
+            "ccode": "CL",
+            "size": 484250
+        },
+        "CX": {
+            "name": "Christmas Island",
+            "ccode": "CX",
+            "size": 177
+        },
+        "CC": {
+            "name": "Cocos Islands",
+            "ccode": "CC",
+            "size": 54
+        },
+        "CO": {
+            "name": "Colombia",
+            "ccode": "CO",
+            "size": 521286
+        },
+        "CR": {
+            "name": "Costa Rica",
+            "ccode": "CR",
+            "size": 521286
+        },
+        "HR": {
+            "name": "Croatia",
+            "ccode": "HR",
+            "size": 66248
+        },
+        "CW": {
+            "name": "Curacao",
+            "ccode": "CW",
+            "size": 408
+        },
+        "CZ": {
+            "name": "Czech Republic",
+            "ccode": "CZ",
+            "size": 78350
+        },
+        "DK": {
+            "name": "Denmark",
+            "ccode": "DK",
+            "size": 57810
+        },
+        "DO": {
+            "name": "Dominican Republic",
+            "ccode": "DO",
+            "size": 750
         }
     }
 }

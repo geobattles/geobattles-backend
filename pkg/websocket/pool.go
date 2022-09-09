@@ -64,7 +64,7 @@ func (pool *Pool) Start() {
 			lobby.RemovePlayerFromLobby(client.ID, client.Room)
 			//fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 			go func() {
-				client.Pool.Transmit <- logic.RouteMsg{Room: client.Room, Data: logic.ClientResp{Status: "OK", Type: "LEFT_LOBBY", Lobby: lobby.LobbyMap[client.Room]}}
+				client.Pool.Transmit <- logic.RouteMsg{Room: client.Room, Data: logic.ClientResp{Status: "OK", Type: "LEFT_LOBBY", User: client.ID, Lobby: lobby.LobbyMap[client.Room]}}
 			}()
 
 			// send updated list of players to every member of the lobby
