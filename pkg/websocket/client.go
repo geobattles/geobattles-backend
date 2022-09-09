@@ -56,7 +56,7 @@ func (c *Client) Read() {
 				c.Pool.Transmit <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: "NOT_ADMIN"}}
 				break
 			}
-			if lobby.LobbyMap[c.Room].Timer == true {
+			if lobby.LobbyMap[c.Room].Timer {
 				c.Pool.Transmit <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: "ALREADY_ACTIVE"}}
 				break
 			}
@@ -65,8 +65,11 @@ func (c *Client) Read() {
 			var location logic.Coords = logic.RndLocation(lobby.LobbyMap[c.Room].Conf.CCList, lobby.LobbyMap[c.Room].CCSize)
 			lobby.UpdateCurrentLocation(c.Room, location)
 			fmt.Println("start timer")
+			message := logic.ClientResp{Status: "OK", Type: "START_ROUND", Loc: &location}
+			c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: message}
+
 			// 3 sec added to timer for countdown
-			c.Pool.Timer = time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime)+time.Duration(3), func() {
+			c.Pool.Timer = time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime+3), func() {
 				fmt.Println("times up")
 				if lobby.LobbyMap[c.Room] == nil {
 					fmt.Println("LOBBY ne obstaja vec")
@@ -84,8 +87,6 @@ func (c *Client) Read() {
 					lobby.ResetLobby(c.Room)
 				}
 			})
-			message := logic.ClientResp{Status: "OK", Type: "START_ROUND", Loc: &location}
-			c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: message}
 
 		case "submit_location":
 			fmt.Println(*clientReq.Loc)
