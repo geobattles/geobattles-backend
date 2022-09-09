@@ -124,6 +124,16 @@
             "name": "Croatia",
             "ccode": "HR",
             "size": 66248
+        },
+        "DK": {
+            "name": "Denmark",
+            "ccode": "DK",
+            "size": 57810
+        },
+        "DO": {
+            "name": "Dominican Republic",
+            "ccode": "DO",
+            "size": 750
         }
     }
 }
