@@ -77,6 +77,9 @@ func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby
 	if clientID != LobbyMap[ID].Admin {
 		return nil, errors.New("NOT_ADMIN")
 	}
+	if LobbyMap[ID].CurrentRound != 0 {
+		return nil, errors.New("GAME_IN_PROGRESS")
+	}
 
 	if conf.Name != "" {
 		LobbyMap[ID].Conf.Name = conf.Name
@@ -181,6 +184,17 @@ func scoreDistance(x float64, a float64) int {
 
 // calculates distance and score and adds them to the results
 func SubmitResult(lobbyID string, clientID string, location logic.Coords) (float64, int, error) {
+	// immediately return error if game hasnt started yet, times up or player has no more attempts left
+	if LobbyMap[lobbyID].CurrentLoc == nil {
+		return -1, -1, errors.New("GAME_NOT_ACTIVE")
+	}
+	if !LobbyMap[lobbyID].Timer {
+		return -1, -1, errors.New("TIMES_UP")
+	}
+	if len(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID]) >= LobbyMap[lobbyID].Conf.NumAttempt {
+		return -1, -1, errors.New("NO_MORE_ATTEMPTS")
+	}
+	// if time has expired throw an error
 	distance := logic.CalcDistance(*LobbyMap[lobbyID].CurrentLoc, location)
 	score, error := addToResults(lobbyID, clientID, location, distance)
 	return distance, score, error
@@ -191,14 +205,6 @@ func addToResults(lobbyID string, clientID string, location logic.Coords, distan
 	// if user currently doesnt have a result in this round create new map
 	if LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] == nil {
 		LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound] = make(map[string][]logic.Results)
-	}
-	// if all attempts have been used up throw error
-	if len(LobbyMap[lobbyID].Results[LobbyMap[lobbyID].CurrentRound][clientID]) >= LobbyMap[lobbyID].Conf.NumAttempt {
-		return -1, errors.New("NO_MORE_ATTEMPTS")
-	}
-	// if time has expired throw an error
-	if !LobbyMap[lobbyID].Timer {
-		return -1, errors.New("TIMES_UP")
 	}
 	score := scoreDistance(distance, float64(LobbyMap[lobbyID].Conf.ScoreFactor))
 	// TODO: split this monstrosity, maybe use variables
