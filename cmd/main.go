@@ -1,13 +1,18 @@
 // Helper package for testing country polygons and api
-// run with: go run cmd\main.go <poly or api> <CCODE> <poly name, optional>
-// ex: "cmd\main.go poly AU Australia1" tests polygon responses on Australia1 polygon
-// ex: "cmd\main.go api AU" tests api responses for all polygons in AU
-// the idea is to first test polygons (default 100 times each) to see if they are optimal
+// run with: go run cmd\main.go <poly or api or rnd> <CCODE> <poly name, optional>
+// ex: "cmd\main.go poly XX xxxx" tests polygon responses on xxxx polygon
+// ex: "cmd\main.go api XX" tests api responses for all polygons in XX
+// ex: "cmd\main.go rnd" tests random pick rate of countries
+// ex: "cmd\main.go rnd XX" tests random pick rate of areas within XX
+
+// the idea is to first test polygons to see if they are optimal
 // this is cheap so even high values like 3+ shouldnt be a problem
-// next is testing actual api for street view availability (10 times for each polygon)
+// next is testing actual api for street view availability (25 times for each polygon)
 // search radius should be tuned to reach value of around ~1.2
 // lower than that means results arent accurate and higher is wasting api calls
-// *while testing there is a limit of 1 api req/s, it can take a few mins for more complex countries
+// *while testing there is a limit of 5 api req/s, it can take a few mins for more complex countries
+// rnd gives an idea of how likely a country/area is to be selected
+
 package main
 
 import (
@@ -17,6 +22,8 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"sort"
+	"text/tabwriter"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -33,6 +40,7 @@ var countryDB struct {
 	Countries map[string]*country
 	totalSize float64
 }
+var CountryList []string
 
 func InitCountryDB() {
 	fmt.Println("Populating countriesDB")
@@ -42,12 +50,13 @@ func InitCountryDB() {
 	}
 
 	var sum float64
-	// convert country sizen to 10th root and calculate size sum
+	// convert country size to 10th root and calculate size sum
 	// populate every countries search area
 	for ccode, country := range countryDB.Countries {
-		country.Size = math.Pow(country.Size, 0.1)
+		country.Size = math.Pow(country.Size, 0.16)
 		sum += country.Size
 		buf, _ := os.ReadFile(fmt.Sprintf("assets/basic/%s.json", ccode))
+		CountryList = append(CountryList, ccode)
 
 		if err := json.Unmarshal(buf, &country.Areas); err != nil {
 			fmt.Println(err)
@@ -57,6 +66,9 @@ func InitCountryDB() {
 			country.Areas.InnerSize += polygon.Size
 		}
 	}
+	sort.SliceStable(CountryList, func(i, j int) bool {
+		return countryDB.Countries[CountryList[i]].Name < countryDB.Countries[CountryList[j]].Name
+	})
 	countryDB.totalSize = sum
 }
 
@@ -163,42 +175,53 @@ func rayIntersect(p, s, e logic.Point) (intersects, on bool) {
 }
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Println("not enough args")
+	if len(os.Args) < 2 {
+		fmt.Println("Not enough args")
 		return
 	}
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Error loading .env file")
+		return
 	}
 	rand.Seed(time.Now().UnixNano())
 
 	mode := os.Args[1]
-	ccode := os.Args[2]
+	if mode != "rnd" && len(os.Args) < 3 {
+		fmt.Println("Not enough args")
+		return
+	}
+	InitCountryDB()
+	fmt.Println("CHOSEN MODE: ", mode)
+
 	var polyName string
 	if len(os.Args) > 3 {
 		polyName = os.Args[3]
 	}
-	InitCountryDB()
-	fmt.Println("CHOSEN MODE: ", mode)
-	fmt.Println("CHOSEN CCODE: ", ccode)
-
-	var totalResults string
+	var ccode string
 	var polygonList []string
-	if polyName != "" {
-		polygonList = append(polygonList, polyName)
-	} else {
-		for area := range countryDB.Countries[ccode].Areas.SearchArea {
-			polygonList = append(polygonList, area)
+	if len(os.Args) > 2 {
+		ccode = os.Args[2]
+		fmt.Println("CHOSEN CCODE: ", ccode)
+		if polyName != "" {
+			polygonList = append(polygonList, polyName)
+		} else {
+			for area := range countryDB.Countries[ccode].Areas.SearchArea {
+				polygonList = append(polygonList, area)
+			}
 		}
+		sort.Strings(polygonList)
+		fmt.Println("number of polygons selected: ", len(polygonList))
+		fmt.Println(polygonList)
 	}
-	fmt.Println("number of polygons selected: ", len(polygonList))
-	fmt.Println(polygonList)
-	fmt.Println()
+
+	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
 
 	switch mode {
 	case "poly":
-		tries := 100
+		tries := 1000
+		fmt.Fprintln(w, "AREA\t POLY %")
+
 		for i := 0; i < len(polygonList); i++ {
 			polygon := countryDB.Countries[ccode].Areas.SearchArea[polygonList[i]]
 			//fmt.Println("CURRENT POLYGON: ", polygonList[i])
@@ -208,20 +231,17 @@ func main() {
 			for j := 0; j < tries; j++ {
 				for polyOK := true; polyOK; polyOK = !polygonContains(polygon.Rings, pt) {
 					pt = logic.RndPointWithinBox(bbox)
-					fmt.Println("poly contains: ", pt, polygonContains(polygon.Rings, pt))
+					// fmt.Println("poly contains: ", pt, polygonContains(polygon.Rings, pt))
 					polyAttempt++
 				}
 
 			}
-			fmt.Println()
-			fmt.Println("CURRENT POLYGON: ", polygonList[i])
-			fmt.Println("POLY_ATTEMPT:    ", polyAttempt, float64(polyAttempt)/float64(tries))
-			totalResults += fmt.Sprintln("POLYGON:      ", polygonList[i])
-			totalResults += fmt.Sprintln("POLY_ATTEMPT: ", polyAttempt, float64(polyAttempt)/float64(tries))
-
+			fmt.Fprintln(w, polygonList[i], "\t", fmt.Sprintf("%.2f", float64(polyAttempt)/float64(tries)))
 		}
 	case "api":
 		tries := 25
+		fmt.Fprintln(w, "AREA\t POLY %\t FAIL %\t API %")
+
 		for i := 0; i < len(polygonList); i++ {
 			polygon := countryDB.Countries[ccode].Areas.SearchArea[polygonList[i]]
 			bbox := polygon.Rings[0].Bound()
@@ -242,26 +262,54 @@ func main() {
 						pt = logic.RndPointWithinBox(bbox)
 						polyAttempt++
 					}
-					time.Sleep(50 * time.Millisecond)
+					time.Sleep(200 * time.Millisecond)
 					loc, status = logic.CheckStreetViewExists(pt, polygon.Radius)
 					fmt.Println("api check: ", pt, loc, status)
 					failsafe++
 					apiAttempt++
 				}
-
 			}
-			fmt.Println()
-			fmt.Println("CURRENT POLYGON: ", polygonList[i])
-			fmt.Println("API_ATTEMPTS:    ", apiAttempt, float64(apiAttempt)/float64(tries))
-			fmt.Println("API_FAILS:       ", apiFail, float64(apiFail)/float64(tries))
-			fmt.Println("POLY_ATTEMPT:    ", polyAttempt, float64(apiFail)/float64(tries))
-			totalResults += fmt.Sprintln("POLYGON:      ", polygonList[i])
-			totalResults += fmt.Sprintln("POLY_ATTEMPT: ", polyAttempt, float64(polyAttempt)/float64(tries))
-			totalResults += fmt.Sprintln("API_ATTEMPTS: ", apiAttempt, float64(apiAttempt)/float64(tries))
-			totalResults += fmt.Sprintln("API_FAILS:    ", apiFail, float64(apiFail)/float64(tries))
 
+			fmt.Fprintln(w, polygonList[i], "\t", fmt.Sprintf("%.2f", float64(polyAttempt)/float64(tries)), "\t", fmt.Sprintf("%.2f", float64(apiFail)/float64(tries)), "\t", fmt.Sprintf("%.2f", float64(apiAttempt)/float64(tries)))
 		}
+	case "rnd":
+		tries := 1000000
+		cLog := make(map[string]int)
+		if len(polygonList) == 0 {
+			for i := 0; i < tries; i++ {
+				rnd := rand.Float64() * countryDB.totalSize
+				for ccode, country := range countryDB.Countries {
+					if rnd <= country.Size {
+						cLog[ccode]++
+						break
+					}
+					rnd -= country.Size
+				}
+			}
+			fmt.Fprintln(w, "COUNTRY\t COUNT\t %")
+			for _, ccode := range CountryList {
+				fmt.Fprintln(w, countryDB.Countries[ccode].Name, "\t", cLog[ccode], "\t", fmt.Sprintf("%.2f", (float64(cLog[ccode])/float64(tries))*100))
+			}
+		} else {
+			for i := 0; i < tries; i++ {
+
+				rnd := rand.Intn(countryDB.Countries[ccode].Areas.InnerSize)
+				for area, polygon := range countryDB.Countries[ccode].Areas.SearchArea {
+					if rnd <= polygon.Size {
+						cLog[area]++
+						break
+					}
+					rnd -= polygon.Size
+				}
+			}
+			fmt.Fprintln(w, "AREA\t COUNT\t %")
+			for _, poly := range polygonList {
+				fmt.Fprintln(w, poly, "\t", cLog[poly], "\t", fmt.Sprintf("%.2f", (float64(cLog[poly])/float64(tries))*100))
+			}
+		}
+
 	}
-	fmt.Println("\nTOTAL RESULTS\n", totalResults)
+	fmt.Println("\nRESULTS")
+	w.Flush()
 
 }
