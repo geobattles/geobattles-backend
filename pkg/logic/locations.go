@@ -42,6 +42,7 @@ func InitCountryDB() {
 		}
 
 		for _, polygon := range country.Areas.SearchArea {
+			polygon.Size = int(math.Sqrt(float64(polygon.Size)))
 			country.Areas.InnerSize += polygon.Size
 		}
 	}
