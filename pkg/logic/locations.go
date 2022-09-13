@@ -32,7 +32,7 @@ func InitCountryDB() {
 	// convert country size to 10th root and calculate size sum
 	// populate every countries search area
 	for ccode, country := range countryDB.Countries {
-		country.Size = math.Pow(country.Size, 0.1)
+		country.Size = math.Pow(country.Size, 0.16)
 		sum += country.Size
 		buf, _ := os.ReadFile(fmt.Sprintf("assets/basic/%s.json", ccode))
 		CountryList = append(CountryList, ccode)
@@ -42,6 +42,7 @@ func InitCountryDB() {
 		}
 
 		for _, polygon := range country.Areas.SearchArea {
+			polygon.Size = int(math.Sqrt(float64(polygon.Size)))
 			country.Areas.InnerSize += polygon.Size
 		}
 	}

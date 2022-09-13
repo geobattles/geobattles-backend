@@ -67,9 +67,16 @@ func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 	fmt.Println("WebSocket Endpoint Hit, room ID: ", lobbyID, " name: ", userName)
 	// only connect to ws if lobby exists
 	if _, ok := lobby.LobbyMap[lobbyID]; ok {
+		if lobby.LobbyMap[lobbyID].CurrentRound != 0 {
+			fmt.Println("ERR: Game in progres")
+			w.WriteHeader(http.StatusConflict)
+			return
+		}
+
 		conn, err := websocket.Upgrade(w, r)
 		if err != nil {
 			fmt.Fprintf(w, "%+v\n", err)
+			return
 		}
 
 		client := &websocket.Client{
@@ -85,6 +92,8 @@ func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 		fmt.Println("lobbyList: ", lobby.LobbyMap)
 
 		go client.Read()
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
 	}
 }
 
