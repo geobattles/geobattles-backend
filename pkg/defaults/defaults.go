@@ -9,3 +9,8 @@ const (
 	ScoreFactorHigh = 500
 	RoundTime       = 60
 )
+
+// we cant use constant array/slice so we use this instead
+func Powerups() *[]bool {
+	return &[]bool{true, true}
+}
