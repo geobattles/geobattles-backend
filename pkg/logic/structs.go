@@ -14,6 +14,7 @@ type Results struct {
 	Dist    float64 `json:"distance"`
 	Score   int     `json:"score"`
 	Attempt int     `json:"attempt,omitempty"`
+	Lives   int     `json:"lives,omitempty"`
 }
 
 // response from google maps metadata api
@@ -73,6 +74,7 @@ type Player struct {
 	Name     string `json:"name"`
 	Color    string `json:"color"`
 	Powerups []bool `json:"powerups"`
+	Lives    int    `json:"lives,omitempty"`
 }
 
 type Lobby struct {
