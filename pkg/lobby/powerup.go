@@ -70,6 +70,9 @@ func ProcessPowerups(lobbyID string) error {
 }
 
 func ProcessBonus(lobbyID string) error {
+	if !*LobbyMap[lobbyID].Conf.PlaceBonus {
+		return errors.New("BONUS_DISABLED")
+	}
 	var playerOrder []string
 	for name := range LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound] {
 		playerOrder = append(playerOrder, name)

@@ -245,7 +245,7 @@ func addToResults(lobbyID string, clientID string, location logic.Coords, distan
 	}
 	score := scoreDistance(distance, float64(LobbyMap[lobbyID].Conf.ScoreFactor))
 	// TODO: split this monstrosity, maybe use variables
-	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, Dist: distance, Score: score})
+	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, Dist: distance, Score: score, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID])})
 	if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] == nil {
 		fmt.Println("FIRST RESULT")
 		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, Dist: distance, Score: score, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID])}
