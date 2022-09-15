@@ -78,6 +78,7 @@ func (c *Client) Read() {
 				lobby.LobbyMap[c.Room].Active = false
 
 				c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "WRN", Type: "TIMES_UP"}}
+				lobby.ProcessBonus(c.Room)
 				lobby.ProcessPowerups(c.Room)
 				message := logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].EndResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound]}
 				c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: message}
@@ -126,6 +127,7 @@ func (c *Client) Read() {
 				fmt.Println("STOP TIMER")
 				c.Pool.Timer.Stop()
 				c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "WRN", Type: err.Error()}}
+				lobby.ProcessBonus(c.Room)
 				lobby.ProcessPowerups(c.Room)
 				message := logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].EndResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound]}
 				c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: message}

@@ -14,3 +14,7 @@ const (
 func Powerups() *[]bool {
 	return &[]bool{true, true}
 }
+func PlaceBonus() *bool {
+	b := true
+	return &b
+}

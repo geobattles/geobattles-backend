@@ -37,11 +37,11 @@ type ClientResp struct {
 	User   string                       `json:"user,omitempty"`
 	AllRes map[int]map[string][]Results `json:"results,omitempty"`
 	// RoundRes map[string][]Results         `json:"roundRes,omitempty"`
-	RoundRes map[string]Results `json:"roundRes,omitempty"`
-	GuessRes *Results           `json:"playerRes,omitempty"`
-	Round    int                `json:"round,omitempty"`
-	Lobby    *Lobby             `json:"lobby,omitempty"`
-	PowerLog []Powerup          `json:"PowerLog,omitempty"`
+	RoundRes map[string]*Results `json:"roundRes,omitempty"`
+	GuessRes *Results            `json:"playerRes,omitempty"`
+	Round    int                 `json:"round,omitempty"`
+	Lobby    *Lobby              `json:"lobby,omitempty"`
+	PowerLog []Powerup           `json:"powerLog,omitempty"`
 }
 
 // else it will be broadcast to the entire Room. Conn takes precedence over Room
@@ -66,6 +66,7 @@ type LobbyConf struct {
 	ScoreFactor int      `json:"scoreFactor"`
 	CCList      []string `json:"ccList"`
 	Powerups    *[]bool  `json:"powerups"`
+	PlaceBonus  *bool    `json:"placeBonus"`
 }
 
 type Player struct {
@@ -83,7 +84,7 @@ type Lobby struct {
 	CurrentLoc    *Coords                      `json:"-"`
 	CurrentRound  int                          `json:"currentRound"`
 	RawResults    map[int]map[string][]Results `json:"results"`
-	EndResults    map[int]map[string]Results   `json:"endResults"`
+	EndResults    map[int]map[string]*Results  `json:"endResults"`
 	Active        bool                         `json:"-"`
 	UsersFinished int                          `json:"-"`
 	CCSize        float64                      `json:"-"`

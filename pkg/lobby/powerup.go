@@ -4,6 +4,7 @@ import (
 	"errors"
 	"example/web-service-gin/pkg/logic"
 	"fmt"
+	"sort"
 )
 
 func UsePowerup(powerup logic.Powerup, lobbyID string) error {
@@ -14,6 +15,17 @@ func UsePowerup(powerup logic.Powerup, lobbyID string) error {
 			return errors.New("NOT_AVAILABLE")
 		}
 		LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[0] = false
+		LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1] = append(LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1], powerup)
+		fmt.Println("PWLOG", LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1])
+	case 1:
+		// duel
+		if !LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[1] {
+			return errors.New("NOT_AVAILABLE")
+		}
+		if _, ok := LobbyMap[lobbyID].PlayerMap[powerup.Target]; !ok {
+			return errors.New("WRONG_TARGET")
+		}
+		LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[1] = false
 		LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1] = append(LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1], powerup)
 		fmt.Println("PWLOG", LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1])
 	default:
@@ -28,7 +40,6 @@ func ProcessPowerups(lobbyID string) error {
 		fmt.Println("powerup", power)
 		switch power.Type {
 		case 0:
-			fmt.Println("CASE 0")
 			// double points
 			if result, ok := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source]; ok {
 				result.Score *= 2
@@ -36,8 +47,47 @@ func ProcessPowerups(lobbyID string) error {
 				fmt.Println("DOUBLE SCORE")
 			}
 			fmt.Println(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound])
+		case 1:
+			// duel
+			resultSource, okS := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source]
+			resultTarget, okT := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Target]
+
+			if okS && okT {
+				if resultSource.Dist < resultTarget.Dist {
+					resultSource.Score += 1000
+					resultTarget.Score -= 1000
+				} else {
+					resultSource.Score -= 1000
+					resultTarget.Score += 1000
+				}
+				fmt.Println("DUEL SCORE")
+			}
+			fmt.Println(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound])
 
 		}
+	}
+	return nil
+}
+
+func ProcessBonus(lobbyID string) error {
+	var playerOrder []string
+	for name := range LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound] {
+		playerOrder = append(playerOrder, name)
+	}
+	sort.SliceStable(playerOrder, func(i, j int) bool {
+		return LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[i]].Dist < LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[j]].Dist
+	})
+	fmt.Println("PLAYER ORDER", playerOrder)
+	switch num := len(playerOrder); {
+	case num == 2:
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score) * 1.1)
+	case num == 3:
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score) * 1.25)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].Score) * 1.1)
+	case num >= 4:
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score) * 1.5)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].Score) * 1.25)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[2]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[2]].Score) * 1.1)
 	}
 	return nil
 }
