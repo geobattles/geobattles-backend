@@ -144,6 +144,21 @@
             "name": "Dominican Republic",
             "ccode": "DO",
             "size": 750
+        },
+        "EC": {
+            "name": "Ecuador",
+            "ccode": "EC",
+            "size": 205880
+        },
+        "EG": {
+            "name": "Egypt",
+            "ccode": "EG",
+            "size": 50
+        },
+        "EE": {
+            "name": "Estonia",
+            "ccode": "EE",
+            "size": 45784
         }
     }
 }
