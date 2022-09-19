@@ -14,7 +14,7 @@ type Results struct {
 	Dist    float64 `json:"distance"`
 	Score   int     `json:"score"`
 	Attempt int     `json:"attempt,omitempty"`
-	Lives   int     `json:"lives,omitempty"`
+	Lives   int     `json:"lives"`
 }
 
 // response from google maps metadata api
