@@ -69,6 +69,7 @@ type LobbyConf struct {
 	CCList      []string `json:"ccList"`
 	Powerups    *[]bool  `json:"powerups"`
 	PlaceBonus  *bool    `json:"placeBonus"`
+	DynLives    *bool    `json:"dynLives"`
 }
 
 type Player struct {

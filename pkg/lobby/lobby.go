@@ -10,7 +10,7 @@ import (
 
 // initial lobby list for debugging
 var LobbyMap = map[string]*logic.Lobby{
-	"U4YPR6": {ID: "U4YPR6", Conf: &logic.LobbyConf{Name: "prvi lobby", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}, Powerups: defaults.Powerups(), PlaceBonus: defaults.PlaceBonus()}, NumPlayers: 0, PlayerMap: make(map[string]*logic.Player), RawResults: make(map[int]map[string][]logic.Results), EndResults: make(map[int]map[string]*logic.Results), PowerLogs: make(map[int][]logic.Powerup)},
+	"U4YPR6": {ID: "U4YPR6", Conf: &logic.LobbyConf{Name: "prvi lobby", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}, Powerups: defaults.Powerups(), PlaceBonus: defaults.PlaceBonus(), DynLives: defaults.DynLives()}, NumPlayers: 0, PlayerMap: make(map[string]*logic.Player), RawResults: make(map[int]map[string][]logic.Results), EndResults: make(map[int]map[string]*logic.Results), PowerLogs: make(map[int][]logic.Powerup)},
 }
 
 var ColorList = [12]string{"#e6194B", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#000075", "#469990", "#9A6324", "#dcbeff", "#800000"}
@@ -82,6 +82,12 @@ func CreateLobby(conf logic.LobbyConf) *logic.Lobby {
 		newLobby.Conf.PlaceBonus = defaults.PlaceBonus()
 	}
 
+	if conf.DynLives != nil {
+		newLobby.Conf.DynLives = conf.DynLives
+	} else {
+		newLobby.Conf.DynLives = defaults.DynLives()
+	}
+
 	LobbyMap[lobbyID] = &newLobby
 	return LobbyMap[lobbyID]
 }
@@ -126,6 +132,10 @@ func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby
 
 	if conf.PlaceBonus != nil {
 		LobbyMap[ID].Conf.PlaceBonus = conf.PlaceBonus
+	}
+
+	if conf.DynLives != nil {
+		LobbyMap[ID].Conf.DynLives = conf.DynLives
 	}
 	return LobbyMap[ID], nil
 }
@@ -199,10 +209,16 @@ func UpdateCurrentLocation(lobbyID string, location logic.Coords) {
 			player.Lives = LobbyMap[lobbyID].Conf.NumAttempt
 		}
 	} else {
-		for _, player := range LobbyMap[lobbyID].PlayerMap {
-			player.Lives += (LobbyMap[lobbyID].Conf.NumAttempt + 1) / 2
-			if player.Lives > LobbyMap[lobbyID].Conf.NumAttempt+1 {
-				player.Lives = LobbyMap[lobbyID].Conf.NumAttempt + 1
+		if *LobbyMap[lobbyID].Conf.DynLives == true {
+			for _, player := range LobbyMap[lobbyID].PlayerMap {
+				player.Lives += (LobbyMap[lobbyID].Conf.NumAttempt + 1) / 2
+				if player.Lives > LobbyMap[lobbyID].Conf.NumAttempt+1 {
+					player.Lives = LobbyMap[lobbyID].Conf.NumAttempt + 1
+				}
+			}
+		} else {
+			for _, player := range LobbyMap[lobbyID].PlayerMap {
+				player.Lives = LobbyMap[lobbyID].Conf.NumAttempt
 			}
 		}
 	}

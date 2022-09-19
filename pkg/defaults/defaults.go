@@ -18,3 +18,7 @@ func PlaceBonus() *bool {
 	b := true
 	return &b
 }
+func DynLives() *bool {
+	b := true
+	return &b
+}
