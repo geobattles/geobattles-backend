@@ -159,6 +159,31 @@
             "name": "Estonia",
             "ccode": "EE",
             "size": 45784
+        },
+        "SZ": {
+            "name": "Eswatini",
+            "ccode": "SZ",
+            "size": 14097
+        },
+        "FK": {
+            "name": "Falkland Islands",
+            "ccode": "FK",
+            "size": 14097
+        },
+        "FO": {
+            "name": "Faroe Islands",
+            "ccode": "FO",
+            "size": 1629
+        },
+        "FI": {
+            "name": "Finland",
+            "ccode": "FI",
+            "size": 327586
+        },
+        "FR": {
+            "name": "France",
+            "ccode": "FR",
+            "size": 547646
         }
     }
 }
