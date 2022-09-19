@@ -43,6 +43,7 @@ type ClientResp struct {
 	Round    int                 `json:"round,omitempty"`
 	Lobby    *Lobby              `json:"lobby,omitempty"`
 	PowerLog []Powerup           `json:"powerLog,omitempty"`
+	Players  map[string]*Player  `json:"players,omitempty"`
 }
 
 // else it will be broadcast to the entire Room. Conn takes precedence over Room
