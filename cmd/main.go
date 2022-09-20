@@ -253,7 +253,7 @@ func main() {
 			for j := 0; j < tries; j++ {
 				for apiOK, failsafe := true, 0; apiOK; apiOK = (status == "ZERO_RESULTS") {
 					// failsafe, if location repeatedly fails select different one
-					if failsafe >= 7 {
+					if failsafe >= 3 {
 						fmt.Println("FAILSAFE ACTIVATED!")
 						apiFail++
 						break

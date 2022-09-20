@@ -184,6 +184,16 @@
             "name": "France",
             "ccode": "FR",
             "size": 547646
+        },
+        "DE": {
+            "name": "Germany",
+            "ccode": "DE",
+            "size": 250000
+        },
+        "GH": {
+            "name": "Ghana",
+            "ccode": "GH",
+            "size": 95000
         }
     }
 }
