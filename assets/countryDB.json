@@ -194,6 +194,16 @@
             "name": "Ghana",
             "ccode": "GH",
             "size": 95000
+        },
+        "GI": {
+            "name": "Gibraltar",
+            "ccode": "GI",
+            "size": 5
+        },
+        "GR": {
+            "name": "Greece",
+            "ccode": "GR",
+            "size": 130000
         }
     }
 }
