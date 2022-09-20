@@ -204,6 +204,16 @@
             "name": "Greece",
             "ccode": "GR",
             "size": 130000
+        },
+        "GL": {
+            "name": "Greenland",
+            "ccode": "GL",
+            "size": 70
+        },
+        "GT": {
+            "name": "Guatemala",
+            "ccode": "GT",
+            "size": 56720
         }
     }
 }
