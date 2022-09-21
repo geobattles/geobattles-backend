@@ -214,6 +214,16 @@
             "name": "Guatemala",
             "ccode": "GT",
             "size": 56720
+        },
+        "HK": {
+            "name": "Hong Kong",
+            "ccode": "HK",
+            "size": 1847
+        },
+        "HU": {
+            "name": "Hungary",
+            "ccode": "HU",
+            "size": 92687
         }
     }
 }
