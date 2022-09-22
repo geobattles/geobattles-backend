@@ -259,6 +259,21 @@
             "name": "Italy",
             "ccode": "IT",
             "size": 310897
+        },
+        "JP": {
+            "name": "Japan",
+            "ccode": "JP",
+            "size": 330897
+        },
+        "JE": {
+            "name": "Jersey",
+            "ccode": "JE",
+            "size": 121
+        },
+        "JO": {
+            "name": "Jordan",
+            "ccode": "JO",
+            "size": 16245
         }
     }
 }
