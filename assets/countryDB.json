@@ -279,6 +279,36 @@
             "name": "South Georgia and the South Sandwich Islands",
             "ccode": "GS",
             "size": 3
+        },
+        "JP": {
+            "name": "Japan",
+            "ccode": "JP",
+            "size": 330897
+        },
+        "JE": {
+            "name": "Jersey",
+            "ccode": "JE",
+            "size": 121
+        },
+        "JO": {
+            "name": "Jordan",
+            "ccode": "JO",
+            "size": 16245
+        },
+        "KE": {
+            "name": "Kenya",
+            "ccode": "KE",
+            "size": 125305
+        },
+        "KR": {
+            "name": "South Korea",
+            "ccode": "KR",
+            "size": 65000
+        },
+        "KG": {
+            "name": "Kyrgyzstan",
+            "ccode": "KG",
+            "size": 20817
         }
     }
 }
