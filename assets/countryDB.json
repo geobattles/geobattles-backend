@@ -259,6 +259,26 @@
             "name": "Italy",
             "ccode": "IT",
             "size": 310897
+        },
+        "SI": {
+            "name": "Slovenia",
+            "ccode": "SI",
+            "size": 21137
+        },
+        "ZA": {
+            "name": "South Africa",
+            "ccode": "ZA",
+            "size": 1279321
+        },
+        "ES": {
+            "name": "Spain",
+            "ccode": "ES",
+            "size": 508486
+        },
+        "GS": {
+            "name": "South Georgia and the South Sandwich Islands",
+            "ccode": "GS",
+            "size": 3
         }
     }
 }
