@@ -36,6 +36,10 @@ func UsePowerup(powerup logic.Powerup, lobbyID string) error {
 
 func ProcessPowerups(lobbyID string) error {
 	fmt.Println("PROCESS POWER", LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound])
+	// sort powerlogs so that type 0 is processed before others
+	sort.Slice(LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound], func(p, q int) bool {
+		return LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound][p].Type < LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound][q].Type
+	})
 	for _, power := range LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound] {
 		fmt.Println("powerup", power)
 		switch power.Type {
