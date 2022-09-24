@@ -22,7 +22,7 @@ func UsePowerup(powerup logic.Powerup, lobbyID string) error {
 		if !LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[1] {
 			return errors.New("NOT_AVAILABLE")
 		}
-		if _, ok := LobbyMap[lobbyID].PlayerMap[powerup.Target]; !ok {
+		if _, ok := LobbyMap[lobbyID].PlayerMap[powerup.Target]; !ok || powerup.Source == powerup.Target {
 			return errors.New("WRONG_TARGET")
 		}
 		LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[1] = false

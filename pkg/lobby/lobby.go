@@ -162,7 +162,7 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string) {
 		LobbyMap[lobbyID].Admin = clientID
 	}
 	// LobbyMap[lobbyID].PlayerMap[clientID] = &logic.Player{Name: clientName, Color: genPlayerColor(lobbyID), Powerups: *LobbyMap[lobbyID].Conf.Powerups}
-	LobbyMap[lobbyID].PlayerMap[clientID] = &logic.Player{Name: clientName, Color: genPlayerColor(lobbyID)}
+	LobbyMap[lobbyID].PlayerMap[clientID] = &logic.Player{Name: clientName, Color: genPlayerColor(lobbyID), Powerups: make([]bool, len(*LobbyMap[lobbyID].Conf.Powerups))}
 	LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerMap)
 }
 
@@ -193,9 +193,9 @@ func ResetLobby(lobbyID string) {
 	LobbyMap[lobbyID].CurrentLoc = nil
 	LobbyMap[lobbyID].UsersFinished = 0
 	LobbyMap[lobbyID].CurrentRound = 0
-	for _, player := range LobbyMap[lobbyID].PlayerMap {
-		player.Powerups = *LobbyMap[lobbyID].Conf.Powerups
-	}
+	// for _, player := range LobbyMap[lobbyID].PlayerMap {
+	// 	player.Powerups = *LobbyMap[lobbyID].Conf.Powerups
+	// }
 	fmt.Println("Lobby after reset ", LobbyMap[lobbyID])
 }
 
@@ -205,7 +205,8 @@ func UpdateCurrentLocation(lobbyID string, location logic.Coords) {
 	fmt.Println("updating lobby loaction: ", lobbyID, location)
 	if LobbyMap[lobbyID].CurrentRound == 0 {
 		for _, player := range LobbyMap[lobbyID].PlayerMap {
-			player.Powerups = *LobbyMap[lobbyID].Conf.Powerups
+			copy(player.Powerups, *LobbyMap[lobbyID].Conf.Powerups)
+			//player.Powerups = *LobbyMap[lobbyID].Conf.Powerups
 			player.Lives = LobbyMap[lobbyID].Conf.NumAttempt
 		}
 	} else {
