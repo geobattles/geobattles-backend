@@ -65,7 +65,7 @@ func (c *Client) Read() {
 			var location logic.Coords = logic.RndLocation(lobby.LobbyMap[c.Room].Conf.CCList, lobby.LobbyMap[c.Room].CCSize)
 			lobby.UpdateCurrentLocation(c.Room, location)
 			fmt.Println("start timer")
-			message := logic.ClientResp{Status: "OK", Type: "START_ROUND", Loc: &location, Players: lobby.LobbyMap[c.Room].PlayerMap}
+			message := logic.ClientResp{Status: "OK", Type: "START_ROUND", Loc: &location, Players: lobby.LobbyMap[c.Room].PlayerMap, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound]}
 			c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: message}
 
 			// 3 sec added to timer for countdown
