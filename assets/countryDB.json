@@ -309,6 +309,21 @@
             "name": "Kyrgyzstan",
             "ccode": "KG",
             "size": 20817
+        },
+        "LA": {
+            "name": "Laos",
+            "ccode": "LA",
+            "size": 105481
+        },
+        "LV": {
+            "name": "Latvia",
+            "ccode": "LV",
+            "size": 62834
+        },
+        "LB": {
+            "name": "Lebanon",
+            "ccode": "LB",
+            "size": 6184
         }
     }
 }
