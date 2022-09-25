@@ -144,6 +144,186 @@
             "name": "Dominican Republic",
             "ccode": "DO",
             "size": 750
+        },
+        "EC": {
+            "name": "Ecuador",
+            "ccode": "EC",
+            "size": 205880
+        },
+        "EG": {
+            "name": "Egypt",
+            "ccode": "EG",
+            "size": 50
+        },
+        "EE": {
+            "name": "Estonia",
+            "ccode": "EE",
+            "size": 45784
+        },
+        "SZ": {
+            "name": "Eswatini",
+            "ccode": "SZ",
+            "size": 14097
+        },
+        "FK": {
+            "name": "Falkland Islands",
+            "ccode": "FK",
+            "size": 14097
+        },
+        "FO": {
+            "name": "Faroe Islands",
+            "ccode": "FO",
+            "size": 1629
+        },
+        "FI": {
+            "name": "Finland",
+            "ccode": "FI",
+            "size": 327586
+        },
+        "FR": {
+            "name": "France",
+            "ccode": "FR",
+            "size": 547646
+        },
+        "DE": {
+            "name": "Germany",
+            "ccode": "DE",
+            "size": 250000
+        },
+        "GH": {
+            "name": "Ghana",
+            "ccode": "GH",
+            "size": 95000
+        },
+        "GI": {
+            "name": "Gibraltar",
+            "ccode": "GI",
+            "size": 5
+        },
+        "GR": {
+            "name": "Greece",
+            "ccode": "GR",
+            "size": 130000
+        },
+        "GL": {
+            "name": "Greenland",
+            "ccode": "GL",
+            "size": 70
+        },
+        "GT": {
+            "name": "Guatemala",
+            "ccode": "GT",
+            "size": 56720
+        },
+        "HK": {
+            "name": "Hong Kong",
+            "ccode": "HK",
+            "size": 1847
+        },
+        "HU": {
+            "name": "Hungary",
+            "ccode": "HU",
+            "size": 92687
+        },
+        "IS": {
+            "name": "Iceland",
+            "ccode": "IS",
+            "size": 59494
+        },
+        "IN": {
+            "name": "India",
+            "ccode": "IN",
+            "size": 1000000
+        },
+        "ID": {
+            "name": "Indonesia",
+            "ccode": "ID",
+            "size": 1400000
+        },
+        "IE": {
+            "name": "Ireland",
+            "ccode": "IE",
+            "size": 72159
+        },
+        "IM": {
+            "name": "Isle of Man",
+            "ccode": "IM",
+            "size": 605
+        },
+        "IL": {
+            "name": "Israel",
+            "ccode": "IL",
+            "size": 13872
+        },
+        "IT": {
+            "name": "Italy",
+            "ccode": "IT",
+            "size": 310897
+        },
+        "SI": {
+            "name": "Slovenia",
+            "ccode": "SI",
+            "size": 21137
+        },
+        "ZA": {
+            "name": "South Africa",
+            "ccode": "ZA",
+            "size": 1279321
+        },
+        "ES": {
+            "name": "Spain",
+            "ccode": "ES",
+            "size": 508486
+        },
+        "GS": {
+            "name": "South Georgia and the South Sandwich Islands",
+            "ccode": "GS",
+            "size": 3
+        },
+        "JP": {
+            "name": "Japan",
+            "ccode": "JP",
+            "size": 330897
+        },
+        "JE": {
+            "name": "Jersey",
+            "ccode": "JE",
+            "size": 121
+        },
+        "JO": {
+            "name": "Jordan",
+            "ccode": "JO",
+            "size": 16245
+        },
+        "KE": {
+            "name": "Kenya",
+            "ccode": "KE",
+            "size": 125305
+        },
+        "KR": {
+            "name": "South Korea",
+            "ccode": "KR",
+            "size": 65000
+        },
+        "KG": {
+            "name": "Kyrgyzstan",
+            "ccode": "KG",
+            "size": 20817
+        },
+        "LA": {
+            "name": "Laos",
+            "ccode": "LA",
+            "size": 105481
+        },
+        "LV": {
+            "name": "Latvia",
+            "ccode": "LV",
+            "size": 62834
+        },
+        "LB": {
+            "name": "Lebanon",
+            "ccode": "LB",
+            "size": 6184
         }
     }
 }
