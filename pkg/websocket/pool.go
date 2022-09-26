@@ -52,12 +52,6 @@ func (pool *Pool) Start() {
 				client.Pool.Transmit <- logic.RouteMsg{Room: client.Room, Data: logic.ClientResp{Status: "OK", Type: "JOINED_LOBBY", User: client.ID, Lobby: lobby.LobbyMap[client.Room]}}
 			}()
 
-			// for clientConn := range pool.Rooms[client.Room] {
-			// 	//fmt.Println("sending updated client list", client)
-			// 	clientConn.WriteJSON(logic.ResponseMsg{Status: "OK", Type: "JOINED_LOBBY", Lobby: lobby.LobbyMap[client.Room]})
-			// }
-			break
-
 		case client := <-pool.Unregister:
 			fmt.Println("UNREGISTERING")
 			delete(pool.Rooms[client.Room], client.Conn)
@@ -66,12 +60,6 @@ func (pool *Pool) Start() {
 			go func() {
 				client.Pool.Transmit <- logic.RouteMsg{Room: client.Room, Data: logic.ClientResp{Status: "OK", Type: "LEFT_LOBBY", User: client.ID, Lobby: lobby.LobbyMap[client.Room]}}
 			}()
-
-			// send updated list of players to every member of the lobby
-			// for clientConn := range pool.Rooms[client.Room] {
-			// 	clientConn.WriteJSON(logic.ResponseMsg{Status: "OK", Type: "LEFT_LOBBY", Lobby: lobby.LobbyMap[client.Room]})
-			// }
-			break
 
 		case message := <-pool.Transmit:
 			fmt.Println("msg to send: ", message)

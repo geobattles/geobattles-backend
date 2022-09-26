@@ -10,9 +10,11 @@ type Coords struct {
 }
 
 type Results struct {
-	Loc   Coords  `json:"location"`
-	Dist  float64 `json:"distance"`
-	Score int     `json:"score"`
+	Loc     Coords  `json:"location"`
+	Dist    float64 `json:"distance"`
+	Score   int     `json:"score"`
+	Attempt int     `json:"attempt"`
+	Lives   int     `json:"lives"`
 }
 
 // response from google maps metadata api
@@ -22,12 +24,28 @@ type ApiMetaResponse struct {
 }
 
 type ClientReq struct {
-	Cmd  string    `json:"command"`
-	Loc  *Coords   `json:"location"`
-	Conf LobbyConf `json:"conf"`
+	Cmd     string    `json:"command"`
+	Loc     *Coords   `json:"location"`
+	Conf    LobbyConf `json:"conf"`
+	Powerup Powerup   `json:"powerup"`
 }
 
 // either Conn or Room must be provided. if Conn is set Data will be sent to this connection
+type ClientResp struct {
+	Status string                       `json:"status"`
+	Type   string                       `json:"type"`
+	Loc    *Coords                      `json:"location,omitempty"`
+	User   string                       `json:"user,omitempty"`
+	AllRes map[int]map[string][]Results `json:"results,omitempty"`
+	// RoundRes map[string][]Results         `json:"roundRes,omitempty"`
+	RoundRes map[string]*Results `json:"roundRes,omitempty"`
+	GuessRes *Results            `json:"playerRes,omitempty"`
+	Round    int                 `json:"round,omitempty"`
+	Lobby    *Lobby              `json:"lobby,omitempty"`
+	PowerLog []Powerup           `json:"powerLog,omitempty"`
+	Players  map[string]*Player  `json:"players,omitempty"`
+}
+
 // else it will be broadcast to the entire Room. Conn takes precedence over Room
 type RouteMsg struct {
 	Conn *websocket.Conn
@@ -35,18 +53,10 @@ type RouteMsg struct {
 	Data ClientResp
 }
 
-type ClientResp struct {
-	Status   string                       `json:"status"`
-	Type     string                       `json:"type"`
-	Loc      *Coords                      `json:"location,omitempty"`
-	User     string                       `json:"user,omitempty"`
-	AllRes   map[int]map[string][]Results `json:"results,omitempty"`
-	RoundRes map[string][]Results         `json:"roundRes,omitempty"`
-	GuessRes *Results                     `json:"playerRes,omitempty"`
-	Round    int                          `json:"round,omitempty"`
-	Lobby    *Lobby                       `json:"lobby,omitempty"`
-	//Distance float64                      `json:"distance,omitempty"`
-	//Score    int                          `json:"score,omitempty"`
+type Powerup struct {
+	Type   int    `json:"type"`
+	Source string `json:"source"`
+	Target string `json:"target,omitempty"`
 }
 
 type LobbyConf struct {
@@ -57,11 +67,16 @@ type LobbyConf struct {
 	RoundTime   int      `json:"roundTime"`
 	ScoreFactor int      `json:"scoreFactor"`
 	CCList      []string `json:"ccList"`
+	Powerups    *[]bool  `json:"powerups"`
+	PlaceBonus  *bool    `json:"placeBonus"`
+	DynLives    *bool    `json:"dynLives"`
 }
 
 type Player struct {
-	Name  string `json:"name"`
-	Color string `json:"color"`
+	Name     string `json:"name"`
+	Color    string `json:"color"`
+	Powerups []bool `json:"powerups"`
+	Lives    int    `json:"lives,omitempty"`
 }
 
 type Lobby struct {
@@ -69,11 +84,13 @@ type Lobby struct {
 	Admin         string                       `json:"admin"`
 	Conf          *LobbyConf                   `json:"conf"`
 	NumPlayers    int                          `json:"numPlayers"`
-	PlayerMap     map[string]Player            `json:"playerList"`
+	PlayerMap     map[string]*Player           `json:"playerList"`
 	CurrentLoc    *Coords                      `json:"-"`
 	CurrentRound  int                          `json:"currentRound"`
-	Results       map[int]map[string][]Results `json:"results"`
-	Timer         bool                         `json:"-"`
+	RawResults    map[int]map[string][]Results `json:"results"`
+	EndResults    map[int]map[string]*Results  `json:"endResults"`
+	Active        bool                         `json:"-"`
 	UsersFinished int                          `json:"-"`
 	CCSize        float64                      `json:"-"`
+	PowerLogs     map[int][]Powerup            `json:"-"`
 }
