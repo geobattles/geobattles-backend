@@ -53,19 +53,28 @@ func ProcessPowerups(lobbyID string) error {
 			fmt.Println(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound])
 		case 1:
 			// duel
-			resultSource, okS := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source]
-			resultTarget, okT := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Target]
-
-			if okS && okT {
-				if resultSource.Dist < resultTarget.Dist {
-					resultSource.Score += 1000
-					resultTarget.Score -= 1000
-				} else {
-					resultSource.Score -= 1000
-					resultTarget.Score += 1000
-				}
-				fmt.Println("DUEL SCORE")
+			resultSource := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source]
+			resultTarget := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Target]
+			// if source player left dont process anything
+			if _, okS := LobbyMap[lobbyID].PlayerMap[power.Source]; okS {
+				fmt.Println("player left, dont do duel")
+				break
 			}
+			// if target left refund source and dont process anything
+			if _, okT := LobbyMap[lobbyID].PlayerMap[power.Source]; okT {
+				fmt.Println("player left, dont do duel, refund player")
+				LobbyMap[lobbyID].PlayerMap[power.Source].Powerups[1] = true
+				break
+			}
+
+			if resultSource.Dist < resultTarget.Dist {
+				resultSource.Score += 1000
+				resultTarget.Score -= 1000
+			} else {
+				resultSource.Score -= 1000
+				resultTarget.Score += 1000
+			}
+			fmt.Println("DUEL SCORE")
 			fmt.Println(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound])
 
 		}
@@ -82,6 +91,13 @@ func ProcessBonus(lobbyID string) error {
 		playerOrder = append(playerOrder, name)
 	}
 	sort.SliceStable(playerOrder, func(i, j int) bool {
+		// fmt.Println(i, j, LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[i]].Dist < LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[j]].Dist)
+		if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[j]].Attempt == 0 {
+			return true
+		}
+		if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[i]].Attempt == 0 {
+			return false
+		}
 		return LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[i]].Dist < LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[j]].Dist
 	})
 	fmt.Println("PLAYER ORDER", playerOrder)

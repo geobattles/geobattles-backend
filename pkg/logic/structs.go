@@ -13,7 +13,7 @@ type Results struct {
 	Loc     Coords  `json:"location"`
 	Dist    float64 `json:"distance"`
 	Score   int     `json:"score"`
-	Attempt int     `json:"attempt,omitempty"`
+	Attempt int     `json:"attempt"`
 	Lives   int     `json:"lives"`
 }
 

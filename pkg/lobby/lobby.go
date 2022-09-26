@@ -170,6 +170,11 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string) {
 func RemovePlayerFromLobby(clientID string, lobbyID string) {
 	delete(LobbyMap[lobbyID].PlayerMap, clientID)
 	LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerMap)
+	// delete from end results
+	for _, results := range LobbyMap[lobbyID].EndResults {
+		delete(results, clientID)
+	}
+	fmt.Println("after deleting results", LobbyMap[lobbyID].EndResults)
 	// if removed player was admin & there are other players left
 	// select one of them as new admin, otherwise make admin empty
 	// if there are no players left delete lobby
@@ -203,30 +208,28 @@ func ResetLobby(lobbyID string) {
 // increments round counter every call
 func UpdateCurrentLocation(lobbyID string, location logic.Coords) {
 	fmt.Println("updating lobby loaction: ", lobbyID, location)
-	if LobbyMap[lobbyID].CurrentRound == 0 {
-		for _, player := range LobbyMap[lobbyID].PlayerMap {
-			copy(player.Powerups, *LobbyMap[lobbyID].Conf.Powerups)
-			//player.Powerups = *LobbyMap[lobbyID].Conf.Powerups
-			player.Lives = LobbyMap[lobbyID].Conf.NumAttempt
-		}
-	} else {
-		if *LobbyMap[lobbyID].Conf.DynLives == true {
-			for _, player := range LobbyMap[lobbyID].PlayerMap {
-				player.Lives += (LobbyMap[lobbyID].Conf.NumAttempt + 1) / 2
-				if player.Lives > LobbyMap[lobbyID].Conf.NumAttempt+1 {
-					player.Lives = LobbyMap[lobbyID].Conf.NumAttempt + 1
-				}
-			}
-		} else {
-			for _, player := range LobbyMap[lobbyID].PlayerMap {
-				player.Lives = LobbyMap[lobbyID].Conf.NumAttempt
-			}
-		}
-	}
 	LobbyMap[lobbyID].UsersFinished = 0
 	LobbyMap[lobbyID].CurrentLoc = &location
-	LobbyMap[lobbyID].CurrentRound++
 	LobbyMap[lobbyID].Active = true
+	LobbyMap[lobbyID].CurrentRound++
+	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound] = make(map[string][]logic.Results)
+	LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound] = make(map[string]*logic.Results)
+
+	for name, player := range LobbyMap[lobbyID].PlayerMap {
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][name] = &logic.Results{Score: 0}
+
+		if LobbyMap[lobbyID].CurrentRound == 1 {
+			copy(player.Powerups, *LobbyMap[lobbyID].Conf.Powerups)
+			player.Lives = LobbyMap[lobbyID].Conf.NumAttempt
+		} else if *LobbyMap[lobbyID].Conf.DynLives {
+			player.Lives += (LobbyMap[lobbyID].Conf.NumAttempt + 1) / 2
+			if player.Lives > LobbyMap[lobbyID].Conf.NumAttempt+1 {
+				player.Lives = LobbyMap[lobbyID].Conf.NumAttempt + 1
+			}
+		} else {
+			player.Lives = LobbyMap[lobbyID].Conf.NumAttempt
+		}
+	}
 }
 
 // calculate score based on distance and scorefactor
@@ -262,20 +265,12 @@ func SubmitResult(lobbyID string, clientID string, location logic.Coords) (float
 
 // adds result to map of all results in lobby
 func addToResults(lobbyID string, clientID string, location logic.Coords, distance float64) (int, error) {
-	// if user currently doesnt have a result in this round create new map
-	if LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound] == nil {
-		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound] = make(map[string][]logic.Results)
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound] = make(map[string]*logic.Results)
 
-	}
 	score := scoreDistance(distance, float64(LobbyMap[lobbyID].Conf.ScoreFactor))
 	// TODO: split this monstrosity, maybe use variables
 	LobbyMap[lobbyID].PlayerMap[clientID].Lives -= 1
 	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, Dist: distance, Score: score, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives})
-	if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] == nil {
-		fmt.Println("FIRST RESULT")
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, Dist: distance, Score: score, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID])}
-	} else if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Dist > distance {
+	if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Dist > distance || LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Attempt == 0 {
 		fmt.Println("NEW BEST RESULT")
 		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, Dist: distance, Score: score, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID])}
 	} else {
