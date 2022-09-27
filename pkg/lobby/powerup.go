@@ -7,12 +7,12 @@ import (
 	"sort"
 )
 
-func UsePowerup(powerup logic.Powerup, lobbyID string) error {
+func UsePowerup(powerup logic.Powerup, lobbyID string) (string, error) {
 	switch powerup.Type {
 	case 0:
 		// double points
 		if !LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[0] {
-			return errors.New("NOT_AVAILABLE")
+			return "", errors.New("NOT_AVAILABLE")
 		}
 		LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[0] = false
 		LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1] = append(LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1], powerup)
@@ -20,18 +20,19 @@ func UsePowerup(powerup logic.Powerup, lobbyID string) error {
 	case 1:
 		// duel
 		if !LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[1] {
-			return errors.New("NOT_AVAILABLE")
+			return "", errors.New("NOT_AVAILABLE")
 		}
 		if _, ok := LobbyMap[lobbyID].PlayerMap[powerup.Target]; !ok || powerup.Source == powerup.Target {
-			return errors.New("WRONG_TARGET")
+			return "", errors.New("WRONG_TARGET")
 		}
 		LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[1] = false
 		LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1] = append(LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1], powerup)
 		fmt.Println("PWLOG", LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1])
+		return powerup.Target, nil
 	default:
-		return errors.New("WRONG_TYPE")
+		return "", errors.New("WRONG_TYPE")
 	}
-	return nil
+	return "", nil
 }
 
 func ProcessPowerups(lobbyID string) error {
@@ -56,12 +57,12 @@ func ProcessPowerups(lobbyID string) error {
 			resultSource := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source]
 			resultTarget := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Target]
 			// if source player left dont process anything
-			if _, okS := LobbyMap[lobbyID].PlayerMap[power.Source]; okS {
+			if _, okS := LobbyMap[lobbyID].PlayerMap[power.Source]; !okS {
 				fmt.Println("player left, dont do duel")
 				break
 			}
 			// if target left refund source and dont process anything
-			if _, okT := LobbyMap[lobbyID].PlayerMap[power.Source]; okT {
+			if _, okT := LobbyMap[lobbyID].PlayerMap[power.Source]; !okT {
 				fmt.Println("player left, dont do duel, refund player")
 				LobbyMap[lobbyID].PlayerMap[power.Source].Powerups[1] = true
 				break

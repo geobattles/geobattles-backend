@@ -100,12 +100,15 @@ func (c *Client) Read() {
 				break
 			}
 			clientReq.Powerup.Source = c.ID
-			err := lobby.UsePowerup(clientReq.Powerup, c.Room)
+			target, err := lobby.UsePowerup(clientReq.Powerup, c.Room)
 			if err != nil {
 				c.Pool.Transmit <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: err.Error()}}
 				break
 			}
 			c.Pool.Transmit <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "OK", Type: "POWERUP_USED"}}
+			if target != "" {
+				c.Pool.Transmit <- logic.RouteMsg{Conn: c.Pool.Rooms[c.Room][target], Data: logic.ClientResp{Status: "WRN", Type: "DUEL_FROM", User: c.ID}}
+			}
 
 		case "submit_location":
 			fmt.Println(*clientReq.Loc)

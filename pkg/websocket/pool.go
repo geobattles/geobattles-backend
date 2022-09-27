@@ -12,18 +12,20 @@ import (
 type Pool struct {
 	Register   chan *Client
 	Unregister chan *Client
-	Rooms      map[string]map[*websocket.Conn]bool
-	Transmit   chan logic.RouteMsg
-	Timer      *time.Timer
+	//Rooms      map[string]map[*websocket.Conn]bool
+	Rooms    map[string]map[string]*websocket.Conn
+	Transmit chan logic.RouteMsg
+	Timer    *time.Timer
 }
 
 func NewPool() *Pool {
 	return &Pool{
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
-		Rooms:      make(map[string]map[*websocket.Conn]bool),
-		Transmit:   make(chan logic.RouteMsg),
-		Timer:      &time.Timer{},
+		//Rooms:      make(map[string]map[*websocket.Conn]bool),
+		Rooms:    make(map[string]map[string]*websocket.Conn),
+		Transmit: make(chan logic.RouteMsg),
+		Timer:    &time.Timer{},
 	}
 }
 
@@ -41,10 +43,12 @@ func (pool *Pool) Start() {
 			// if room doesnt exist yet create it, otherwise just add client to it
 			if connections == nil {
 				fmt.Println("creating new connection room")
-				connections = make(map[*websocket.Conn]bool)
+				//connections = make(map[*websocket.Conn]bool)
+				connections = make(map[string]*websocket.Conn)
 				pool.Rooms[client.Room] = connections
 			}
-			pool.Rooms[client.Room][client.Conn] = true
+			//pool.Rooms[client.Room][client.Conn] = true
+			pool.Rooms[client.Room][client.ID] = client.Conn
 			fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 
 			// send updated list of players to every member of the lobby
@@ -54,7 +58,7 @@ func (pool *Pool) Start() {
 
 		case client := <-pool.Unregister:
 			fmt.Println("UNREGISTERING")
-			delete(pool.Rooms[client.Room], client.Conn)
+			delete(pool.Rooms[client.Room], client.ID)
 			lobby.RemovePlayerFromLobby(client.ID, client.Room)
 			//fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 			go func() {
@@ -66,7 +70,7 @@ func (pool *Pool) Start() {
 			// if message doesnt have connection field broadcast it
 			// otherwise only send it to the connection given
 			if message.Conn == nil {
-				for client := range pool.Rooms[message.Room] {
+				for _, client := range pool.Rooms[message.Room] {
 					if err := client.WriteJSON(message.Data); err != nil {
 						fmt.Println("error writing broadcast", err)
 					}

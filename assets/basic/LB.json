@@ -1,8 +1,8 @@
 {
     "searchArea": {
         "Lebanon": {
-            "size": 6184,
-            "radius": 30000,
+            "size": 50,
+            "radius": 28000,
             "rings": [
                 [
                     [35.27937880436278, 33.444417099511426],
@@ -22,7 +22,7 @@
             ]
         },
         "Beirut": {
-            "size": 33,
+            "size": 34,
             "radius": 3000,
             "rings": [
                 [
