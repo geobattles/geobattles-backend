@@ -56,12 +56,12 @@ func ProcessPowerups(lobbyID string) error {
 			resultSource := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source]
 			resultTarget := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Target]
 			// if source player left dont process anything
-			if _, okS := LobbyMap[lobbyID].PlayerMap[power.Source]; okS {
+			if _, okS := LobbyMap[lobbyID].PlayerMap[power.Source]; !okS {
 				fmt.Println("player left, dont do duel")
 				break
 			}
 			// if target left refund source and dont process anything
-			if _, okT := LobbyMap[lobbyID].PlayerMap[power.Source]; okT {
+			if _, okT := LobbyMap[lobbyID].PlayerMap[power.Source]; !okT {
 				fmt.Println("player left, dont do duel, refund player")
 				LobbyMap[lobbyID].PlayerMap[power.Source].Powerups[1] = true
 				break
