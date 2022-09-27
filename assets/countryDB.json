@@ -260,26 +260,6 @@
             "ccode": "IT",
             "size": 310897
         },
-        "SI": {
-            "name": "Slovenia",
-            "ccode": "SI",
-            "size": 21137
-        },
-        "ZA": {
-            "name": "South Africa",
-            "ccode": "ZA",
-            "size": 1279321
-        },
-        "ES": {
-            "name": "Spain",
-            "ccode": "ES",
-            "size": 508486
-        },
-        "GS": {
-            "name": "South Georgia and the South Sandwich Islands",
-            "ccode": "GS",
-            "size": 3
-        },
         "JP": {
             "name": "Japan",
             "ccode": "JP",
@@ -313,7 +293,7 @@
         "LA": {
             "name": "Laos",
             "ccode": "LA",
-            "size": 105481
+            "size": 1080
         },
         "LV": {
             "name": "Latvia",
@@ -324,6 +304,26 @@
             "name": "Lebanon",
             "ccode": "LB",
             "size": 6184
+        },
+        "SI": {
+            "name": "Slovenia",
+            "ccode": "SI",
+            "size": 20861
+        },
+        "ZA": {
+            "name": "South Africa",
+            "ccode": "ZA",
+            "size": 1130749
+        },
+        "ES": {
+            "name": "Spain",
+            "ccode": "ES",
+            "size": 508486
+        },
+        "GS": {
+            "name": "South Georgia and the South Sandwich Islands",
+            "ccode": "GS",
+            "size": 3
         }
     }
 }
