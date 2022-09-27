@@ -273,9 +273,6 @@ func addToResults(lobbyID string, clientID string, location logic.Coords, distan
 	if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Dist > distance || LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Attempt == 0 {
 		fmt.Println("NEW BEST RESULT")
 		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, Dist: distance, Score: score, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID])}
-	} else {
-		fmt.Println("Current DISTANCE", LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Dist)
-		fmt.Println("Current2 DISTANCE", LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID])
 	}
 
 	// if this is last attempt indicate finished and check if everyone has finished
