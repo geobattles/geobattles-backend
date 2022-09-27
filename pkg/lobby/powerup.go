@@ -68,12 +68,12 @@ func ProcessPowerups(lobbyID string) error {
 				break
 			}
 
-			if resultSource.Dist < resultTarget.Dist {
-				resultSource.Score += 1000
-				resultTarget.Score -= 1000
-			} else {
+			if resultSource.Attempt == 0 || (resultTarget.Dist <= resultSource.Dist && resultTarget.Attempt != 0) {
 				resultSource.Score -= 1000
 				resultTarget.Score += 1000
+			} else {
+				resultSource.Score += 1000
+				resultTarget.Score -= 1000
 			}
 			fmt.Println("DUEL SCORE")
 			fmt.Println(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound])
