@@ -4,7 +4,6 @@ import (
 	"example/web-service-gin/pkg/lobby"
 	"example/web-service-gin/pkg/logic"
 	"fmt"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -15,7 +14,6 @@ type Pool struct {
 	//Rooms      map[string]map[*websocket.Conn]bool
 	Rooms    map[string]map[string]*websocket.Conn
 	Transmit chan logic.RouteMsg
-	Timer    *time.Timer
 }
 
 func NewPool() *Pool {
@@ -25,7 +23,6 @@ func NewPool() *Pool {
 		//Rooms:      make(map[string]map[*websocket.Conn]bool),
 		Rooms:    make(map[string]map[string]*websocket.Conn),
 		Transmit: make(chan logic.RouteMsg),
-		Timer:    &time.Timer{},
 	}
 }
 

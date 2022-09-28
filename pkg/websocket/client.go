@@ -68,13 +68,9 @@ func (c *Client) Read() {
 			message := logic.ClientResp{Status: "OK", Type: "START_ROUND", Loc: &location, Players: lobby.LobbyMap[c.Room].PlayerMap, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound]}
 			c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: message}
 
-			// 3 sec added to timer for countdown
-			c.Pool.Timer = time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime+3), func() {
+			// 3 sec added to timer for frontend countdown
+			lobby.LobbyMap[c.Room].Timer = time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime+3), func() {
 				fmt.Println("times up")
-				if lobby.LobbyMap[c.Room] == nil {
-					fmt.Println("LOBBY ne obstaja vec")
-					return
-				}
 				lobby.LobbyMap[c.Room].Active = false
 
 				c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "WRN", Type: "TIMES_UP"}}
@@ -128,7 +124,7 @@ func (c *Client) Read() {
 			if err != nil && err.Error() == "ROUND_FINISHED" {
 				lobby.LobbyMap[c.Room].Active = false
 				fmt.Println("STOP TIMER")
-				c.Pool.Timer.Stop()
+				lobby.LobbyMap[c.Room].Timer.Stop()
 				c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "WRN", Type: err.Error()}}
 				lobby.ProcessBonus(c.Room)
 				lobby.ProcessPowerups(c.Room)
