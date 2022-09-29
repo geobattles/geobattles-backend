@@ -278,9 +278,16 @@ func SubmitResult(lobbyID string, clientID string, location logic.Coords) (float
 		return -1, -1, errors.New("NO_MORE_ATTEMPTS")
 	}
 	// if time has expired throw an error
-	distance := logic.CalcDistance(*LobbyMap[lobbyID].CurrentLoc, location)
-	score, error := addToResults(lobbyID, clientID, location, distance)
-	return distance, score, error
+	switch LobbyMap[lobbyID].Conf.Mode {
+	case 2:
+
+		return 0, 0, nil
+	default:
+		distance := logic.CalcDistance(*LobbyMap[lobbyID].CurrentLoc, location)
+		score, error := addToResults(lobbyID, clientID, location, distance)
+		return distance, score, error
+
+	}
 }
 
 // adds result to map of all results in lobby

@@ -43,6 +43,7 @@ type ClientResp struct {
 	RoundRes map[string]*Results `json:"roundRes,omitempty"`
 	GuessRes *Results            `json:"playerRes,omitempty"`
 	Round    int                 `json:"round,omitempty"`
+	CC       string              `json:"cc,omitempty"`
 	Lobby    *Lobby              `json:"lobby,omitempty"`
 	PowerLog []Powerup           `json:"powerLog,omitempty"`
 	Players  map[string]*Player  `json:"players,omitempty"`

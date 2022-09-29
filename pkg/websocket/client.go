@@ -141,6 +141,14 @@ func (c *Client) Read() {
 					lobby.ResetLobby(c.Room)
 				}
 			}
+		case "loc_to_cc":
+			cc, err := logic.LocToCC(*clientReq.Loc)
+			if err != nil {
+				c.Pool.Transmit <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: err.Error()}}
+				break
+			}
+			c.Pool.Transmit <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "OK", Type: "CC", CC: cc}}
+
 		}
 	}
 }
