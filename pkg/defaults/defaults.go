@@ -1,6 +1,7 @@
 package defaults
 
 const (
+	Mode            = 1
 	NumOfTries      = 3
 	NumOfRounds     = 5
 	MaxPlayers      = 10

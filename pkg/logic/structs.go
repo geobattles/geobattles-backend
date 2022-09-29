@@ -15,6 +15,7 @@ type Results struct {
 	Score   int     `json:"score"`
 	Attempt int     `json:"attempt"`
 	Lives   int     `json:"lives"`
+	CC      string  `json:"cc,omitempty"`
 }
 
 // response from google maps metadata api
@@ -26,6 +27,7 @@ type ApiMetaResponse struct {
 type ClientReq struct {
 	Cmd     string    `json:"command"`
 	Loc     *Coords   `json:"location"`
+	CC      string    `json:"cc,omitempty"`
 	Conf    LobbyConf `json:"conf"`
 	Powerup Powerup   `json:"powerup"`
 }
@@ -61,21 +63,22 @@ type Powerup struct {
 
 type LobbyConf struct {
 	Name        string   `json:"name"`
+	Mode        int      `json:"mode"`
 	MaxPlayers  int      `json:"maxPlayers"`
 	NumAttempt  int      `json:"numAttempt"`
 	NumRounds   int      `json:"numRounds"`
 	RoundTime   int      `json:"roundTime"`
-	ScoreFactor int      `json:"scoreFactor"`
+	ScoreFactor int      `json:"scoreFactor,omitempty"`
 	CCList      []string `json:"ccList"`
-	Powerups    *[]bool  `json:"powerups"`
-	PlaceBonus  *bool    `json:"placeBonus"`
+	Powerups    *[]bool  `json:"powerups,omitempty"`
+	PlaceBonus  *bool    `json:"placeBonus,omitempty"`
 	DynLives    *bool    `json:"dynLives"`
 }
 
 type Player struct {
 	Name     string `json:"name"`
 	Color    string `json:"color"`
-	Powerups []bool `json:"powerups"`
+	Powerups []bool `json:"powerups,omitempty"`
 	Lives    int    `json:"lives,omitempty"`
 }
 
@@ -86,6 +89,7 @@ type Lobby struct {
 	NumPlayers    int                          `json:"numPlayers"`
 	PlayerMap     map[string]*Player           `json:"playerList"`
 	CurrentLoc    *Coords                      `json:"-"`
+	CurrentCC     string                       `json:"-"`
 	CurrentRound  int                          `json:"currentRound"`
 	RawResults    map[int]map[string][]Results `json:"results"`
 	EndResults    map[int]map[string]*Results  `json:"endResults"`

@@ -10,7 +10,7 @@ import (
 
 // initial lobby list for debugging
 var LobbyMap = map[string]*logic.Lobby{
-	"U4YPR6": {ID: "U4YPR6", Conf: &logic.LobbyConf{Name: "prvi lobby", MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}, Powerups: defaults.Powerups(), PlaceBonus: defaults.PlaceBonus(), DynLives: defaults.DynLives()}, NumPlayers: 0, PlayerMap: make(map[string]*logic.Player), RawResults: make(map[int]map[string][]logic.Results), EndResults: make(map[int]map[string]*logic.Results), PowerLogs: make(map[int][]logic.Powerup)},
+	"U4YPR6": {ID: "U4YPR6", Conf: &logic.LobbyConf{Name: "prvi lobby", Mode: 1, MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}, Powerups: defaults.Powerups(), PlaceBonus: defaults.PlaceBonus(), DynLives: defaults.DynLives()}, NumPlayers: 0, PlayerMap: make(map[string]*logic.Player), RawResults: make(map[int]map[string][]logic.Results), EndResults: make(map[int]map[string]*logic.Results), PowerLogs: make(map[int][]logic.Powerup)},
 }
 
 var ColorList = [12]string{"#e6194B", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#000075", "#469990", "#9A6324", "#dcbeff", "#800000"}
@@ -23,7 +23,6 @@ func CreateLobby(conf logic.LobbyConf) *logic.Lobby {
 	newLobby.RawResults = make(map[int]map[string][]logic.Results)
 	newLobby.EndResults = make(map[int]map[string]*logic.Results)
 
-	newLobby.PowerLogs = make(map[int][]logic.Powerup)
 	lobbyID := logic.GenerateRndID(6)
 	newLobby.ID = lobbyID
 	// validate values and set defaults otherwise
@@ -31,6 +30,31 @@ func CreateLobby(conf logic.LobbyConf) *logic.Lobby {
 		newLobby.Conf.Name = lobbyID
 	} else {
 		newLobby.Conf.Name = conf.Name
+	}
+
+	switch conf.Mode {
+	case 2:
+		newLobby.Conf.Mode = conf.Mode
+	default:
+		newLobby.Conf.Mode = defaults.Mode
+		newLobby.PowerLogs = make(map[int][]logic.Powerup)
+		if conf.ScoreFactor == 0 || conf.ScoreFactor < defaults.ScoreFactorLow || conf.ScoreFactor > defaults.ScoreFactorHigh {
+			newLobby.Conf.ScoreFactor = defaults.ScoreFactor
+		} else {
+			newLobby.Conf.ScoreFactor = conf.ScoreFactor
+		}
+		if conf.Powerups != nil && len(*conf.Powerups) == 2 {
+			newLobby.Conf.Powerups = conf.Powerups
+		} else {
+			newLobby.Conf.Powerups = defaults.Powerups()
+		}
+
+		if conf.PlaceBonus != nil {
+			newLobby.Conf.PlaceBonus = conf.PlaceBonus
+		} else {
+			newLobby.Conf.PlaceBonus = defaults.PlaceBonus()
+		}
+
 	}
 
 	if conf.MaxPlayers <= 0 {
@@ -51,12 +75,6 @@ func CreateLobby(conf logic.LobbyConf) *logic.Lobby {
 		newLobby.Conf.NumRounds = conf.NumRounds
 	}
 
-	if conf.ScoreFactor == 0 || conf.ScoreFactor < defaults.ScoreFactorLow || conf.ScoreFactor > defaults.ScoreFactorHigh {
-		newLobby.Conf.ScoreFactor = defaults.ScoreFactor
-	} else {
-		newLobby.Conf.ScoreFactor = conf.ScoreFactor
-	}
-
 	if conf.RoundTime <= 0 {
 		newLobby.Conf.RoundTime = defaults.RoundTime
 	} else {
@@ -68,18 +86,6 @@ func CreateLobby(conf logic.LobbyConf) *logic.Lobby {
 	} else {
 		newLobby.Conf.CCList = conf.CCList
 		newLobby.CCSize = logic.SumCCListSize(conf.CCList)
-	}
-
-	if conf.Powerups != nil && len(*conf.Powerups) == 2 {
-		newLobby.Conf.Powerups = conf.Powerups
-	} else {
-		newLobby.Conf.Powerups = defaults.Powerups()
-	}
-
-	if conf.PlaceBonus != nil {
-		newLobby.Conf.PlaceBonus = conf.PlaceBonus
-	} else {
-		newLobby.Conf.PlaceBonus = defaults.PlaceBonus()
 	}
 
 	if conf.DynLives != nil {
@@ -105,6 +111,28 @@ func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby
 	if conf.Name != "" {
 		LobbyMap[ID].Conf.Name = conf.Name
 	}
+
+	switch conf.Mode {
+	case 2:
+		LobbyMap[ID].Conf.Mode = conf.Mode
+		LobbyMap[ID].PowerLogs = nil
+		LobbyMap[ID].Conf.ScoreFactor = 0
+		LobbyMap[ID].Conf.Powerups = nil
+		LobbyMap[ID].Conf.PlaceBonus = nil
+
+	default:
+		LobbyMap[ID].Conf.Mode = defaults.Mode
+		if conf.ScoreFactor > defaults.ScoreFactorLow && conf.ScoreFactor < defaults.ScoreFactorHigh {
+			LobbyMap[ID].Conf.ScoreFactor = conf.ScoreFactor
+		}
+		if conf.Powerups != nil && len(*conf.Powerups) == 2 {
+			LobbyMap[ID].Conf.Powerups = conf.Powerups
+		}
+		if conf.PlaceBonus != nil {
+			LobbyMap[ID].Conf.PlaceBonus = conf.PlaceBonus
+		}
+	}
+
 	if conf.MaxPlayers > 0 {
 		LobbyMap[ID].Conf.MaxPlayers = conf.MaxPlayers
 	}
@@ -114,9 +142,6 @@ func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby
 	if conf.NumRounds > 0 {
 		LobbyMap[ID].Conf.NumRounds = conf.NumRounds
 	}
-	if conf.ScoreFactor > defaults.ScoreFactorLow && conf.ScoreFactor < defaults.ScoreFactorHigh {
-		LobbyMap[ID].Conf.ScoreFactor = conf.ScoreFactor
-	}
 	if conf.RoundTime > 0 {
 		LobbyMap[ID].Conf.RoundTime = conf.RoundTime
 	}
@@ -124,14 +149,6 @@ func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby
 	if conf.CCList != nil {
 		LobbyMap[ID].Conf.CCList = conf.CCList
 		LobbyMap[ID].CCSize = logic.SumCCListSize(conf.CCList)
-	}
-
-	if conf.Powerups != nil && len(*conf.Powerups) == 2 {
-		LobbyMap[ID].Conf.Powerups = conf.Powerups
-	}
-
-	if conf.PlaceBonus != nil {
-		LobbyMap[ID].Conf.PlaceBonus = conf.PlaceBonus
 	}
 
 	if conf.DynLives != nil {
@@ -206,10 +223,11 @@ func ResetLobby(lobbyID string) {
 
 // keeps track of the location of the currently active game in lobby
 // increments round counter every call
-func UpdateCurrentLocation(lobbyID string, location logic.Coords) {
+func UpdateCurrentLocation(lobbyID string, location logic.Coords, ccode string) {
 	fmt.Println("updating lobby loaction: ", lobbyID, location)
 	LobbyMap[lobbyID].UsersFinished = 0
 	LobbyMap[lobbyID].CurrentLoc = &location
+	LobbyMap[lobbyID].CurrentCC = ccode
 	LobbyMap[lobbyID].Active = true
 	LobbyMap[lobbyID].CurrentRound++
 	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound] = make(map[string][]logic.Results)
@@ -219,7 +237,9 @@ func UpdateCurrentLocation(lobbyID string, location logic.Coords) {
 		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][name] = &logic.Results{Score: 0}
 
 		if LobbyMap[lobbyID].CurrentRound == 1 {
-			copy(player.Powerups, *LobbyMap[lobbyID].Conf.Powerups)
+			if LobbyMap[lobbyID].Conf.Mode == 1 {
+				copy(player.Powerups, *LobbyMap[lobbyID].Conf.Powerups)
+			}
 			player.Lives = LobbyMap[lobbyID].Conf.NumAttempt
 		} else if *LobbyMap[lobbyID].Conf.DynLives {
 			player.Lives += (LobbyMap[lobbyID].Conf.NumAttempt + 1) / 2
