@@ -6,6 +6,7 @@ import (
 	"example/web-service-gin/pkg/logic"
 	"fmt"
 	"math"
+	"time"
 )
 
 // initial lobby list for debugging
@@ -227,7 +228,10 @@ func UpdateCurrentLocation(lobbyID string, location logic.Coords, ccode string) 
 	fmt.Println("updating lobby loaction: ", lobbyID, location)
 	LobbyMap[lobbyID].UsersFinished = 0
 	LobbyMap[lobbyID].CurrentLoc = &location
-	LobbyMap[lobbyID].CurrentCC = ccode
+	if LobbyMap[lobbyID].Conf.Mode == 2 {
+		LobbyMap[lobbyID].CurrentCC = ccode
+		LobbyMap[lobbyID].StartTime = time.Now()
+	}
 	LobbyMap[lobbyID].Active = true
 	LobbyMap[lobbyID].CurrentRound++
 	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound] = make(map[string][]logic.Results)
@@ -280,8 +284,8 @@ func SubmitResult(lobbyID string, clientID string, location logic.Coords) (float
 	// if time has expired throw an error
 	switch LobbyMap[lobbyID].Conf.Mode {
 	case 2:
-
-		return 0, 0, nil
+		_, err := processCountryGuess(lobbyID, clientID, location)
+		return 0, 0, err
 	default:
 		distance := logic.CalcDistance(*LobbyMap[lobbyID].CurrentLoc, location)
 		score, error := addToResults(lobbyID, clientID, location, distance)
@@ -310,4 +314,23 @@ func addToResults(lobbyID string, clientID string, location logic.Coords, distan
 		}
 	}
 	return score, nil
+}
+
+// processes submitted guess in mode 2 (country guessing)
+func processCountryGuess(lobbyID string, clientID string, location logic.Coords) (string, error) {
+	cc, err := logic.LocToCC(location)
+	if err != nil {
+		return "", err
+	}
+
+	LobbyMap[lobbyID].PlayerMap[clientID].Lives -= 1
+	timeLeft := time.Duration(LobbyMap[lobbyID].Conf.RoundTime+3).Microseconds() - time.Since(LobbyMap[lobbyID].StartTime).Microseconds()
+	score := int(float64(timeLeft) / float64(time.Duration(LobbyMap[lobbyID].Conf.RoundTime-3).Microseconds()) * 5000)
+	// correct result is indicated by ccode = XX and score, false result gets score = 0
+	if cc == LobbyMap[lobbyID].CurrentCC {
+		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, Score: score, Time: timeLeft, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: "XX"})
+	} else {
+		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, Score: 0, Time: timeLeft, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: cc})
+	}
+	return cc, nil
 }

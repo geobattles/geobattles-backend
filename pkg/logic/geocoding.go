@@ -19,8 +19,8 @@ type apiResponse struct {
 	Status      status `json:"status"`
 }
 
+// reverse geolocation based on imput coordinates. returns 2 leter country code
 func LocToCC(loc Coords) (string, error) {
-	fmt.Println(fmt.Sprintf("http://api.geonames.org/countryCode?lat=%f&lng=%f&username=%s&type=JSON", loc.Lat, loc.Lng, os.Getenv("GEONAMES_USER")))
 	res, err := http.Get(fmt.Sprintf("http://api.geonames.org/countryCode?lat=%f&lng=%f&username=%s&type=JSON", loc.Lat, loc.Lng, os.Getenv("GEONAMES_USER")))
 	if err != nil {
 		fmt.Println(err)

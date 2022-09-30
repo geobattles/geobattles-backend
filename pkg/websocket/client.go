@@ -80,7 +80,12 @@ func (c *Client) Read() {
 				c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "WRN", Type: "TIMES_UP"}}
 				lobby.ProcessBonus(c.Room)
 				lobby.ProcessPowerups(c.Room)
-				message := logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].EndResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound]}
+				var message logic.ClientResp
+				if lobby.LobbyMap[c.Room].Conf.Mode == 2 {
+					message = logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", FullRoundRes: lobby.LobbyMap[c.Room].RawResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound]}
+				} else {
+					message = logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].EndResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound]}
+				}
 				c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: message}
 				// send end of game msg and cleanup lobby
 				if lobby.LobbyMap[c.Room].CurrentRound >= lobby.LobbyMap[c.Room].Conf.NumRounds {
@@ -122,8 +127,6 @@ func (c *Client) Read() {
 			//c.Pool.Transmit <- logic.Message{Room: c.Room, Data: logic.ResponseMsg{Status: "OK", Type: "NEW_RESULT", User: c.ID, Distance: dist, Score: score, Location: clientReq.Location}}
 			c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "OK", Type: "NEW_RESULT", User: c.ID, GuessRes: &lobby.LobbyMap[c.Room].RawResults[lobby.LobbyMap[c.Room].CurrentRound][c.ID][len(lobby.LobbyMap[c.Room].RawResults[lobby.LobbyMap[c.Room].CurrentRound][c.ID])-1]}}
 
-			// message := logic.ResponseMsg{Status: "OK", Type: "ALL_RESULTS", Results: lobby.LobbyMap[c.Room].Results}
-			// c.Pool.Transmit <- logic.Message{Room: c.Room, Data: message}
 			// if round is finished notify lobby
 			if err != nil && err.Error() == "ROUND_FINISHED" {
 				lobby.LobbyMap[c.Room].Active = false
@@ -132,7 +135,12 @@ func (c *Client) Read() {
 				c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "WRN", Type: err.Error()}}
 				lobby.ProcessBonus(c.Room)
 				lobby.ProcessPowerups(c.Room)
-				message := logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].EndResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound]}
+				var message logic.ClientResp
+				if lobby.LobbyMap[c.Room].Conf.Mode == 2 {
+					message = logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", FullRoundRes: lobby.LobbyMap[c.Room].RawResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound]}
+				} else {
+					message = logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].EndResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound]}
+				}
 				c.Pool.Transmit <- logic.RouteMsg{Room: c.Room, Data: message}
 				// send end of game msg and cleanup lobby
 				if lobby.LobbyMap[c.Room].CurrentRound >= lobby.LobbyMap[c.Room].Conf.NumRounds {

@@ -2,6 +2,7 @@ package logic
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -18,6 +19,7 @@ type Results struct {
 	Attempt int     `json:"attempt"`
 	Lives   int     `json:"lives"`
 	CC      string  `json:"cc,omitempty"`
+	Time    int64   `json:"time,omitempty"`
 }
 
 // response from google maps metadata api
@@ -27,29 +29,29 @@ type ApiMetaResponse struct {
 }
 
 type ClientReq struct {
-	Cmd     string    `json:"command"`
-	Loc     *Coords   `json:"location"`
-	CC      string    `json:"cc,omitempty"`
+	Cmd string  `json:"command"`
+	Loc *Coords `json:"location"`
+	//CC      string    `json:"cc,omitempty"`
 	Conf    LobbyConf `json:"conf"`
 	Powerup Powerup   `json:"powerup"`
 }
 
 // either Conn or Room must be provided. if Conn is set Data will be sent to this connection
 type ClientResp struct {
-	Status string                       `json:"status"`
-	Type   string                       `json:"type"`
-	Loc    *Coords                      `json:"location,omitempty"`
-	User   string                       `json:"user,omitempty"`
-	AllRes map[int]map[string][]Results `json:"results,omitempty"`
-	// RoundRes map[string][]Results         `json:"roundRes,omitempty"`
-	RoundRes map[string]*Results `json:"roundRes,omitempty"`
-	GuessRes *Results            `json:"playerRes,omitempty"`
-	Round    int                 `json:"round,omitempty"`
-	CC       string              `json:"cc,omitempty"`
-	Lobby    *Lobby              `json:"lobby,omitempty"`
-	PowerLog []Powerup           `json:"powerLog,omitempty"`
-	Players  map[string]*Player  `json:"players,omitempty"`
-	Polygon  json.RawMessage     `json:"polygon,omitempty"`
+	Status       string                       `json:"status"`
+	Type         string                       `json:"type"`
+	Loc          *Coords                      `json:"location,omitempty"`
+	User         string                       `json:"user,omitempty"`
+	AllRes       map[int]map[string][]Results `json:"results,omitempty"`
+	FullRoundRes map[string][]Results         `json:"fullroundRes,omitempty"`
+	RoundRes     map[string]*Results          `json:"roundRes,omitempty"`
+	GuessRes     *Results                     `json:"playerRes,omitempty"`
+	Round        int                          `json:"round,omitempty"`
+	CC           string                       `json:"cc,omitempty"`
+	Lobby        *Lobby                       `json:"lobby,omitempty"`
+	PowerLog     []Powerup                    `json:"powerLog,omitempty"`
+	Players      map[string]*Player           `json:"players,omitempty"`
+	Polygon      json.RawMessage              `json:"polygon,omitempty"`
 }
 
 // else it will be broadcast to the entire Room. Conn takes precedence over Room
@@ -101,4 +103,5 @@ type Lobby struct {
 	UsersFinished int                          `json:"-"`
 	CCSize        float64                      `json:"-"`
 	PowerLogs     map[int][]Powerup            `json:"-"`
+	StartTime     time.Time                    `json:"-"`
 }
