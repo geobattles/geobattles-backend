@@ -147,7 +147,7 @@ func (c *Client) Read() {
 				c.Pool.Transmit <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: err.Error()}}
 				break
 			}
-			c.Pool.Transmit <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "OK", Type: "CC", CC: cc}}
+			c.Pool.Transmit <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "OK", Type: "CC", CC: cc, Polygon: logic.PolyDB[cc]}}
 
 		}
 	}

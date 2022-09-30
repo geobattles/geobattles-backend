@@ -1,6 +1,8 @@
 package logic
 
 import (
+	"encoding/json"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -47,6 +49,7 @@ type ClientResp struct {
 	Lobby    *Lobby              `json:"lobby,omitempty"`
 	PowerLog []Powerup           `json:"powerLog,omitempty"`
 	Players  map[string]*Player  `json:"players,omitempty"`
+	Polygon  json.RawMessage     `json:"polygon,omitempty"`
 }
 
 // else it will be broadcast to the entire Room. Conn takes precedence over Room

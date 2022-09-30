@@ -50,6 +50,7 @@ func InitCountryDB() {
 		return countryDB.Countries[CountryList[i]].Name < countryDB.Countries[CountryList[j]].Name
 	})
 	countryDB.totalSize = sum
+	readAllPolygons()
 }
 
 // returns valid random street view coordinates
