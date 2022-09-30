@@ -324,8 +324,12 @@ func processCountryGuess(lobbyID string, clientID string, location logic.Coords)
 	}
 
 	LobbyMap[lobbyID].PlayerMap[clientID].Lives -= 1
-	timeLeft := time.Duration(LobbyMap[lobbyID].Conf.RoundTime+3).Microseconds() - time.Since(LobbyMap[lobbyID].StartTime).Microseconds()
-	score := int(float64(timeLeft) / float64(time.Duration(LobbyMap[lobbyID].Conf.RoundTime-3).Microseconds()) * 5000)
+	timeLeft := (int64(LobbyMap[lobbyID].Conf.RoundTime)+3)*1000000 - time.Since(LobbyMap[lobbyID].StartTime).Microseconds()
+	// guesses submitted within first 4s get full 5000 points
+	score := int(float64(timeLeft) / float64((int64(LobbyMap[lobbyID].Conf.RoundTime)-4)*1000000) * 5000)
+	if score > 5000 {
+		score = 5000
+	}
 	// correct result is indicated by ccode = XX and score, false result gets score = 0
 	if cc == LobbyMap[lobbyID].CurrentCC {
 		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, Score: score, Time: timeLeft, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: "XX"})
