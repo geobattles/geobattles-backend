@@ -1,6 +1,8 @@
 package logic
 
 import (
+	"time"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -93,4 +95,5 @@ type Lobby struct {
 	UsersFinished int                          `json:"-"`
 	CCSize        float64                      `json:"-"`
 	PowerLogs     map[int][]Powerup            `json:"-"`
+	Timer         *time.Timer                  `json:"-"`
 }

@@ -186,6 +186,9 @@ func RemovePlayerFromLobby(clientID string, lobbyID string) {
 
 	} else if LobbyMap[lobbyID].NumPlayers == 0 {
 		fmt.Println("deleting lobby")
+		if LobbyMap[lobbyID].Timer != nil {
+			LobbyMap[lobbyID].Timer.Stop()
+		}
 		delete(LobbyMap, lobbyID)
 	}
 }
@@ -208,9 +211,9 @@ func ResetLobby(lobbyID string) {
 // increments round counter every call
 func UpdateCurrentLocation(lobbyID string, location logic.Coords) {
 	fmt.Println("updating lobby loaction: ", lobbyID, location)
+	LobbyMap[lobbyID].Active = true
 	LobbyMap[lobbyID].UsersFinished = 0
 	LobbyMap[lobbyID].CurrentLoc = &location
-	LobbyMap[lobbyID].Active = true
 	LobbyMap[lobbyID].CurrentRound++
 	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound] = make(map[string][]logic.Results)
 	LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound] = make(map[string]*logic.Results)
