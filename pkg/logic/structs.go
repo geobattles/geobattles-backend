@@ -100,7 +100,7 @@ type Lobby struct {
 	RawResults    map[int]map[string][]Results `json:"results"`
 	EndResults    map[int]map[string]*Results  `json:"endResults"`
 	Active        bool                         `json:"-"`
-	UsersFinished int                          `json:"-"`
+	UsersFinished map[string]bool              `json:"-"`
 	CCSize        float64                      `json:"-"`
 	PowerLogs     map[int][]Powerup            `json:"-"`
 	StartTime     time.Time                    `json:"-"`

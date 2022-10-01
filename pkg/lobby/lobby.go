@@ -214,7 +214,7 @@ func ResetLobby(lobbyID string) {
 
 	LobbyMap[lobbyID].PowerLogs = make(map[int][]logic.Powerup)
 	LobbyMap[lobbyID].CurrentLoc = nil
-	LobbyMap[lobbyID].UsersFinished = 0
+	LobbyMap[lobbyID].UsersFinished = make(map[string]bool)
 	LobbyMap[lobbyID].CurrentRound = 0
 	// for _, player := range LobbyMap[lobbyID].PlayerMap {
 	// 	player.Powerups = *LobbyMap[lobbyID].Conf.Powerups
@@ -226,7 +226,7 @@ func ResetLobby(lobbyID string) {
 // increments round counter every call
 func UpdateCurrentLocation(lobbyID string, location logic.Coords, ccode string) {
 	fmt.Println("updating lobby loaction: ", lobbyID, location)
-	LobbyMap[lobbyID].UsersFinished = 0
+	LobbyMap[lobbyID].UsersFinished = make(map[string]bool)
 	LobbyMap[lobbyID].CurrentLoc = &location
 	if LobbyMap[lobbyID].Conf.Mode == 2 {
 		LobbyMap[lobbyID].CurrentCC = ccode
@@ -308,8 +308,8 @@ func addToResults(lobbyID string, clientID string, location logic.Coords, distan
 
 	// if this is last attempt indicate finished and check if everyone has finished
 	if LobbyMap[lobbyID].PlayerMap[clientID].Lives <= 0 {
-		LobbyMap[lobbyID].UsersFinished++
-		if LobbyMap[lobbyID].UsersFinished >= LobbyMap[lobbyID].NumPlayers {
+		LobbyMap[lobbyID].UsersFinished[clientID] = true
+		if len(LobbyMap[lobbyID].UsersFinished) >= LobbyMap[lobbyID].NumPlayers {
 			return score, errors.New("ROUND_FINISHED")
 		}
 	}
@@ -318,6 +318,10 @@ func addToResults(lobbyID string, clientID string, location logic.Coords, distan
 
 // processes submitted guess in mode 2 (country guessing)
 func processCountryGuess(lobbyID string, clientID string, location logic.Coords) (string, error) {
+	// if user has already submitted correct guess
+	if LobbyMap[lobbyID].UsersFinished[clientID] {
+		return "", errors.New("ALREADY_FINISHED")
+	}
 	cc, err := logic.LocToCC(location)
 	if err != nil {
 		return "", err
@@ -335,6 +339,14 @@ func processCountryGuess(lobbyID string, clientID string, location logic.Coords)
 		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, Score: score, Time: timeLeft, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: "XX"})
 	} else {
 		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, Score: 0, Time: timeLeft, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: cc})
+	}
+
+	// if last/correct guess mark user as finished. end round if all users have finished
+	if LobbyMap[lobbyID].PlayerMap[clientID].Lives <= 0 || LobbyMap[lobbyID].CurrentCC == cc {
+		LobbyMap[lobbyID].UsersFinished[clientID] = true
+		if len(LobbyMap[lobbyID].UsersFinished) >= LobbyMap[lobbyID].NumPlayers {
+			return cc, errors.New("ROUND_FINISHED")
+		}
 	}
 	return cc, nil
 }
