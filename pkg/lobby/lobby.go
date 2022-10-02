@@ -122,16 +122,22 @@ func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby
 		LobbyMap[ID].Conf.PlaceBonus = nil
 
 	default:
-		LobbyMap[ID].Conf.Mode = defaults.Mode
 		if conf.ScoreFactor > defaults.ScoreFactorLow && conf.ScoreFactor < defaults.ScoreFactorHigh {
 			LobbyMap[ID].Conf.ScoreFactor = conf.ScoreFactor
+		} else if LobbyMap[ID].Conf.Mode == 2 {
+			LobbyMap[ID].Conf.ScoreFactor = defaults.ScoreFactor
 		}
 		if conf.Powerups != nil && len(*conf.Powerups) == 2 {
 			LobbyMap[ID].Conf.Powerups = conf.Powerups
+		} else if LobbyMap[ID].Conf.Mode == 2 {
+			LobbyMap[ID].Conf.Powerups = defaults.Powerups()
 		}
 		if conf.PlaceBonus != nil {
 			LobbyMap[ID].Conf.PlaceBonus = conf.PlaceBonus
+		} else if LobbyMap[ID].Conf.Mode == 2 {
+			LobbyMap[ID].Conf.PlaceBonus = defaults.PlaceBonus()
 		}
+		LobbyMap[ID].Conf.Mode = defaults.Mode
 	}
 
 	if conf.MaxPlayers > 0 {
