@@ -112,32 +112,44 @@ func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby
 	if conf.Name != "" {
 		LobbyMap[ID].Conf.Name = conf.Name
 	}
-
-	switch conf.Mode {
-	case 2:
+	// if mode is changing apply defaults for new fields if not explicitly set
+	if conf.Mode != 0 && conf.Mode != LobbyMap[ID].Conf.Mode {
 		LobbyMap[ID].Conf.Mode = conf.Mode
-		LobbyMap[ID].PowerLogs = nil
-		LobbyMap[ID].Conf.ScoreFactor = 0
-		LobbyMap[ID].Conf.Powerups = nil
-		LobbyMap[ID].Conf.PlaceBonus = nil
+		switch conf.Mode {
+		case 2:
+			LobbyMap[ID].PowerLogs = nil
+			LobbyMap[ID].Conf.ScoreFactor = 0
+			LobbyMap[ID].Conf.Powerups = nil
+			LobbyMap[ID].Conf.PlaceBonus = nil
 
-	default:
-		if conf.ScoreFactor > defaults.ScoreFactorLow && conf.ScoreFactor < defaults.ScoreFactorHigh {
-			LobbyMap[ID].Conf.ScoreFactor = conf.ScoreFactor
-		} else if LobbyMap[ID].Conf.Mode == 2 {
-			LobbyMap[ID].Conf.ScoreFactor = defaults.ScoreFactor
+		case 1:
+			LobbyMap[ID].PowerLogs = make(map[int][]logic.Powerup)
+
+			if conf.ScoreFactor > defaults.ScoreFactorLow && conf.ScoreFactor < defaults.ScoreFactorHigh {
+				LobbyMap[ID].Conf.ScoreFactor = conf.ScoreFactor
+			} else {
+				LobbyMap[ID].Conf.ScoreFactor = defaults.ScoreFactor
+			}
+			if conf.Powerups != nil && len(*conf.Powerups) == 2 {
+				LobbyMap[ID].Conf.Powerups = conf.Powerups
+			} else {
+				LobbyMap[ID].Conf.Powerups = defaults.Powerups()
+			}
+			if conf.PlaceBonus != nil {
+				LobbyMap[ID].Conf.PlaceBonus = conf.PlaceBonus
+			} else {
+				LobbyMap[ID].Conf.PlaceBonus = defaults.PlaceBonus()
+			}
 		}
-		if conf.Powerups != nil && len(*conf.Powerups) == 2 {
-			LobbyMap[ID].Conf.Powerups = conf.Powerups
-		} else if LobbyMap[ID].Conf.Mode == 2 {
-			LobbyMap[ID].Conf.Powerups = defaults.Powerups()
-		}
-		if conf.PlaceBonus != nil {
-			LobbyMap[ID].Conf.PlaceBonus = conf.PlaceBonus
-		} else if LobbyMap[ID].Conf.Mode == 2 {
-			LobbyMap[ID].Conf.PlaceBonus = defaults.PlaceBonus()
-		}
-		LobbyMap[ID].Conf.Mode = defaults.Mode
+	}
+	if conf.ScoreFactor > defaults.ScoreFactorLow && conf.ScoreFactor < defaults.ScoreFactorHigh {
+		LobbyMap[ID].Conf.ScoreFactor = conf.ScoreFactor
+	}
+	if conf.Powerups != nil && len(*conf.Powerups) == 2 {
+		LobbyMap[ID].Conf.Powerups = conf.Powerups
+	}
+	if conf.PlaceBonus != nil {
+		LobbyMap[ID].Conf.PlaceBonus = conf.PlaceBonus
 	}
 
 	if conf.MaxPlayers > 0 {
