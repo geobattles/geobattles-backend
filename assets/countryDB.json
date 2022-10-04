@@ -305,6 +305,21 @@
             "ccode": "LB",
             "size": 6184
         },
+        "LS": {
+            "name": "Lesotho",
+            "ccode": "LS",
+            "size": 15558
+        },
+        "LT": {
+            "name": "Lithuania",
+            "ccode": "LT",
+            "size": 66047
+        },
+        "LU": {
+            "name": "Luxembourg",
+            "ccode": "LU",
+            "size": 49
+        },
         "SI": {
             "name": "Slovenia",
             "ccode": "SI",
