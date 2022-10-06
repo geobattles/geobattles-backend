@@ -19,7 +19,7 @@ type Results struct {
 	Attempt int     `json:"attempt"`
 	Lives   int     `json:"lives"`
 	CC      string  `json:"cc,omitempty"`
-	Time    int64   `json:"time,omitempty"`
+	Time    int     `json:"time,omitempty"`
 }
 
 // response from google maps metadata api

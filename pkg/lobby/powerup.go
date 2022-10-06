@@ -53,7 +53,6 @@ func ProcessPowerups(lobbyID string) error {
 				result.Score *= 2
 				LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source] = result
 			}
-			// fmt.Println(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound])
 		case 1:
 			// duel
 			resultSource := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source]
@@ -70,14 +69,24 @@ func ProcessPowerups(lobbyID string) error {
 				break
 			}
 
-			if resultSource.Attempt == 0 || (resultTarget.Dist <= resultSource.Dist && resultTarget.Attempt != 0) {
-				resultSource.Score -= 1000
-				resultTarget.Score += 1000
-			} else {
-				resultSource.Score += 1000
-				resultTarget.Score -= 1000
+			switch LobbyMap[lobbyID].Conf.Mode {
+			case 2:
+				if resultSource.Attempt == 0 || (resultTarget.Time <= resultSource.Time && resultTarget.Attempt != 0) {
+					resultSource.Score -= 1000
+					resultTarget.Score += 1000
+				} else {
+					resultSource.Score += 1000
+					resultTarget.Score -= 1000
+				}
+			default:
+				if resultSource.Attempt == 0 || (resultTarget.Dist <= resultSource.Dist && resultTarget.Attempt != 0) {
+					resultSource.Score -= 1000
+					resultTarget.Score += 1000
+				} else {
+					resultSource.Score += 1000
+					resultTarget.Score -= 1000
+				}
 			}
-			// fmt.Println(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound])
 		}
 	}
 	return nil
@@ -86,7 +95,7 @@ func ProcessPowerups(lobbyID string) error {
 // add bonus points based on player placement. first player gets 30% bonus, second 20, third 10
 // depends on the number of players; with 2 players only first gets 10%
 func ProcessBonus(lobbyID string) error {
-	if LobbyMap[lobbyID].Conf.PlaceBonus == nil || !*LobbyMap[lobbyID].Conf.PlaceBonus {
+	if !*LobbyMap[lobbyID].Conf.PlaceBonus {
 		fmt.Println("BONUS_DISABLED")
 		return errors.New("BONUS_DISABLED")
 	}
@@ -101,7 +110,12 @@ func ProcessBonus(lobbyID string) error {
 		if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[i]].Attempt == 0 {
 			return false
 		}
-		return LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[i]].Dist < LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[j]].Dist
+		switch LobbyMap[lobbyID].Conf.Mode {
+		case 2:
+			return LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[i]].Time < LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[j]].Time
+		default:
+			return LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[i]].Dist < LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[j]].Dist
+		}
 	})
 	fmt.Println("PLAYER ORDER", playerOrder)
 	switch num := len(playerOrder); {
