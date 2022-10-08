@@ -50,7 +50,7 @@ func ProcessPowerups(lobbyID string) error {
 			// TODO: dont stack with placement bonus
 			// double points
 			if result, ok := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source]; ok {
-				result.Score *= 2
+				result.DoubleScore = 2 * result.BaseScore
 				LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source] = result
 			}
 		case 1:
@@ -72,19 +72,19 @@ func ProcessPowerups(lobbyID string) error {
 			switch LobbyMap[lobbyID].Conf.Mode {
 			case 2:
 				if resultSource.Attempt == 0 || (resultTarget.Time <= resultSource.Time && resultTarget.Attempt != 0) {
-					resultSource.Score -= 1000
-					resultTarget.Score += 1000
+					resultSource.DuelScore -= 1000
+					resultTarget.DuelScore += 1000
 				} else {
-					resultSource.Score += 1000
-					resultTarget.Score -= 1000
+					resultSource.DuelScore += 1000
+					resultTarget.DuelScore -= 1000
 				}
 			default:
 				if resultSource.Attempt == 0 || (resultTarget.Dist <= resultSource.Dist && resultTarget.Attempt != 0) {
-					resultSource.Score -= 1000
-					resultTarget.Score += 1000
+					resultSource.DuelScore -= 1000
+					resultTarget.DuelScore += 1000
 				} else {
-					resultSource.Score += 1000
-					resultTarget.Score -= 1000
+					resultSource.DuelScore += 1000
+					resultTarget.DuelScore -= 1000
 				}
 			}
 		}
@@ -120,14 +120,23 @@ func ProcessBonus(lobbyID string) error {
 	fmt.Println("PLAYER ORDER", playerOrder)
 	switch num := len(playerOrder); {
 	case num == 2:
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score) * 1.1)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].BaseScore) * 1.1)
 	case num == 3:
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score) * 1.2)
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].Score) * 1.1)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].BaseScore) * 1.2)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].BaseScore) * 1.1)
 	case num >= 4:
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].Score) * 1.3)
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].Score) * 1.2)
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[2]].Score = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[2]].Score) * 1.1)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].BaseScore) * 1.3)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].BaseScore) * 1.2)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[2]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[2]].BaseScore) * 1.1)
+	}
+	return nil
+}
+
+// add bonus points based on player placement. first player gets 30% bonus, second 20, third 10
+// depends on the number of players; with 2 players only first gets 10%
+func ProcessTotal(lobbyID string) error {
+	for player, result := range LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound] {
+		LobbyMap[lobbyID].TotalResults[player].Total += result.BaseScore + result.PlaceScore + result.DoubleScore + result.DuelScore
 	}
 	return nil
 }

@@ -30,7 +30,6 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(lobby.LobbyMap)
 		fmt.Println("Sent lobby list")
-		//fmt.Println(runtime.NumGoroutine())
 	case http.MethodPost:
 		var lobbyConf logic.LobbyConf
 		reqBody, err := io.ReadAll(r.Body)

@@ -13,13 +13,17 @@ type Coords struct {
 }
 
 type Results struct {
-	Loc     Coords  `json:"location"`
-	Dist    float64 `json:"distance"`
-	Score   int     `json:"score"`
-	Attempt int     `json:"attempt"`
-	Lives   int     `json:"lives"`
-	CC      string  `json:"cc,omitempty"`
-	Time    int     `json:"time,omitempty"`
+	Loc         Coords  `json:"location"`
+	Dist        float64 `json:"distance"`
+	BaseScore   int     `json:"baseScr"`
+	PlaceScore  int     `json:"placeScr,omitempty"`
+	DoubleScore int     `json:"dblScr,omitempty"`
+	DuelScore   int     `json:"duelScr,omitempty"`
+	Total       int     `json:"total,omitempty"`
+	Attempt     int     `json:"attempt"`
+	Lives       int     `json:"lives"`
+	CC          string  `json:"cc,omitempty"`
+	Time        int     `json:"time,omitempty"`
 }
 
 // response from google maps metadata api
@@ -45,6 +49,7 @@ type ClientResp struct {
 	AllRes       map[int]map[string][]Results `json:"results,omitempty"`
 	FullRoundRes map[string][]Results         `json:"fullroundRes,omitempty"`
 	RoundRes     map[string]*Results          `json:"roundRes,omitempty"`
+	TotalResults map[string]*Results          `json:"totalResults,omitempty"`
 	GuessRes     *Results                     `json:"playerRes,omitempty"`
 	Round        int                          `json:"round,omitempty"`
 	CC           string                       `json:"cc,omitempty"`
@@ -99,6 +104,7 @@ type Lobby struct {
 	CurrentRound  int                          `json:"currentRound"`
 	RawResults    map[int]map[string][]Results `json:"results"`
 	EndResults    map[int]map[string]*Results  `json:"endResults"`
+	TotalResults  map[string]*Results          `json:"totalResults"`
 	Active        bool                         `json:"-"`
 	UsersFinished map[string]bool              `json:"-"`
 	CCSize        float64                      `json:"-"`
