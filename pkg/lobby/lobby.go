@@ -304,7 +304,7 @@ func addToResults(lobbyID string, clientID string, location logic.Coords, distan
 	score := scoreDistance(distance, float64(LobbyMap[lobbyID].Conf.ScoreFactor))
 	// TODO: split this monstrosity, maybe use variables
 	LobbyMap[lobbyID].PlayerMap[clientID].Lives -= 1
-	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, Dist: distance, BaseScore: score, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives})
+	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, Dist: distance, BaseScore: score, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1})
 	if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Dist > distance || LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Attempt == 0 {
 		fmt.Println("NEW BEST RESULT")
 		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, Dist: distance, BaseScore: score, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID])}
@@ -341,11 +341,11 @@ func processCountryGuess(lobbyID string, clientID string, location logic.Coords)
 	// correct result is indicated by ccode = XX and score, false result gets score = 0
 	if cc == LobbyMap[lobbyID].CurrentCC {
 		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, BaseScore: score, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: "XX"})
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, BaseScore: score, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: "XX"}
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, BaseScore: score, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]), CC: "XX"}
 
 	} else {
 		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, BaseScore: 0, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: cc})
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, BaseScore: 0, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: cc}
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, BaseScore: 0, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]), CC: cc}
 
 	}
 
