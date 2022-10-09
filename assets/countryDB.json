@@ -218,7 +218,7 @@
         "HK": {
             "name": "Hong Kong",
             "ccode": "HK",
-            "size": 1847
+            "size": 1803
         },
         "HU": {
             "name": "Hungary",
@@ -319,6 +319,21 @@
             "name": "Luxembourg",
             "ccode": "LU",
             "size": 49
+        },
+        "ML": {
+            "name": "Mali",
+            "ccode": "ML",
+            "size": 10
+        },
+        "MO": {
+            "name": "Macau",
+            "ccode": "MO",
+            "size": 45
+        },
+        "MG": {
+            "name": "Madagascar",
+            "ccode": "MG",
+            "size": 60
         },
         "SI": {
             "name": "Slovenia",
