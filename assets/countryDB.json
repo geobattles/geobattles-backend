@@ -335,6 +335,21 @@
             "ccode": "MG",
             "size": 60
         },
+        "MY": {
+            "name": "Malaysia",
+            "ccode": "MY",
+            "size": 239898
+        },
+        "MT": {
+            "name": "Malta",
+            "ccode": "MT",
+            "size": 336
+        },
+        "MQ": {
+            "name": "Martinique",
+            "ccode": "MQ",
+            "size": 1300
+        },
         "SI": {
             "name": "Slovenia",
             "ccode": "SI",
