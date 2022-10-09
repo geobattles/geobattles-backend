@@ -350,6 +350,26 @@
             "ccode": "MQ",
             "size": 1300
         },
+        "MX": {
+            "name": "Mexico",
+            "ccode": "MX",
+            "size": 1811650
+        },
+        "MC": {
+            "name": "Monaco",
+            "ccode": "MC",
+            "size": 3
+        },
+        "MN": {
+            "name": "Mongolia",
+            "ccode": "MN",
+            "size": 558172
+        },
+        "ME": {
+            "name": "Montenegro",
+            "ccode": "ME",
+            "size": 8129
+        },
         "SI": {
             "name": "Slovenia",
             "ccode": "SI",
