@@ -50,7 +50,7 @@ func ProcessPowerups(lobbyID string) error {
 			// TODO: dont stack with placement bonus
 			// double points
 			if result, ok := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source]; ok {
-				result.DoubleScore = 2 * result.BaseScore
+				result.DoubleScore = result.BaseScore
 				LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Source] = result
 			}
 		case 1:
@@ -120,14 +120,14 @@ func ProcessBonus(lobbyID string) error {
 	fmt.Println("PLAYER ORDER", playerOrder)
 	switch num := len(playerOrder); {
 	case num == 2:
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].BaseScore) * 1.1)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].BaseScore) * 0.1)
 	case num == 3:
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].BaseScore) * 1.2)
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].BaseScore) * 1.1)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].BaseScore) * 0.2)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].BaseScore) * 0.1)
 	case num >= 4:
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].BaseScore) * 1.3)
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].BaseScore) * 1.2)
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[2]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[2]].BaseScore) * 1.1)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].BaseScore) * 0.3)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[1]].BaseScore) * 0.2)
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[2]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[2]].BaseScore) * 0.1)
 	}
 	return nil
 }
