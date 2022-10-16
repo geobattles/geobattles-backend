@@ -370,6 +370,26 @@
             "ccode": "ME",
             "size": 8129
         },
+        "NP": {
+            "name": "Nepal",
+            "ccode": "NP",
+            "size": 20
+        },
+        "NL": {
+            "name": "Netherlands",
+            "ccode": "NL",
+            "size": 37335
+        },
+        "NZ": {
+            "name": "NewZaeland",
+            "ccode": "NZ",
+            "size": 231453
+        },
+        "NG": {
+            "name": "Nigeria",
+            "ccode": "NG",
+            "size": 403274
+        },
         "SI": {
             "name": "Slovenia",
             "ccode": "SI",
