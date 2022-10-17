@@ -390,6 +390,21 @@
             "ccode": "NG",
             "size": 403274
         },
+        "MK": {
+            "name": "NorthMacedonia",
+            "ccode": "MK",
+            "size": 10588
+        },
+        "MP": {
+            "name": "NorthernMarianaIslands",
+            "ccode": "MP",
+            "size": 50
+        },
+        "NO": {
+            "name": "Norway",
+            "ccode": "NO",
+            "size": 388522
+        },
         "SI": {
             "name": "Slovenia",
             "ccode": "SI",
