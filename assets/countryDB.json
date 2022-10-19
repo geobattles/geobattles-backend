@@ -425,6 +425,21 @@
             "ccode": "PN",
             "size": 9
         },
+        "PL": {
+            "name": "Poland",
+            "ccode": "PL",
+            "size": 313706
+        },
+        "PT": {
+            "name": "Portugal",
+            "ccode": "PT",
+            "size": 91435
+        },
+        "PR": {
+            "name": "PuertoRico",
+            "ccode": "PR",
+            "size": 6371
+        },
         "SI": {
             "name": "Slovenia",
             "ccode": "SI",
