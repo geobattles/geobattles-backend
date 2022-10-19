@@ -405,6 +405,26 @@
             "ccode": "NO",
             "size": 388522
         },
+        "PS": {
+            "name": "Palestine",
+            "ccode": "PS",
+            "size": 3358
+        },
+        "PE": {
+            "name": "Peru",
+            "ccode": "PE",
+            "size": 637487
+        },
+        "PH": {
+            "name": "Philippines",
+            "ccode": "PH",
+            "size": 415390
+        },
+        "PN": {
+            "name": "PictarinIslands",
+            "ccode": "PN",
+            "size": 9
+        },
         "SI": {
             "name": "Slovenia",
             "ccode": "SI",
