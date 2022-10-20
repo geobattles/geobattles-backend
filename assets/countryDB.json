@@ -440,6 +440,21 @@
             "ccode": "PR",
             "size": 6371
         },
+        "RE": {
+            "name": "Reunion",
+            "ccode": "RE",
+            "size": 2719
+        },
+        "RO": {
+            "name": "Romania",
+            "ccode": "RO",
+            "size": 236853
+        },
+        "RU": {
+            "name": "Russia",
+            "ccode": "RU",
+            "size": 600000
+        },
         "SI": {
             "name": "Slovenia",
             "ccode": "SI",
