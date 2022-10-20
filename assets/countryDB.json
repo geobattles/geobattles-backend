@@ -455,6 +455,21 @@
             "ccode": "RU",
             "size": 600000
         },
+        "RW": {
+            "name": "Rwanda",
+            "ccode": "RW",
+            "size": 72
+        },
+        "PM": {
+            "name": "SaintPierreAndMiquelon",
+            "ccode": "PM",
+            "size": 6
+        },
+        "SM": {
+            "name": "SanMarino",
+            "ccode": "SM",
+            "size": 60
+        },
         "SI": {
             "name": "Slovenia",
             "ccode": "SI",
