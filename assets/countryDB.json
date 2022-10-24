@@ -509,6 +509,26 @@
             "name": "South Georgia and the South Sandwich Islands",
             "ccode": "GS",
             "size": 3
+        },
+        "LK": {
+            "name": "Sri Lanka",
+            "ccode": "LK",
+            "size": 70720
+        },
+        "SJ": {
+            "name": "Svalbard",
+            "ccode": "SJ",
+            "size": 8
+        },
+        "SE": {
+            "name": "Sweden",
+            "ccode": "SE",
+            "size": 424909
+        },
+        "CH": {
+            "name": "Switzerland",
+            "ccode": "CH",
+            "size": 40156
         }
     }
 }
