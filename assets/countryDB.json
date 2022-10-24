@@ -470,6 +470,26 @@
             "ccode": "SM",
             "size": 60
         },
+        "SN": {
+            "name": "Senegal",
+            "ccode": "SN",
+            "size": 101890
+        },
+        "RS": {
+            "name": "Serbia",
+            "ccode": "RS",
+            "size": 55502
+        },
+        "SG": {
+            "name": "Singapore",
+            "ccode": "SG",
+            "size": 723
+        },
+        "SK": {
+            "name": "Slovakia",
+            "ccode": "SG",
+            "size": 49197
+        },
         "SI": {
             "name": "Slovenia",
             "ccode": "SI",
