@@ -71,7 +71,11 @@ func ProcessPowerups(lobbyID string) error {
 
 			switch LobbyMap[lobbyID].Conf.Mode {
 			case 2:
-				if resultSource.Attempt == 0 || (resultTarget.Time <= resultSource.Time && resultTarget.Attempt != 0) {
+				// if neither user guessed a country dont apply points
+				if (resultSource.Attempt == 0 || resultSource.CC != "XX") && (resultTarget.Attempt == 0 || resultTarget.CC != "XX") {
+					break
+				}
+				if (resultSource.Attempt == 0 || resultSource.CC != "XX") || (resultTarget.Time <= resultSource.Time && !(resultTarget.Attempt == 0 || resultTarget.CC != "XX")) {
 					resultSource.DuelScore -= 1000
 					resultTarget.DuelScore += 1000
 				} else {

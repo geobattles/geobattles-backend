@@ -298,7 +298,7 @@ func SubmitResult(lobbyID string, clientID string, location logic.Coords) (float
 	}
 }
 
-// adds result to map of all results in lobby
+// processes submitted guess in mode 1 (location guessing)
 func addToResults(lobbyID string, clientID string, location logic.Coords, distance float64) (int, error) {
 
 	score := scoreDistance(distance, float64(LobbyMap[lobbyID].Conf.ScoreFactor))
