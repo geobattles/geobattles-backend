@@ -529,6 +529,26 @@
             "name": "Switzerland",
             "ccode": "CH",
             "size": 40156
+        },
+        "TW": {
+            "name": "Taiwan",
+            "ccode": "TW",
+            "size": 32743
+        },
+        "TZ": {
+            "name": "Tanzania",
+            "ccode": "TZ",
+            "size": 50
+        },
+        "TH": {
+            "name": "Thailand",
+            "ccode": "TH",
+            "size": 515728
+        },
+        "TN": {
+            "name": "Tunisia",
+            "ccode": "TN",
+            "size": 16434
         }
     }
 }
