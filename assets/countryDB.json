@@ -549,6 +549,26 @@
             "name": "Tunisia",
             "ccode": "TN",
             "size": 16434
+        },
+        "TR": {
+            "name": "Turkey",
+            "ccode": "TR",
+            "size": 805273
+        },
+        "UG": {
+            "name": "Uganda",
+            "ccode": "UG",
+            "size": 2300
+        },
+        "UA": {
+            "name": "Ukraine",
+            "ccode": "UA",
+            "size": 451081
+        },
+        "AE": {
+            "name": "United Arab Emirates",
+            "ccode": "AE",
+            "size": 9394
         }
     }
 }
