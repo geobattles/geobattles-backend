@@ -569,6 +569,21 @@
             "name": "United Arab Emirates",
             "ccode": "AE",
             "size": 9394
+        },
+        "GB": {
+            "name": "United Kingdom",
+            "ccode": "GB",
+            "size": 263696
+        },
+        "US": {
+            "name": "United States",
+            "ccode": "US",
+            "size": 8200733
+        },
+        "UM": {
+            "name": "United States Minor Outlying Islands",
+            "ccode": "UM",
+            "size": 5
         }
     }
 }
