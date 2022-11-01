@@ -584,6 +584,21 @@
             "name": "United States Minor Outlying Islands",
             "ccode": "UM",
             "size": 5
+        },
+        "VI": {
+            "name": "United States Virgin Islands",
+            "ccode": "VI",
+            "size": 321
+        },
+        "UY": {
+            "name": "Uruguay",
+            "ccode": "UY",
+            "size": 176756
+        },
+        "VU": {
+            "name": "Vanuatu",
+            "ccode": "VU",
+            "size": 6
         }
     }
 }
