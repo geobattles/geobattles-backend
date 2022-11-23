@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -12,11 +13,17 @@ type Coords struct {
 }
 
 type Results struct {
-	Loc     Coords  `json:"location"`
-	Dist    float64 `json:"distance"`
-	Score   int     `json:"score"`
-	Attempt int     `json:"attempt"`
-	Lives   int     `json:"lives"`
+	Loc         Coords  `json:"location"`
+	Dist        float64 `json:"distance"`
+	BaseScore   int     `json:"baseScr"`
+	PlaceScore  int     `json:"placeScr,omitempty"`
+	DoubleScore int     `json:"dblScr,omitempty"`
+	DuelScore   int     `json:"duelScr,omitempty"`
+	Total       int     `json:"total,omitempty"`
+	Attempt     int     `json:"attempt"`
+	Lives       int     `json:"lives"`
+	CC          string  `json:"cc,omitempty"`
+	Time        int     `json:"time,omitempty"`
 }
 
 // response from google maps metadata api
@@ -26,26 +33,30 @@ type ApiMetaResponse struct {
 }
 
 type ClientReq struct {
-	Cmd     string    `json:"command"`
-	Loc     *Coords   `json:"location"`
+	Cmd string  `json:"command"`
+	Loc *Coords `json:"location"`
+	//CC      string    `json:"cc,omitempty"`
 	Conf    LobbyConf `json:"conf"`
 	Powerup Powerup   `json:"powerup"`
 }
 
 // either Conn or Room must be provided. if Conn is set Data will be sent to this connection
 type ClientResp struct {
-	Status string                       `json:"status"`
-	Type   string                       `json:"type"`
-	Loc    *Coords                      `json:"location,omitempty"`
-	User   string                       `json:"user,omitempty"`
-	AllRes map[int]map[string][]Results `json:"results,omitempty"`
-	// RoundRes map[string][]Results         `json:"roundRes,omitempty"`
-	RoundRes map[string]*Results `json:"roundRes,omitempty"`
-	GuessRes *Results            `json:"playerRes,omitempty"`
-	Round    int                 `json:"round,omitempty"`
-	Lobby    *Lobby              `json:"lobby,omitempty"`
-	PowerLog []Powerup           `json:"powerLog,omitempty"`
-	Players  map[string]*Player  `json:"players,omitempty"`
+	Status       string                       `json:"status"`
+	Type         string                       `json:"type"`
+	Loc          *Coords                      `json:"location,omitempty"`
+	User         string                       `json:"user,omitempty"`
+	AllRes       map[int]map[string][]Results `json:"results,omitempty"`
+	FullRoundRes map[string][]Results         `json:"fullroundRes,omitempty"`
+	RoundRes     map[string]*Results          `json:"roundRes,omitempty"`
+	TotalResults map[string]*Results          `json:"totalResults,omitempty"`
+	GuessRes     *Results                     `json:"playerRes,omitempty"`
+	Round        int                          `json:"round,omitempty"`
+	CC           string                       `json:"cc,omitempty"`
+	Lobby        *Lobby                       `json:"lobby,omitempty"`
+	PowerLog     []Powerup                    `json:"powerLog,omitempty"`
+	Players      map[string]*Player           `json:"players,omitempty"`
+	Polygon      json.RawMessage              `json:"polygon,omitempty"`
 }
 
 // else it will be broadcast to the entire Room. Conn takes precedence over Room
@@ -63,21 +74,22 @@ type Powerup struct {
 
 type LobbyConf struct {
 	Name        string   `json:"name"`
+	Mode        int      `json:"mode"`
 	MaxPlayers  int      `json:"maxPlayers"`
 	NumAttempt  int      `json:"numAttempt"`
 	NumRounds   int      `json:"numRounds"`
 	RoundTime   int      `json:"roundTime"`
-	ScoreFactor int      `json:"scoreFactor"`
+	ScoreFactor int      `json:"scoreFactor,omitempty"`
 	CCList      []string `json:"ccList"`
-	Powerups    *[]bool  `json:"powerups"`
-	PlaceBonus  *bool    `json:"placeBonus"`
+	Powerups    *[]bool  `json:"powerups,omitempty"`
+	PlaceBonus  *bool    `json:"placeBonus,omitempty"`
 	DynLives    *bool    `json:"dynLives"`
 }
 
 type Player struct {
 	Name     string `json:"name"`
 	Color    string `json:"color"`
-	Powerups []bool `json:"powerups"`
+	Powerups []bool `json:"powerups,omitempty"`
 	Lives    int    `json:"lives,omitempty"`
 }
 
@@ -88,12 +100,15 @@ type Lobby struct {
 	NumPlayers    int                          `json:"numPlayers"`
 	PlayerMap     map[string]*Player           `json:"playerList"`
 	CurrentLoc    *Coords                      `json:"-"`
+	CurrentCC     string                       `json:"-"`
 	CurrentRound  int                          `json:"currentRound"`
 	RawResults    map[int]map[string][]Results `json:"results"`
 	EndResults    map[int]map[string]*Results  `json:"endResults"`
+	TotalResults  map[string]*Results          `json:"totalResults"`
 	Active        bool                         `json:"-"`
-	UsersFinished int                          `json:"-"`
+	UsersFinished map[string]bool              `json:"-"`
 	CCSize        float64                      `json:"-"`
 	PowerLogs     map[int][]Powerup            `json:"-"`
+	StartTime     time.Time                    `json:"-"`
 	Timer         *time.Timer                  `json:"-"`
 }

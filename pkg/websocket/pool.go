@@ -63,7 +63,7 @@ func (pool *Pool) Start() {
 			}()
 
 		case message := <-pool.Transmit:
-			fmt.Println("msg to send: ", message)
+			// fmt.Println("msg to send: ", message)
 			// if message doesnt have connection field broadcast it
 			// otherwise only send it to the connection given
 			if message.Conn == nil {

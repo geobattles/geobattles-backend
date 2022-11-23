@@ -50,12 +50,13 @@ func InitCountryDB() {
 		return countryDB.Countries[CountryList[i]].Name < countryDB.Countries[CountryList[j]].Name
 	})
 	countryDB.totalSize = sum
+	readAllPolygons()
 }
 
 // returns valid random street view coordinates
-func RndLocation(countryList []string, totalSize float64) Coords {
+func RndLocation(countryList []string, totalSize float64) (Coords, string) {
 	//fmt.Println(SelectRndArea())
-	polygon := SelectRndArea(countryList, totalSize)
+	polygon, ccode := SelectRndArea(countryList, totalSize)
 	bbox := polygon.Rings[0].Bound()
 	var status string
 	var loc Coords
@@ -66,7 +67,7 @@ func RndLocation(countryList []string, totalSize float64) Coords {
 		if failCount >= 4 {
 			fmt.Println("FAILSAFE ACTIVATED!")
 			failCount = 0
-			polygon = SelectRndArea(countryList, totalSize)
+			polygon, ccode = SelectRndArea(countryList, totalSize)
 			bbox = polygon.Rings[0].Bound()
 		}
 
@@ -78,23 +79,23 @@ func RndLocation(countryList []string, totalSize float64) Coords {
 		fmt.Println("api check: ", loc, status)
 		failCount++
 	}
-	return loc
+	return loc, ccode
 
 }
 
 // returns random area name within random country
-func SelectRndArea(countryList []string, totalSize float64) Polygon {
+func SelectRndArea(countryList []string, totalSize float64) (Polygon, string) {
 	ccode := SelectRandomCountry(countryList, totalSize)
 	fmt.Println("Selected country: ", ccode)
 	rnd := rand.Intn(countryDB.Countries[ccode].Areas.InnerSize)
 	for area, polygon := range countryDB.Countries[ccode].Areas.SearchArea {
 		if rnd <= polygon.Size {
 			fmt.Println("Selected polygon: ", area)
-			return *polygon
+			return *polygon, ccode
 		}
 		rnd -= polygon.Size
 	}
-	return Polygon{}
+	return Polygon{}, ccode
 }
 
 // returns country code of a randomly selected country
