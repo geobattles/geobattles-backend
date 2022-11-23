@@ -110,4 +110,5 @@ type Lobby struct {
 	CCSize        float64                      `json:"-"`
 	PowerLogs     map[int][]Powerup            `json:"-"`
 	StartTime     time.Time                    `json:"-"`
+	Timer         *time.Timer                  `json:"-"`
 }

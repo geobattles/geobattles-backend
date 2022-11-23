@@ -218,7 +218,7 @@
         "HK": {
             "name": "Hong Kong",
             "ccode": "HK",
-            "size": 1847
+            "size": 1803
         },
         "HU": {
             "name": "Hungary",
@@ -305,6 +305,191 @@
             "ccode": "LB",
             "size": 6184
         },
+        "LS": {
+            "name": "Lesotho",
+            "ccode": "LS",
+            "size": 15558
+        },
+        "LT": {
+            "name": "Lithuania",
+            "ccode": "LT",
+            "size": 66047
+        },
+        "LU": {
+            "name": "Luxembourg",
+            "ccode": "LU",
+            "size": 49
+        },
+        "ML": {
+            "name": "Mali",
+            "ccode": "ML",
+            "size": 10
+        },
+        "MO": {
+            "name": "Macau",
+            "ccode": "MO",
+            "size": 45
+        },
+        "MG": {
+            "name": "Madagascar",
+            "ccode": "MG",
+            "size": 60
+        },
+        "MY": {
+            "name": "Malaysia",
+            "ccode": "MY",
+            "size": 239898
+        },
+        "MT": {
+            "name": "Malta",
+            "ccode": "MT",
+            "size": 336
+        },
+        "MQ": {
+            "name": "Martinique",
+            "ccode": "MQ",
+            "size": 1300
+        },
+        "MX": {
+            "name": "Mexico",
+            "ccode": "MX",
+            "size": 1811650
+        },
+        "MC": {
+            "name": "Monaco",
+            "ccode": "MC",
+            "size": 3
+        },
+        "MN": {
+            "name": "Mongolia",
+            "ccode": "MN",
+            "size": 558172
+        },
+        "ME": {
+            "name": "Montenegro",
+            "ccode": "ME",
+            "size": 8129
+        },
+        "NP": {
+            "name": "Nepal",
+            "ccode": "NP",
+            "size": 20
+        },
+        "NL": {
+            "name": "Netherlands",
+            "ccode": "NL",
+            "size": 37335
+        },
+        "NZ": {
+            "name": "NewZaeland",
+            "ccode": "NZ",
+            "size": 231453
+        },
+        "NG": {
+            "name": "Nigeria",
+            "ccode": "NG",
+            "size": 403274
+        },
+        "MK": {
+            "name": "NorthMacedonia",
+            "ccode": "MK",
+            "size": 10588
+        },
+        "MP": {
+            "name": "NorthernMarianaIslands",
+            "ccode": "MP",
+            "size": 50
+        },
+        "NO": {
+            "name": "Norway",
+            "ccode": "NO",
+            "size": 388522
+        },
+        "PS": {
+            "name": "Palestine",
+            "ccode": "PS",
+            "size": 3358
+        },
+        "PE": {
+            "name": "Peru",
+            "ccode": "PE",
+            "size": 637487
+        },
+        "PH": {
+            "name": "Philippines",
+            "ccode": "PH",
+            "size": 415390
+        },
+        "PN": {
+            "name": "PictarinIslands",
+            "ccode": "PN",
+            "size": 9
+        },
+        "PL": {
+            "name": "Poland",
+            "ccode": "PL",
+            "size": 313706
+        },
+        "PT": {
+            "name": "Portugal",
+            "ccode": "PT",
+            "size": 91435
+        },
+        "PR": {
+            "name": "PuertoRico",
+            "ccode": "PR",
+            "size": 6371
+        },
+        "RE": {
+            "name": "Reunion",
+            "ccode": "RE",
+            "size": 2719
+        },
+        "RO": {
+            "name": "Romania",
+            "ccode": "RO",
+            "size": 236853
+        },
+        "RU": {
+            "name": "Russia",
+            "ccode": "RU",
+            "size": 600000
+        },
+        "RW": {
+            "name": "Rwanda",
+            "ccode": "RW",
+            "size": 72
+        },
+        "PM": {
+            "name": "SaintPierreAndMiquelon",
+            "ccode": "PM",
+            "size": 6
+        },
+        "SM": {
+            "name": "SanMarino",
+            "ccode": "SM",
+            "size": 60
+        },
+        "SN": {
+            "name": "Senegal",
+            "ccode": "SN",
+            "size": 101890
+        },
+        "RS": {
+            "name": "Serbia",
+            "ccode": "RS",
+            "size": 55502
+        },
+        "SG": {
+            "name": "Singapore",
+            "ccode": "SG",
+            "size": 723
+        },
+        "SK": {
+            "name": "Slovakia",
+            "ccode": "SG",
+            "size": 49197
+        },
         "SI": {
             "name": "Slovenia",
             "ccode": "SI",
@@ -324,6 +509,96 @@
             "name": "South Georgia and the South Sandwich Islands",
             "ccode": "GS",
             "size": 3
+        },
+        "LK": {
+            "name": "Sri Lanka",
+            "ccode": "LK",
+            "size": 70720
+        },
+        "SJ": {
+            "name": "Svalbard",
+            "ccode": "SJ",
+            "size": 8
+        },
+        "SE": {
+            "name": "Sweden",
+            "ccode": "SE",
+            "size": 424909
+        },
+        "CH": {
+            "name": "Switzerland",
+            "ccode": "CH",
+            "size": 40156
+        },
+        "TW": {
+            "name": "Taiwan",
+            "ccode": "TW",
+            "size": 32743
+        },
+        "TZ": {
+            "name": "Tanzania",
+            "ccode": "TZ",
+            "size": 50
+        },
+        "TH": {
+            "name": "Thailand",
+            "ccode": "TH",
+            "size": 515728
+        },
+        "TN": {
+            "name": "Tunisia",
+            "ccode": "TN",
+            "size": 16434
+        },
+        "TR": {
+            "name": "Turkey",
+            "ccode": "TR",
+            "size": 805273
+        },
+        "UG": {
+            "name": "Uganda",
+            "ccode": "UG",
+            "size": 2300
+        },
+        "UA": {
+            "name": "Ukraine",
+            "ccode": "UA",
+            "size": 451081
+        },
+        "AE": {
+            "name": "United Arab Emirates",
+            "ccode": "AE",
+            "size": 9394
+        },
+        "GB": {
+            "name": "United Kingdom",
+            "ccode": "GB",
+            "size": 263696
+        },
+        "US": {
+            "name": "United States",
+            "ccode": "US",
+            "size": 8200733
+        },
+        "UM": {
+            "name": "United States Minor Outlying Islands",
+            "ccode": "UM",
+            "size": 5
+        },
+        "VI": {
+            "name": "United States Virgin Islands",
+            "ccode": "VI",
+            "size": 321
+        },
+        "UY": {
+            "name": "Uruguay",
+            "ccode": "UY",
+            "size": 176756
+        },
+        "VU": {
+            "name": "Vanuatu",
+            "ccode": "VU",
+            "size": 6
         }
     }
 }
