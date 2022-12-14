@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"github.com/slinarji/go-geo-server/pkg/reverse"
 	"fmt"
 	"time"
 
@@ -151,7 +152,7 @@ func (c *Client) Read() {
 				}
 			}
 		case "loc_to_cc":
-			cc, err := logic.LocToCC(*clientReq.Loc)
+			cc, err := reverse.ReverseGeocode(clientReq.Loc.Lng, clientReq.Loc.Lat)
 			if err != nil {
 				c.Pool.Transmit <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: err.Error()}}
 				break

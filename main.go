@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/slinarji/go-geo-server/pkg/reverse"
 	"fmt"
 	"io"
 	"math/rand"
@@ -119,5 +120,11 @@ func main() {
 	router := mux.NewRouter()
 	setupRoutes(router)
 	logic.InitCountryDB()
+	err2 := reverse.InitReverse()
+	if err2 != nil {
+		fmt.Println(err2.Error())
+	}
+
+	fmt.Println("Server is ready")
 	http.ListenAndServe("0.0.0.0:8080", router)
 }

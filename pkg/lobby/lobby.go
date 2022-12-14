@@ -2,6 +2,7 @@ package lobby
 
 import (
 	"errors"
+	"github.com/slinarji/go-geo-server/pkg/reverse"
 	"fmt"
 	"math"
 	"time"
@@ -331,7 +332,7 @@ func processCountryGuess(lobbyID string, clientID string, location logic.Coords)
 	if LobbyMap[lobbyID].UsersFinished[clientID] {
 		return "", errors.New("ALREADY_FINISHED")
 	}
-	cc, err := logic.LocToCC(location)
+	cc, err := reverse.ReverseGeocode(location.Lng, location.Lat)
 	if err != nil {
 		return "", err
 	}
