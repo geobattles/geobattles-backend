@@ -2,9 +2,10 @@ package lobby
 
 import (
 	"errors"
-	"example/web-service-gin/pkg/logic"
 	"fmt"
 	"sort"
+
+	"github.com/slinarji/go-geo-server/pkg/logic"
 )
 
 // uses given powerup. adds succesfully used powerup to powerlog

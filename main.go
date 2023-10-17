@@ -2,14 +2,15 @@ package main
 
 import (
 	"encoding/json"
-	"example/web-service-gin/pkg/lobby"
-	"example/web-service-gin/pkg/logic"
-	"example/web-service-gin/pkg/websocket"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/slinarji/go-geo-server/pkg/lobby"
+	"github.com/slinarji/go-geo-server/pkg/logic"
+	"github.com/slinarji/go-geo-server/pkg/websocket"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"

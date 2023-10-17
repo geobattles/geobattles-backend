@@ -17,7 +17,6 @@ package main
 
 import (
 	"encoding/json"
-	"example/web-service-gin/pkg/logic"
 	"fmt"
 	"math"
 	"math/rand"
@@ -25,6 +24,8 @@ import (
 	"sort"
 	"text/tabwriter"
 	"time"
+
+	"github.com/slinarji/go-geo-server/pkg/logic"
 
 	"github.com/joho/godotenv"
 )

@@ -2,11 +2,12 @@ package lobby
 
 import (
 	"errors"
-	"example/web-service-gin/pkg/defaults"
-	"example/web-service-gin/pkg/logic"
 	"fmt"
 	"math"
 	"time"
+
+	"github.com/slinarji/go-geo-server/pkg/defaults"
+	"github.com/slinarji/go-geo-server/pkg/logic"
 )
 
 // initial lobby list for debugging

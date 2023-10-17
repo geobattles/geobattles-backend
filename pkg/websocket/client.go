@@ -1,10 +1,11 @@
 package websocket
 
 import (
-	"example/web-service-gin/pkg/lobby"
-	"example/web-service-gin/pkg/logic"
 	"fmt"
 	"time"
+
+	"github.com/slinarji/go-geo-server/pkg/lobby"
+	"github.com/slinarji/go-geo-server/pkg/logic"
 
 	"github.com/gorilla/websocket"
 )
