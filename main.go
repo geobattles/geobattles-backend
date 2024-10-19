@@ -90,6 +90,8 @@ func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 }
 
 func setupRoutes(r *mux.Router) {
+	r.HandleFunc("/register", api.RegisterUser).Methods("POST")       // register user
+	r.HandleFunc("/login", api.LoginUser).Methods("POST")             // login user
 	r.HandleFunc("/countryList", api.ServeCountryList).Methods("GET") // send list of available countries
 	r.HandleFunc("/lobby", serveLobby)
 	pool := websocket.NewPool()

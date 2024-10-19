@@ -1,0 +1,129 @@
+package api
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+
+	"github.com/slinarji/go-geo-server/pkg/auth"
+	"github.com/slinarji/go-geo-server/pkg/models"
+)
+
+type registerResponse struct {
+	ID   uint   `json:"Id"`
+	Name string `json:"Name"`
+}
+
+type response struct {
+	Error  string `json:"error,omitempty"`
+	Status string `json:"status,omitempty"`
+}
+
+// writes response with given status code and payload
+func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.WriteHeader(statusCode)
+	err := json.NewEncoder(w).Encode(data)
+	if err != nil {
+		fmt.Fprintf(w, "%s", err.Error())
+		slog.Error(err.Error())
+	}
+	slog.Info("sent response ", data)
+}
+
+// send response with given error code and message
+func ERROR(w http.ResponseWriter, statusCode int, err error) {
+	if err != nil {
+		JSON(w, statusCode, struct {
+			Error string `json:"error"`
+		}{
+			Error: err.Error(),
+		})
+		return
+	}
+	JSON(w, http.StatusBadRequest, nil)
+}
+
+// creates user and returns user id and name
+func RegisterUser(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	user := models.User{}
+	err = json.Unmarshal(body, &user)
+	if err != nil {
+		ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(user.Password)
+	if err != nil {
+		ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	err = user.ValidateUser()
+	if err != nil {
+		ERROR(w, http.StatusBadRequest, err)
+		return
+	}
+
+	newUser := models.User{
+		Name:     user.Name,
+		Password: hashedPassword,
+	}
+
+	// TODO: Implement database
+	// result := db.DB.Create(&newUser)
+
+	// if result.Error != nil {
+	// 	fmt.Println("duplicate user", result.Error.Error())
+	// 	ERROR(w, http.StatusConflict, result.Error)
+	// 	return
+	// }
+
+	response := registerResponse{
+		ID:   newUser.ID,
+		Name: newUser.Name,
+	}
+
+	JSON(w, http.StatusCreated, response)
+}
+
+// validates user credentials and returns jwt auth_token
+func LoginUser(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	user := models.User{}
+	err = json.Unmarshal(body, &user)
+	if err != nil {
+		ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	// TODO: validate user
+	// var dbUser models.User
+	// result := db.DB.First(&dbUser, "name = ?", user.Name)
+	// if result.Error != nil {
+	// 	ERROR(w, http.StatusUnauthorized, result.Error)
+	// 	return
+	// }
+
+	// if auth.VerifyPassword(dbUser.Password, user.Password) != nil {
+	// 	ERROR(w, http.StatusUnauthorized, fmt.Errorf("Wrong password"))
+	// 	return
+	// }
+
+	// token, err := auth.CreateToken(dbUser.ID)
+	token, err := auth.CreateToken(1234)
+
+	JSON(w, http.StatusOK, token)
+}
