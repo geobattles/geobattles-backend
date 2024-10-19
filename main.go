@@ -2,19 +2,19 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/slinarji/go-geo-server/pkg/reverse"
 	"fmt"
 	"io"
-	"math/rand"
+	"log/slog"
 	"net/http"
-	"time"
-
-	"github.com/slinarji/go-geo-server/pkg/lobby"
-	"github.com/slinarji/go-geo-server/pkg/logic"
-	"github.com/slinarji/go-geo-server/pkg/websocket"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+
+	"github.com/slinarji/go-geo-server/pkg/api"
+	"github.com/slinarji/go-geo-server/pkg/lobby"
+	"github.com/slinarji/go-geo-server/pkg/logic"
+	"github.com/slinarji/go-geo-server/pkg/reverse"
+	"github.com/slinarji/go-geo-server/pkg/websocket"
 )
 
 func serveLobby(w http.ResponseWriter, r *http.Request) {
@@ -31,17 +31,17 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(lobby.LobbyMap)
-		fmt.Println("Sent lobby list")
+		slog.Info("Sent lobby list")
 	case http.MethodPost:
 		var lobbyConf logic.LobbyConf
 		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
-			fmt.Println(err)
+			slog.Error(err.Error())
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		if err = json.Unmarshal(reqBody, &lobbyConf); err != nil {
-			fmt.Println(err)
+			slog.Error(err.Error())
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -52,24 +52,15 @@ func serveLobby(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func serveCountryList(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "*")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(logic.CountryList)
-	fmt.Println("sent country list")
-}
-
 func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
 	// Added query parameter reader for id of lobby
 	lobbyID := r.URL.Query().Get("id")
 	userName := r.URL.Query().Get("name")
-	fmt.Println("WebSocket Endpoint Hit, room ID: ", lobbyID, " name: ", userName)
+	slog.Info("WebSocket Endpoint Hit, room ID: ", lobbyID, " name: ", userName)
 	// only connect to ws if lobby exists
 	if _, ok := lobby.LobbyMap[lobbyID]; ok {
 		if lobby.LobbyMap[lobbyID].CurrentRound != 0 {
-			fmt.Println("ERR: Game in progres")
+			slog.Error("ERR: Game in progres")
 			w.WriteHeader(http.StatusConflict)
 			return
 		}
@@ -90,7 +81,7 @@ func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 		lobby.AddPlayerToLobby(client.ID, client.Name, lobbyID)
 
 		pool.Register <- client
-		fmt.Println("lobbyList: ", lobby.LobbyMap)
+		slog.Info("lobbyList: ", lobby.LobbyMap)
 
 		go client.Read()
 	} else {
@@ -99,32 +90,38 @@ func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 }
 
 func setupRoutes(r *mux.Router) {
+	r.HandleFunc("/countryList", api.ServeCountryList).Methods("GET") // send list of available countries
+	r.HandleFunc("/lobby", serveLobby)
 	pool := websocket.NewPool()
 	go pool.Start()
 	r.HandleFunc("/lobbySocket", func(w http.ResponseWriter, r *http.Request) {
 		serveLobbySocket(pool, w, r)
 	})
-	r.HandleFunc("/lobby", serveLobby)
-	r.HandleFunc("/countryList", serveCountryList)
 }
 
-func main() {
-	//set seed for rand function
-	rand.Seed(time.Now().UnixNano())
+func init() {
 	// try to read .env file
-	// in docker we just use ENV variables and this WILL throw error
+	// in docker we just use ENV variables and this WILL throw an error
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("Error loading .env file")
+		slog.Info("Error loading .env file")
 	}
-	router := mux.NewRouter()
-	setupRoutes(router)
+
 	logic.InitCountryDB()
 	err2 := reverse.InitReverse()
 	if err2 != nil {
-		fmt.Println(err2.Error())
+		slog.Error(err2.Error())
+	}
+}
+
+func main() {
+	router := mux.NewRouter()
+	setupRoutes(router)
+
+	slog.Info("Server is ready")
+	err := http.ListenAndServe("0.0.0.0:8080", router)
+	if err != nil {
+		slog.Error(err.Error())
 	}
 
-	fmt.Println("Server is ready")
-	http.ListenAndServe("0.0.0.0:8080", router)
 }
