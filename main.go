@@ -11,6 +11,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/slinarji/go-geo-server/pkg/api"
+	"github.com/slinarji/go-geo-server/pkg/db"
 	"github.com/slinarji/go-geo-server/pkg/lobby"
 	"github.com/slinarji/go-geo-server/pkg/logic"
 	"github.com/slinarji/go-geo-server/pkg/reverse"
@@ -108,6 +109,8 @@ func init() {
 	if err != nil {
 		slog.Info("Error loading .env file")
 	}
+
+	db.ConnectDB()
 
 	logic.InitCountryDB()
 	err2 := reverse.InitReverse()

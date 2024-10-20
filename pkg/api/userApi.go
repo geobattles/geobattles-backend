@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/slinarji/go-geo-server/pkg/auth"
+	"github.com/slinarji/go-geo-server/pkg/db"
 	"github.com/slinarji/go-geo-server/pkg/models"
 )
 
@@ -77,14 +78,13 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		Password: hashedPassword,
 	}
 
-	// TODO: Implement database
-	// result := db.DB.Create(&newUser)
+	result := db.DB.Create(&newUser)
 
-	// if result.Error != nil {
-	// 	fmt.Println("duplicate user", result.Error.Error())
-	// 	ERROR(w, http.StatusConflict, result.Error)
-	// 	return
-	// }
+	if result.Error != nil {
+		fmt.Println("duplicate user", result.Error.Error())
+		ERROR(w, http.StatusConflict, result.Error)
+		return
+	}
 
 	response := registerResponse{
 		ID:   newUser.ID,
@@ -109,21 +109,19 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: validate user
-	// var dbUser models.User
-	// result := db.DB.First(&dbUser, "name = ?", user.Name)
-	// if result.Error != nil {
-	// 	ERROR(w, http.StatusUnauthorized, result.Error)
-	// 	return
-	// }
+	var dbUser models.User
+	result := db.DB.First(&dbUser, "name = ?", user.Name)
+	if result.Error != nil {
+		ERROR(w, http.StatusUnauthorized, result.Error)
+		return
+	}
 
-	// if auth.VerifyPassword(dbUser.Password, user.Password) != nil {
-	// 	ERROR(w, http.StatusUnauthorized, fmt.Errorf("Wrong password"))
-	// 	return
-	// }
+	if auth.VerifyPassword(dbUser.Password, user.Password) != nil {
+		ERROR(w, http.StatusUnauthorized, fmt.Errorf("wrong password"))
+		return
+	}
 
-	// token, err := auth.CreateToken(dbUser.ID)
-	token, err := auth.CreateToken(1234)
+	token, err := auth.CreateToken(dbUser.ID)
 
 	JSON(w, http.StatusOK, token)
 }

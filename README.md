@@ -4,10 +4,18 @@
 
 -   Go or Docker
 -   API key for Google Street View Static API
+-   Postgres database
 
 # Running
 
-_export your api key to GMAPS_API env or put it into .env file_
+
+
+## Setup postgres database
+```
+docker run -d -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgrespwd -e POSTGRES_DB=db -p 5432:5432 postgres
+```
+
+_Configure environment variables or add them to .env file. See example.env_
 
 ```
 git clone https://github.com/slinarji/go-geo-server
