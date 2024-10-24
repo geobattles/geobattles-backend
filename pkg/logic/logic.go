@@ -89,11 +89,10 @@ var src = rand.NewSource(time.Now().UnixNano())
 // Generates n long string (max 12) using 32 different characters from letterBytes
 // src.Int63() generates 63 random bits, we use the last 5 as letterBytes index
 // shift 5 places right & repeat; Simplified #7 from https://stackoverflow.com/a/31832326
-// TODO verify unique ID
 func GenerateRndID(n int) string {
 	sb := strings.Builder{}
 	sb.Grow(n)
-	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	// A src.Int63() generates 63 random bits, enough for 12 x 5bits!
 	for i, cache := n-1, src.Int63(); i >= 0; {
 		idx := int(cache & 31)
 		sb.WriteByte(letterBytes[idx])

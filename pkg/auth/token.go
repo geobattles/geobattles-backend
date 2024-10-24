@@ -23,7 +23,7 @@ func init() {
 }
 
 // create jwt with user id and expiry
-func CreateToken(uID uint) (Token, error) {
+func CreateToken(uID string) (Token, error) {
 	claims := jwt.MapClaims{}
 	claims["uid"] = uID
 

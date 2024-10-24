@@ -16,7 +16,7 @@ var DB *gorm.DB
 // initialize connection to the database and migrate models
 func ConnectDB() {
 	var err error
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=db port=5432 sslmode=disable TimeZone=UTC",
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=db port=5432 sslmode=disable TimeZone=UTC client_encoding=UTF8",
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
@@ -34,7 +34,8 @@ func ConnectDB() {
 
 	slog.Info("Connected to DB")
 
-	DB.AutoMigrate(&models.User{})
+	// DB.AutoMigrate(&models.User{})
+	DB.AutoMigrate(&models.BaseUser{}, &models.User{})
 
 	slog.Info("Migrated DB schema")
 }

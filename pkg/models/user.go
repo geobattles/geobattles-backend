@@ -1,21 +1,83 @@
 package models
 
-import "errors"
+import (
+	"errors"
+	"fmt"
 
-// user model
-type User struct {
-	ID       uint   `gorm:"primary_key;auto_increment"`
-	Name     string `gorm:"type:varchar(255);not null;unique"`
-	Password string `gorm:"not null"`
+	"github.com/slinarji/go-geo-server/pkg/auth"
+	"github.com/slinarji/go-geo-server/pkg/logic"
+	"gorm.io/gorm"
+)
+
+type BaseUser struct {
+	ID          string `gorm:"primary_key;type:varchar(6);not null;unique"`
+	DisplayName string `gorm:"type:varchar(255);not null"`
+	IsGuest     bool   `gorm:"not null;default:false"`
 }
 
-// validate that user fields are not empty
-func (u *User) ValidateUser() error {
-	if u.Name == "" {
-		return errors.New("name cannot be empty")
+type User struct {
+	BaseUser
+	UserName string `gorm:"type:varchar(255);unique"`
+	Password string `gorm:"type:varchar(255)"`
+}
+
+type Guest struct {
+	BaseUser
+}
+
+// set table name for both User and Guest
+func (BaseUser) TableName() string {
+	return "users"
+}
+
+// BeforeCreate GORM hook for baseUser
+func (baseUser *BaseUser) BeforeCreate(tx *gorm.DB) (err error) {
+	// TODO: check for existing duplicate ID
+	baseUser.ID = logic.GenerateRndID(6)
+	fmt.Println(baseUser.ID)
+
+	return nil
+}
+
+// BeforeCreate GORM hook to handle pre-processing before saving a user to the database
+func (user *User) BeforeCreate(tx *gorm.DB) (err error) {
+	if err := user.BaseUser.BeforeCreate(tx); err != nil {
+		return err
 	}
-	if u.Password == "" {
-		return errors.New("nassword cannot be empty")
+
+	if user.UserName == "" {
+		return errors.New("userName cannot be empty")
 	}
+
+	// Set DisplayName to Name if DisplayName is not provided
+	if user.DisplayName == "" {
+		user.DisplayName = user.UserName
+	}
+
+	if user.Password == "" {
+		return errors.New("password cannot be empty")
+	}
+	// Hash the password before creating the record
+	hashedPassword, err := auth.HashPassword(user.Password)
+	if err != nil {
+		return err
+	}
+	fmt.Println(hashedPassword)
+
+	user.Password = hashedPassword
+
+	user.IsGuest = false
+
+	return nil
+}
+
+// BeforeCreate GORM hook to handle pre-processing before saving a guest to the database
+func (guest *Guest) BeforeCreate(tx *gorm.DB) (err error) {
+	if guest.DisplayName == "" {
+		return errors.New("displayName cannot be empty")
+	}
+
+	guest.IsGuest = true
+
 	return nil
 }

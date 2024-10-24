@@ -13,7 +13,7 @@ import (
 )
 
 type registerResponse struct {
-	ID   uint   `json:"Id"`
+	ID   string `json:"Id"`
 	Name string `json:"Name"`
 }
 
@@ -46,7 +46,7 @@ func ERROR(w http.ResponseWriter, statusCode int, err error) {
 	JSON(w, http.StatusBadRequest, nil)
 }
 
-// creates user and returns user id and name
+// creates user and returns id
 func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -61,34 +61,46 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashedPassword, err := auth.HashPassword(user.Password)
-	if err != nil {
-		ERROR(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	err = user.ValidateUser()
-	if err != nil {
-		ERROR(w, http.StatusBadRequest, err)
-		return
-	}
-
-	newUser := models.User{
-		Name:     user.Name,
-		Password: hashedPassword,
-	}
-
-	result := db.DB.Create(&newUser)
+	result := db.DB.Create(&user)
 
 	if result.Error != nil {
-		fmt.Println("duplicate user", result.Error.Error())
+		slog.Error("ERROR", result.Error.Error())
 		ERROR(w, http.StatusConflict, result.Error)
 		return
 	}
 
 	response := registerResponse{
-		ID:   newUser.ID,
-		Name: newUser.Name,
+		ID: user.ID,
+	}
+
+	JSON(w, http.StatusCreated, response)
+}
+
+// creates guest and returns id
+func RegisterGuest(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	guest := models.Guest{}
+	err = json.Unmarshal(body, &guest)
+	if err != nil {
+		ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	result := db.DB.Create(&guest)
+
+	if result.Error != nil {
+		slog.Error("ERROR", result.Error.Error())
+		ERROR(w, http.StatusConflict, result.Error)
+		return
+	}
+
+	response := registerResponse{
+		ID: guest.ID,
 	}
 
 	JSON(w, http.StatusCreated, response)
@@ -110,7 +122,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var dbUser models.User
-	result := db.DB.First(&dbUser, "name = ?", user.Name)
+	result := db.DB.First(&dbUser, "user_name = ?", user.UserName)
 	if result.Error != nil {
 		ERROR(w, http.StatusUnauthorized, result.Error)
 		return
