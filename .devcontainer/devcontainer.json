@@ -13,7 +13,12 @@
 
 	"mounts": [
 		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
-	]
+	],
+	"features": {
+		"ghcr.io/itsmechlark/features/postgresql:1": {
+			"version": "latest"
+		}
+	}
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "go version",

@@ -27,8 +27,8 @@ func CreateToken(uID uint) (Token, error) {
 	claims := jwt.MapClaims{}
 	claims["uid"] = uID
 
-	// set token expiry 24h from creation
-	expiry := time.Now().UTC().Add(time.Hour * 24).Unix()
+	// set token expiry 365d from creation TODO: reduce and implement token refresh
+	expiry := time.Now().UTC().Add(time.Hour * 24 * 365).Unix()
 	claims["exp"] = expiry
 
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
