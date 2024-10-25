@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 
@@ -14,44 +12,41 @@ import (
 	"github.com/slinarji/go-geo-server/pkg/db"
 	"github.com/slinarji/go-geo-server/pkg/lobby"
 	"github.com/slinarji/go-geo-server/pkg/logic"
+	"github.com/slinarji/go-geo-server/pkg/middleware"
 	"github.com/slinarji/go-geo-server/pkg/reverse"
 	"github.com/slinarji/go-geo-server/pkg/websocket"
 )
 
-func serveLobby(w http.ResponseWriter, r *http.Request) {
-	// deal with CORS
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "*")
-	if r.Method == "OPTIONS" {
-		return
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	id := r.URL.Query().Get("id")
-	switch r.Method {
-	case http.MethodGet:
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(lobby.LobbyMap)
-		slog.Info("Sent lobby list")
-	case http.MethodPost:
-		var lobbyConf logic.LobbyConf
-		reqBody, err := io.ReadAll(r.Body)
-		if err != nil {
-			slog.Error(err.Error())
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		if err = json.Unmarshal(reqBody, &lobbyConf); err != nil {
-			slog.Error(err.Error())
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		json.NewEncoder(w).Encode(lobby.CreateLobby(lobbyConf))
-	// TODO: only allow admin? to delete lobby
-	case http.MethodDelete:
-		delete(lobby.LobbyMap, id)
-	}
-}
+// func serveLobby(w http.ResponseWriter, r *http.Request) {
+// 	// deal with CORS
+// 	w.Header().Set("Access-Control-Allow-Origin", "*")
+// 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+// 	w.Header().Set("Access-Control-Allow-Headers", "*")
+// 	if r.Method == "OPTIONS" {
+// 		return
+// 	}
+// 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+// 	id := r.URL.Query().Get("id")
+// 	switch r.Method {
+// 	case http.MethodPost:
+// 		var lobbyConf logic.LobbyConf
+// 		reqBody, err := io.ReadAll(r.Body)
+// 		if err != nil {
+// 			slog.Error(err.Error())
+// 			w.WriteHeader(http.StatusBadRequest)
+// 			return
+// 		}
+// 		if err = json.Unmarshal(reqBody, &lobbyConf); err != nil {
+// 			slog.Error(err.Error())
+// 			w.WriteHeader(http.StatusBadRequest)
+// 			return
+// 		}
+// 		json.NewEncoder(w).Encode(lobby.CreateLobby(lobbyConf))
+// 	// TODO: only allow admin? to delete lobby
+// 	case http.MethodDelete:
+// 		delete(lobby.LobbyMap, id)
+// 	}
+// }
 
 func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
 	// Added query parameter reader for id of lobby
@@ -95,7 +90,9 @@ func setupRoutes(r *mux.Router) {
 	r.HandleFunc("/register/guest", api.RegisterGuest).Methods("POST") // register guest
 	r.HandleFunc("/login", api.LoginUser).Methods("POST")              // login user
 	r.HandleFunc("/countryList", api.ServeCountryList).Methods("GET")  // send list of available countries
-	r.HandleFunc("/lobby", serveLobby)
+	r.HandleFunc("/lobby", api.ServeGetLobby).Methods("GET")
+	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeCreateLobby)).Methods("POST", "OPTIONS")
+	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeDeleteLobby)).Methods("DELETE")
 	pool := websocket.NewPool()
 	go pool.Start()
 	r.HandleFunc("/lobbySocket", func(w http.ResponseWriter, r *http.Request) {
