@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/slinarji/go-geo-server/pkg/auth"
 	"github.com/slinarji/go-geo-server/pkg/db"
@@ -69,11 +70,9 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := registerResponse{
-		ID: user.ID,
-	}
+	token, err := auth.CreateToken(user.ID, user.IsGuest)
 
-	JSON(w, http.StatusCreated, response)
+	JSON(w, http.StatusCreated, token)
 }
 
 // creates guest and returns id
@@ -99,11 +98,9 @@ func RegisterGuest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := registerResponse{
-		ID: guest.ID,
-	}
+	token, err := auth.CreateToken(guest.ID, guest.IsGuest)
 
-	JSON(w, http.StatusCreated, response)
+	JSON(w, http.StatusCreated, token)
 }
 
 // validates user credentials and returns jwt auth_token
@@ -122,7 +119,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var dbUser models.User
-	result := db.DB.First(&dbUser, "user_name = ?", user.UserName)
+	result := db.DB.First(&dbUser, "is_guest = False AND user_name = ?", strings.ToLower(user.UserName))
 	if result.Error != nil {
 		ERROR(w, http.StatusUnauthorized, result.Error)
 		return
@@ -133,7 +130,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.CreateToken(dbUser.ID)
+	token, err := auth.CreateToken(dbUser.ID, dbUser.IsGuest)
 
 	JSON(w, http.StatusOK, token)
 }

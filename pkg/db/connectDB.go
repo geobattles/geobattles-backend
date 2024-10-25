@@ -34,8 +34,7 @@ func ConnectDB() {
 
 	slog.Info("Connected to DB")
 
-	// DB.AutoMigrate(&models.User{})
-	DB.AutoMigrate(&models.BaseUser{}, &models.User{})
+	DB.AutoMigrate(&models.User{})
 
 	slog.Info("Migrated DB schema")
 }

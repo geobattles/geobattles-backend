@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/slinarji/go-geo-server/pkg/auth"
 	"github.com/slinarji/go-geo-server/pkg/logic"
@@ -34,7 +35,6 @@ func (BaseUser) TableName() string {
 func (baseUser *BaseUser) BeforeCreate(tx *gorm.DB) (err error) {
 	// TODO: check for existing duplicate ID
 	baseUser.ID = logic.GenerateRndID(6)
-	fmt.Println(baseUser.ID)
 
 	return nil
 }
@@ -53,6 +53,8 @@ func (user *User) BeforeCreate(tx *gorm.DB) (err error) {
 	if user.DisplayName == "" {
 		user.DisplayName = user.UserName
 	}
+
+	user.UserName = strings.ToLower(user.UserName)
 
 	if user.Password == "" {
 		return errors.New("password cannot be empty")
@@ -73,6 +75,10 @@ func (user *User) BeforeCreate(tx *gorm.DB) (err error) {
 
 // BeforeCreate GORM hook to handle pre-processing before saving a guest to the database
 func (guest *Guest) BeforeCreate(tx *gorm.DB) (err error) {
+	if err := guest.BaseUser.BeforeCreate(tx); err != nil {
+		return err
+	}
+
 	if guest.DisplayName == "" {
 		return errors.New("displayName cannot be empty")
 	}
