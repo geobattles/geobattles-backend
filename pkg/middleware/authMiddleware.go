@@ -26,12 +26,13 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		ctx := r.Context()
 		token := r.Header.Get("Authorization")
 
-		uid, err := auth.ValidateToken(token)
+		claims, err := auth.ValidateToken(token)
 		if err != nil {
 			api.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 			return
 		}
-		ctx = context.WithValue(ctx, "uid", uid)
+		ctx = context.WithValue(ctx, "uid", claims.UID)
+		ctx = context.WithValue(ctx, "displayname", claims.DisplayName)
 
 		next(w, r.WithContext(ctx))
 	}

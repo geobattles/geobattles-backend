@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -10,49 +9,10 @@ import (
 
 	"github.com/slinarji/go-geo-server/pkg/api"
 	"github.com/slinarji/go-geo-server/pkg/db"
-	"github.com/slinarji/go-geo-server/pkg/lobby"
 	"github.com/slinarji/go-geo-server/pkg/logic"
 	"github.com/slinarji/go-geo-server/pkg/middleware"
 	"github.com/slinarji/go-geo-server/pkg/reverse"
-	"github.com/slinarji/go-geo-server/pkg/websocket"
 )
-
-func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
-	// Added query parameter reader for id of lobby
-	lobbyID := r.URL.Query().Get("id")
-	userName := r.URL.Query().Get("name")
-	slog.Info("WebSocket Endpoint Hit, room ID: ", lobbyID, " name: ", userName)
-	// only connect to ws if lobby exists
-	if _, ok := lobby.LobbyMap[lobbyID]; ok {
-		if lobby.LobbyMap[lobbyID].CurrentRound != 0 {
-			slog.Error("ERR: Game in progres")
-			w.WriteHeader(http.StatusConflict)
-			return
-		}
-
-		conn, err := websocket.Upgrade(w, r)
-		if err != nil {
-			fmt.Fprintf(w, "%+v\n", err)
-			return
-		}
-
-		client := &websocket.Client{
-			Conn: conn,
-			Pool: pool,
-			Room: lobbyID,
-			Name: userName,
-			ID:   logic.GenerateRndID(8),
-		}
-		lobby.AddPlayerToLobby(client.ID, client.Name, lobbyID)
-
-		pool.Register <- client
-		slog.Info("lobbyList: ", lobby.LobbyMap)
-
-		go client.Read()
-	} else {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-}
 
 func setupRoutes(r *mux.Router) {
 	r.HandleFunc("/register/user", middleware.Cors(api.RegisterUser)).Methods("POST", "OPTIONS")       // register user
@@ -62,11 +22,7 @@ func setupRoutes(r *mux.Router) {
 	r.HandleFunc("/lobby", middleware.Cors(api.ServeGetLobby)).Methods("GET", "OPTIONS")               // got list of all lobbies
 	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeCreateLobby)).Methods("POST", "OPTIONS") // create lobby
 	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeDeleteLobby)).Methods("DELETE")          // delete lobby
-	pool := websocket.NewPool()
-	go pool.Start()
-	r.HandleFunc("/lobbySocket", func(w http.ResponseWriter, r *http.Request) {
-		serveLobbySocket(pool, w, r)
-	})
+	r.HandleFunc("/lobbySocket", middleware.AuthMiddleware(api.ServeLobbySocket))
 }
 
 func init() {

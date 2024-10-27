@@ -16,6 +16,11 @@ type Token struct {
 	Expiry     int64
 }
 
+type TokenClaims struct {
+	UID         interface{}
+	DisplayName interface{}
+}
+
 // initialize token signing key
 // TODO read key from env variable
 func init() {
@@ -48,7 +53,7 @@ func CreateToken(uID string, userName string, displayName string, isGuest bool) 
 }
 
 // validate jwt and return users uid, throws error if token has expired
-func ValidateToken(token string) (interface{}, error) {
+func ValidateToken(token string) (*TokenClaims, error) {
 	// parse token and validate signing method
 	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -70,5 +75,5 @@ func ValidateToken(token string) (interface{}, error) {
 		return nil, fmt.Errorf("token expired")
 	}
 
-	return claims["uid"], nil
+	return &TokenClaims{UID: claims["uid"], DisplayName: claims["display_name"]}, nil
 }
