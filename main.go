@@ -55,13 +55,13 @@ func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Reque
 }
 
 func setupRoutes(r *mux.Router) {
-	r.HandleFunc("/register/user", api.RegisterUser).Methods("POST")   // register user
-	r.HandleFunc("/register/guest", api.RegisterGuest).Methods("POST") // register guest
-	r.HandleFunc("/login", api.LoginUser).Methods("POST")              // login user
-	r.HandleFunc("/countryList", api.ServeCountryList).Methods("GET")  // send list of available countries
-	r.HandleFunc("/lobby", api.ServeGetLobby).Methods("GET")
-	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeCreateLobby)).Methods("POST", "OPTIONS")
-	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeDeleteLobby)).Methods("DELETE")
+	r.HandleFunc("/register/user", middleware.Cors(api.RegisterUser)).Methods("POST", "OPTIONS")       // register user
+	r.HandleFunc("/register/guest", middleware.Cors(api.RegisterGuest)).Methods("POST", "OPTIONS")     // register guest
+	r.HandleFunc("/login", middleware.Cors(api.LoginUser)).Methods("POST", "OPTIONS")                  // login user
+	r.HandleFunc("/countryList", middleware.Cors(api.ServeCountryList)).Methods("GET", "OPTIONS")      // send list of available countries
+	r.HandleFunc("/lobby", middleware.Cors(api.ServeGetLobby)).Methods("GET", "OPTIONS")               // got list of all lobbies
+	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeCreateLobby)).Methods("POST", "OPTIONS") // create lobby
+	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeDeleteLobby)).Methods("DELETE")          // delete lobby
 	pool := websocket.NewPool()
 	go pool.Start()
 	r.HandleFunc("/lobbySocket", func(w http.ResponseWriter, r *http.Request) {
