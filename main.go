@@ -22,7 +22,7 @@ func setupRoutes(r *mux.Router) {
 	r.HandleFunc("/lobby", middleware.Cors(api.ServeGetLobby)).Methods("GET", "OPTIONS")               // got list of all lobbies
 	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeCreateLobby)).Methods("POST", "OPTIONS") // create lobby
 	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeDeleteLobby)).Methods("DELETE")          // delete lobby
-	r.HandleFunc("/lobbySocket", middleware.AuthMiddleware(api.ServeLobbySocket))
+	r.HandleFunc("/lobbySocket", middleware.SocketAuthMiddleware(api.ServeLobbySocket))
 }
 
 func init() {
