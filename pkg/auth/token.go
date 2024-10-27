@@ -23,9 +23,11 @@ func init() {
 }
 
 // create jwt with user id and expiry
-func CreateToken(uID string, isGuest bool) (Token, error) {
+func CreateToken(uID string, userName string, displayName string, isGuest bool) (Token, error) {
 	claims := jwt.MapClaims{}
 	claims["uid"] = uID
+	claims["user_name"] = userName
+	claims["display_name"] = displayName
 	claims["guest"] = isGuest
 
 	// set token expiry 365d from creation TODO: reduce and implement token refresh

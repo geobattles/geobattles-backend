@@ -17,37 +17,6 @@ import (
 	"github.com/slinarji/go-geo-server/pkg/websocket"
 )
 
-// func serveLobby(w http.ResponseWriter, r *http.Request) {
-// 	// deal with CORS
-// 	w.Header().Set("Access-Control-Allow-Origin", "*")
-// 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-// 	w.Header().Set("Access-Control-Allow-Headers", "*")
-// 	if r.Method == "OPTIONS" {
-// 		return
-// 	}
-// 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-// 	id := r.URL.Query().Get("id")
-// 	switch r.Method {
-// 	case http.MethodPost:
-// 		var lobbyConf logic.LobbyConf
-// 		reqBody, err := io.ReadAll(r.Body)
-// 		if err != nil {
-// 			slog.Error(err.Error())
-// 			w.WriteHeader(http.StatusBadRequest)
-// 			return
-// 		}
-// 		if err = json.Unmarshal(reqBody, &lobbyConf); err != nil {
-// 			slog.Error(err.Error())
-// 			w.WriteHeader(http.StatusBadRequest)
-// 			return
-// 		}
-// 		json.NewEncoder(w).Encode(lobby.CreateLobby(lobbyConf))
-// 	// TODO: only allow admin? to delete lobby
-// 	case http.MethodDelete:
-// 		delete(lobby.LobbyMap, id)
-// 	}
-// }
-
 func serveLobbySocket(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
 	// Added query parameter reader for id of lobby
 	lobbyID := r.URL.Query().Get("id")

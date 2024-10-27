@@ -70,7 +70,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.CreateToken(user.ID, user.IsGuest)
+	token, err := auth.CreateToken(user.ID, user.UserName, user.DisplayName, user.IsGuest)
 
 	JSON(w, http.StatusCreated, token)
 }
@@ -98,7 +98,7 @@ func RegisterGuest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.CreateToken(guest.ID, guest.IsGuest)
+	token, err := auth.CreateToken(guest.ID, "", guest.DisplayName, guest.IsGuest)
 
 	JSON(w, http.StatusCreated, token)
 }
@@ -130,7 +130,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.CreateToken(dbUser.ID, dbUser.IsGuest)
+	token, err := auth.CreateToken(dbUser.ID, dbUser.UserName, dbUser.DisplayName, dbUser.IsGuest)
 
 	JSON(w, http.StatusOK, token)
 }
