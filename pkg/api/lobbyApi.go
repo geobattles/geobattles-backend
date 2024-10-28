@@ -42,7 +42,7 @@ func ServeCreateLobby(w http.ResponseWriter, r *http.Request) {
 func ServeDeleteLobby(w http.ResponseWriter, r *http.Request) {
 
 	id := r.URL.Query().Get("id")
-	slog.Info("!!NOT IMPLEMENTED!! Deleted", "lobbyId", id)
+	slog.Info("!! Delete lobby NOT implemented!!", "lobbyId", id)
 	// delete(lobby.LobbyMap, id)
 
 	w.WriteHeader(http.StatusOK)
@@ -62,12 +62,12 @@ func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := ctx.Value("uid").(string)
 	displayName := ctx.Value("displayname").(string)
-	slog.Info("WebSocket Endpoint Hit, room ID: ", lobbyID, "uid : ", uid, " name: ", displayName)
+	slog.Info("WebSocket Endpoint Hit", "lobby ID", lobbyID, "uid", uid, " name", displayName)
 
 	// only connect to ws if lobby exists
 	if _, ok := lobby.LobbyMap[lobbyID]; ok {
 		if lobby.LobbyMap[lobbyID].CurrentRound != 0 {
-			slog.Error("ERR: Game in progres")
+			slog.Error("Game in progres")
 			w.WriteHeader(http.StatusConflict)
 			return
 		}
@@ -88,7 +88,7 @@ func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 		lobby.AddPlayerToLobby(client.ID, client.Name, lobbyID)
 
 		pool.Register <- client
-		slog.Info("lobbyList: ", lobby.LobbyMap)
+		slog.Info("Added player to lobby", "lobby map", lobby.LobbyMap)
 
 		go client.Read()
 	} else {

@@ -61,7 +61,7 @@ func SocketAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 		token := strings.TrimSpace(protocols[1])
 
-		slog.Info("url auth: ", "TOKEN", token)
+		slog.Info("Socket auth middleware", "TOKEN", token)
 
 		ctx := r.Context()
 

@@ -31,7 +31,7 @@ func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
 		fmt.Fprintf(w, "%s", err.Error())
 		slog.Error(err.Error())
 	}
-	slog.Info("sent response ", data)
+	slog.Info("Sent response", "data", data)
 }
 
 // send response with given error code and message
@@ -65,7 +65,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	result := db.DB.Create(&user)
 
 	if result.Error != nil {
-		slog.Error("ERROR", result.Error.Error())
+		slog.Error("Error creating user", "error", result.Error.Error())
 		ERROR(w, http.StatusConflict, result.Error)
 		return
 	}
@@ -93,7 +93,7 @@ func RegisterGuest(w http.ResponseWriter, r *http.Request) {
 	result := db.DB.Create(&guest)
 
 	if result.Error != nil {
-		slog.Error("ERROR", result.Error.Error())
+		slog.Error("Error creating guest", "error", result.Error.Error())
 		ERROR(w, http.StatusConflict, result.Error)
 		return
 	}
