@@ -1,32 +1,49 @@
-package lobby
+package game
 
 import (
 	"errors"
-	"github.com/slinarji/go-geo-server/pkg/reverse"
 	"fmt"
+	"log/slog"
 	"math"
 	"time"
 
+	"github.com/slinarji/go-geo-server/pkg/reverse"
+
 	"github.com/slinarji/go-geo-server/pkg/defaults"
 	"github.com/slinarji/go-geo-server/pkg/logic"
+	"github.com/slinarji/go-geo-server/pkg/websocket"
 )
 
-// initial lobby list for debugging
-var LobbyMap = map[string]*logic.Lobby{
-	"U4YPR6": {ID: "U4YPR6", Conf: &logic.LobbyConf{Name: "prvi lobby", Mode: 1, MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}, Powerups: defaults.Powerups(), PlaceBonus: defaults.PlaceBonus(), DynLives: defaults.DynLives()}, NumPlayers: 0, PlayerMap: make(map[string]*logic.Player), RawResults: make(map[int]map[string][]logic.Results), EndResults: make(map[int]map[string]*logic.Results), TotalResults: make(map[string]*logic.Results), PowerLogs: make(map[int][]logic.Powerup)},
+var LobbyMap = make(map[string]*Lobby)
+
+func init() {
+	slog.Info("Creating initial lobby")
+	hub := websocket.NewHub()
+	go hub.Start()
+	LobbyMap["U4YPR6"] = &Lobby{ID: "U4YPR6", Hub: hub, Conf: &LobbyConf{Name: "prvi lobby", Mode: 1, MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}, Powerups: defaults.Powerups(), PlaceBonus: defaults.PlaceBonus(), DynLives: defaults.DynLives()}, NumPlayers: 0, PlayerMap: make(map[string]*Player), RawResults: make(map[int]map[string][]Result), EndResults: make(map[int]map[string]*Result), TotalResults: make(map[string]*Result), PowerLogs: make(map[int][]Powerup)}
 }
+
+// initial lobby list for debugging
+// var LobbyMap = map[string]*Lobby{
+// 	"U4YPR6": {ID: "U4YPR6", Conf: &LobbyConf{Name: "prvi lobby", Mode: 1, MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}, Powerups: defaults.Powerups(), PlaceBonus: defaults.PlaceBonus(), DynLives: defaults.DynLives()}, NumPlayers: 0, PlayerMap: make(map[string]*Player), RawResults: make(map[int]map[string][]Result), EndResults: make(map[int]map[string]*Result), TotalResults: make(map[string]*Result), PowerLogs: make(map[int][]Powerup)},
+// }
 
 var ColorList = [12]string{"#e6194B", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#000075", "#469990", "#9A6324", "#dcbeff", "#800000"}
 
 // validates values and creates new lobby
-func CreateLobby(conf logic.LobbyConf) *logic.Lobby {
-	var newLobby logic.Lobby
-	newLobby.Conf = &logic.LobbyConf{}
-	newLobby.PlayerMap = make(map[string]*logic.Player)
-	newLobby.RawResults = make(map[int]map[string][]logic.Results)
-	newLobby.EndResults = make(map[int]map[string]*logic.Results)
-	newLobby.TotalResults = make(map[string]*logic.Results)
-	newLobby.PowerLogs = make(map[int][]logic.Powerup)
+func CreateLobby(conf LobbyConf) *Lobby {
+	var newLobby Lobby
+
+	hub := websocket.NewHub()
+	go hub.Start()
+	newLobby.Hub = hub
+
+	newLobby.Conf = &LobbyConf{}
+	newLobby.PlayerMap = make(map[string]*Player)
+	newLobby.RawResults = make(map[int]map[string][]Result)
+	newLobby.EndResults = make(map[int]map[string]*Result)
+	newLobby.TotalResults = make(map[string]*Result)
+	newLobby.PowerLogs = make(map[int][]Powerup)
 
 	lobbyID := logic.GenerateRndID(6)
 	newLobby.ID = lobbyID
@@ -103,7 +120,7 @@ func CreateLobby(conf logic.LobbyConf) *logic.Lobby {
 }
 
 // update existing lobby settings
-func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby, error) {
+func UpdateLobby(clientID string, ID string, conf LobbyConf) (*Lobby, error) {
 	if clientID != LobbyMap[ID].Admin {
 		return nil, errors.New("NOT_ADMIN")
 	}
@@ -111,6 +128,7 @@ func UpdateLobby(clientID string, ID string, conf logic.LobbyConf) (*logic.Lobby
 		return nil, errors.New("GAME_IN_PROGRESS")
 	}
 	fmt.Println("update", conf)
+	slog.Info("Updating lobby settings", "new settings", conf)
 
 	if conf.Name != "" {
 		LobbyMap[ID].Conf.Name = conf.Name
@@ -179,50 +197,12 @@ cycle:
 	return color
 }
 
-// adds player as map[id]name to playerlist in lobby
-func AddPlayerToLobby(clientID string, clientName string, lobbyID string) {
-	// if there is no lobby admin make this user one
-	if LobbyMap[lobbyID].Admin == "" {
-		LobbyMap[lobbyID].Admin = clientID
-	}
-	// LobbyMap[lobbyID].PlayerMap[clientID] = &logic.Player{Name: clientName, Color: genPlayerColor(lobbyID), Powerups: *LobbyMap[lobbyID].Conf.Powerups}
-	LobbyMap[lobbyID].PlayerMap[clientID] = &logic.Player{Name: clientName, Color: genPlayerColor(lobbyID), Powerups: make([]bool, len(*LobbyMap[lobbyID].Conf.Powerups))}
-	LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerMap)
-}
-
-// removes player map from playerlist in lobby
-func RemovePlayerFromLobby(clientID string, lobbyID string) {
-	delete(LobbyMap[lobbyID].PlayerMap, clientID)
-	LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerMap)
-	// delete from end results
-	for _, results := range LobbyMap[lobbyID].EndResults {
-		delete(results, clientID)
-	}
-	fmt.Println("after deleting results", LobbyMap[lobbyID].EndResults)
-	// if removed player was admin & there are other players left
-	// select one of them as new admin, otherwise make admin empty
-	// if there are no players left delete lobby
-	if LobbyMap[lobbyID].Admin == clientID && LobbyMap[lobbyID].NumPlayers != 0 {
-		for id := range LobbyMap[lobbyID].PlayerMap {
-			LobbyMap[lobbyID].Admin = id
-			break
-		}
-
-	} else if LobbyMap[lobbyID].NumPlayers == 0 {
-		fmt.Println("deleting lobby")
-		if LobbyMap[lobbyID].Timer != nil {
-			LobbyMap[lobbyID].Timer.Stop()
-		}
-		delete(LobbyMap, lobbyID)
-	}
-}
-
 func ResetLobby(lobbyID string) {
-	LobbyMap[lobbyID].RawResults = make(map[int]map[string][]logic.Results)
-	LobbyMap[lobbyID].EndResults = make(map[int]map[string]*logic.Results)
-	LobbyMap[lobbyID].TotalResults = make(map[string]*logic.Results)
+	LobbyMap[lobbyID].RawResults = make(map[int]map[string][]Result)
+	LobbyMap[lobbyID].EndResults = make(map[int]map[string]*Result)
+	LobbyMap[lobbyID].TotalResults = make(map[string]*Result)
 
-	LobbyMap[lobbyID].PowerLogs = make(map[int][]logic.Powerup)
+	LobbyMap[lobbyID].PowerLogs = make(map[int][]Powerup)
 	LobbyMap[lobbyID].CurrentLoc = nil
 	LobbyMap[lobbyID].UsersFinished = make(map[string]bool)
 	LobbyMap[lobbyID].CurrentRound = 0
@@ -230,12 +210,14 @@ func ResetLobby(lobbyID string) {
 	// 	player.Powerups = *LobbyMap[lobbyID].Conf.Powerups
 	// }
 	fmt.Println("Lobby after reset ", LobbyMap[lobbyID])
+	slog.Info("Lobby reset", "lobbyMap", LobbyMap[lobbyID])
 }
 
 // keeps track of the location of the currently active game in lobby
 // increments round counter every call
 func UpdateCurrentLocation(lobbyID string, location logic.Coords, ccode string) {
 	fmt.Println("updating lobby loaction: ", lobbyID, location)
+	slog.Info("Updating lobby location", "lobbyID", lobbyID, "location", location)
 	LobbyMap[lobbyID].UsersFinished = make(map[string]bool)
 	LobbyMap[lobbyID].CurrentLoc = &location
 	if LobbyMap[lobbyID].Conf.Mode == 2 {
@@ -245,14 +227,14 @@ func UpdateCurrentLocation(lobbyID string, location logic.Coords, ccode string) 
 	LobbyMap[lobbyID].Active = true
 
 	LobbyMap[lobbyID].CurrentRound++
-	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound] = make(map[string][]logic.Results)
-	LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound] = make(map[string]*logic.Results)
+	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound] = make(map[string][]Result)
+	LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound] = make(map[string]*Result)
 
 	for name, player := range LobbyMap[lobbyID].PlayerMap {
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][name] = &logic.Results{}
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][name] = &Result{}
 
 		if LobbyMap[lobbyID].CurrentRound == 1 {
-			LobbyMap[lobbyID].TotalResults[name] = &logic.Results{}
+			LobbyMap[lobbyID].TotalResults[name] = &Result{}
 			copy(player.Powerups, *LobbyMap[lobbyID].Conf.Powerups)
 			player.Lives = LobbyMap[lobbyID].Conf.NumAttempt
 		} else if *LobbyMap[lobbyID].Conf.DynLives {
@@ -310,10 +292,11 @@ func addToResults(lobbyID string, clientID string, location logic.Coords, distan
 	score := scoreDistance(distance, float64(LobbyMap[lobbyID].Conf.ScoreFactor))
 	// TODO: split this monstrosity, maybe use variables
 	LobbyMap[lobbyID].PlayerMap[clientID].Lives -= 1
-	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, Dist: distance, BaseScore: score, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1})
+	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], Result{Loc: location, Dist: distance, BaseScore: score, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1})
 	if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Dist > distance || LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Attempt == 0 {
 		fmt.Println("NEW BEST RESULT")
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, Dist: distance, BaseScore: score, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID])}
+		slog.Info("New best result")
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &Result{Loc: location, Dist: distance, BaseScore: score, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID])}
 	}
 
 	// if this is last attempt indicate finished and check if everyone has finished
@@ -346,12 +329,12 @@ func processCountryGuess(lobbyID string, clientID string, location logic.Coords)
 	}
 	// correct result is indicated by ccode = XX and score, false result gets score = 0
 	if cc == LobbyMap[lobbyID].CurrentCC {
-		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, BaseScore: score, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: "XX"})
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, BaseScore: score, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]), CC: "XX"}
+		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], Result{Loc: location, BaseScore: score, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: "XX"})
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &Result{Loc: location, BaseScore: score, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]), CC: "XX"}
 
 	} else {
-		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], logic.Results{Loc: location, BaseScore: 0, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: cc})
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &logic.Results{Loc: location, BaseScore: 0, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]), CC: cc}
+		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], Result{Loc: location, BaseScore: 0, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: cc})
+		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &Result{Loc: location, BaseScore: 0, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]), CC: cc}
 
 	}
 

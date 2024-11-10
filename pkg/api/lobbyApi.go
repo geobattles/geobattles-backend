@@ -7,22 +7,21 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/slinarji/go-geo-server/pkg/lobby"
-	"github.com/slinarji/go-geo-server/pkg/logic"
+	"github.com/slinarji/go-geo-server/pkg/game"
 	"github.com/slinarji/go-geo-server/pkg/websocket"
 )
 
 func ServeGetLobby(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(lobby.LobbyMap)
+	json.NewEncoder(w).Encode(game.LobbyMap)
 	slog.Info("Sent lobby list")
 }
 
 func ServeCreateLobby(w http.ResponseWriter, r *http.Request) {
 	// w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	var lobbyConf logic.LobbyConf
+	var lobbyConf game.LobbyConf
 	reqBody, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error(err.Error())
@@ -34,7 +33,7 @@ func ServeCreateLobby(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	json.NewEncoder(w).Encode(lobby.CreateLobby(lobbyConf))
+	json.NewEncoder(w).Encode(game.CreateLobby(lobbyConf))
 
 	slog.Info("Created new lobby")
 }
@@ -48,12 +47,12 @@ func ServeDeleteLobby(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-var pool *websocket.Pool
+// var hub *websocket.Hub
 
-func init() {
-	pool = websocket.NewPool()
-	go pool.Start()
-}
+// func init() {
+// 	hub = websocket.NewHub()
+// 	go hub.Start()
+// }
 
 func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 	// Added query parameter reader for id of lobby
@@ -65,8 +64,8 @@ func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 	slog.Info("WebSocket Endpoint Hit", "lobby ID", lobbyID, "uid", uid, " name", displayName)
 
 	// only connect to ws if lobby exists
-	if _, ok := lobby.LobbyMap[lobbyID]; ok {
-		if lobby.LobbyMap[lobbyID].CurrentRound != 0 {
+	if _, ok := game.LobbyMap[lobbyID]; ok {
+		if game.LobbyMap[lobbyID].CurrentRound != 0 {
 			slog.Error("Game in progres")
 			w.WriteHeader(http.StatusConflict)
 			return
@@ -78,19 +77,8 @@ func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		client := &websocket.Client{
-			Conn: conn,
-			Pool: pool,
-			Room: lobbyID,
-			Name: displayName,
-			ID:   uid,
-		}
-		lobby.AddPlayerToLobby(client.ID, client.Name, lobbyID)
+		game.AddPlayerToLobby(uid, displayName, lobbyID, conn)
 
-		pool.Register <- client
-		slog.Info("Added player to lobby", "lobby map", lobby.LobbyMap)
-
-		go client.Read()
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
 	}

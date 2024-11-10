@@ -18,6 +18,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/rand"
 	"os"
@@ -44,10 +45,10 @@ var countryDB struct {
 var CountryList []string
 
 func InitCountryDB() {
-	fmt.Println("Populating countriesDB")
+	slog.Info("Populating countriesDB")
 	b, _ := os.ReadFile("assets/countryDB.json")
 	if err := json.Unmarshal(b, &countryDB); err != nil {
-		fmt.Println(err)
+		slog.Error("Error reading countryDB.json", "error", err)
 	}
 
 	var sum float64
@@ -60,7 +61,7 @@ func InitCountryDB() {
 		CountryList = append(CountryList, ccode)
 
 		if err := json.Unmarshal(buf, &country.Areas); err != nil {
-			fmt.Println(err)
+			slog.Error("Error reading assets/basic/", "cc", ccode, "error", err)
 		}
 
 		for _, polygon := range country.Areas.SearchArea {

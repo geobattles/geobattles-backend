@@ -1,15 +1,13 @@
-package lobby
+package game
 
 import (
 	"errors"
 	"fmt"
 	"sort"
-
-	"github.com/slinarji/go-geo-server/pkg/logic"
 )
 
 // uses given powerup. adds succesfully used powerup to powerlog
-func UsePowerup(powerup logic.Powerup, lobbyID string) (string, error) {
+func UsePowerup(powerup Powerup, lobbyID string) (string, error) {
 	switch powerup.Type {
 	case 0:
 		// double points
