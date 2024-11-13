@@ -35,6 +35,7 @@ type Client struct {
 // goroutine to read messages from client
 func (c *Client) Read() {
 	defer func() {
+		slog.Info("Defer read")
 		c.Hub.Unregister <- c
 		c.Conn.Close()
 	}()
@@ -49,7 +50,9 @@ func (c *Client) Read() {
 			fmt.Println("Error reading message: ", err)
 			return
 		}
+		slog.Info("Received message", "message", string(message))
 		if c.MessageHandler != nil {
+			slog.Info("Calling message handler")
 			c.MessageHandler(c, message)
 		}
 		// var clientReq logic.ClientReq
@@ -190,6 +193,7 @@ func (c *Client) Read() {
 func (c *Client) Write() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
+		slog.Info("Defer write")
 		ticker.Stop()
 		c.Conn.Close()
 	}()
@@ -200,6 +204,7 @@ func (c *Client) Write() {
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
+				slog.Info("Hub closed channel")
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
@@ -212,6 +217,7 @@ func (c *Client) Write() {
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			slog.Info("Sending ping")
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				slog.Error("Error sending ping", "error", err)
 				return
 			}
 		}

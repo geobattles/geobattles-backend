@@ -16,12 +16,13 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 	hub := LobbyMap[lobbyID].Hub
 
 	client := &websocket.Client{
-		ID:   clientID,
-		Room: lobbyID,
-		Name: clientName,
-		Hub:  hub,
-		Conn: conn,
-		Send: make(chan interface{}, 1),
+		ID:             clientID,
+		Room:           lobbyID,
+		Name:           clientName,
+		Hub:            hub,
+		Conn:           conn,
+		Send:           make(chan interface{}, 1),
+		MessageHandler: PlayerMessageHandler,
 	}
 
 	hub.Register <- client
@@ -214,6 +215,7 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		// Call lobby functions as needed
 	// ...
 	default:
+		slog.Info("echo message", "message", clientReq)
 		c.Send <- clientReq
 	}
 }
