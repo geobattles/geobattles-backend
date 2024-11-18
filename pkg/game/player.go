@@ -2,11 +2,13 @@ package game
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
+	"time"
 
 	ws "github.com/gorilla/websocket"
+	"github.com/slinarji/go-geo-server/pkg/logic"
 	"github.com/slinarji/go-geo-server/pkg/models"
+	"github.com/slinarji/go-geo-server/pkg/reverse"
 	"github.com/slinarji/go-geo-server/pkg/websocket"
 )
 
@@ -49,7 +51,7 @@ func RemovePlayerFromLobby(clientID string, lobbyID string) {
 	for _, results := range LobbyMap[lobbyID].EndResults {
 		delete(results, clientID)
 	}
-	fmt.Println("after deleting results", LobbyMap[lobbyID].EndResults)
+
 	// if removed player was admin & there are other players left
 	// select one of them as new admin, otherwise make admin empty
 	// if there are no players left delete lobby
@@ -77,143 +79,125 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		return
 	}
 
-	// var clientReq logic.ClientReq
-	// err := c.Conn.ReadJSON(&clientReq)
-
-	// if err != nil {
-	// 	fmt.Println("error reading client json: ", err)
-	// 	// if connection was closed unregister client, on other error (egwrong json fields) just break current loop
-	// 	if err.Error() == "websocket: close 1001 (going away)" {
-	// 		fmt.Println("ws closed")
-	// 		return
-	// 	}
-
-	// 	c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: err.Error()}}
-	// 	break
-	// }
-	// fmt.Println("Client msg: ", clientReq)
-
-	// switch clientReq.Cmd {
-	// case "update_lobby_settings":
-	// 	fmt.Println(clientReq.Conf)
-	// 	lobby, err := lobby.UpdateLobby(c.ID, c.Room, clientReq.Conf)
-	// 	if err != nil {
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: err.Error()}}
-	// 	} else {
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "OK", Type: "UPDATED_LOBBY", Lobby: lobby}}
-	// 	}
-	// case "start":
-	// 	// if user is lobby admin send coordinates, otherwise return error
-	// 	if c.ID != lobby.LobbyMap[c.Room].Admin {
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: "NOT_ADMIN"}}
-	// 		break
-	// 	}
-	// 	if lobby.LobbyMap[c.Room].Active {
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: "ALREADY_ACTIVE"}}
-	// 		break
-	// 	}
-
-	// 	fmt.Println("USER IS ADMIN")
-	// 	location, ccode := logic.RndLocation(lobby.LobbyMap[c.Room].Conf.CCList, lobby.LobbyMap[c.Room].CCSize)
-	// 	lobby.UpdateCurrentLocation(c.Room, location, ccode)
-	// 	fmt.Println("start timer")
-	// 	message := logic.ClientResp{Status: "OK", Type: "START_ROUND", Loc: &location, Players: lobby.LobbyMap[c.Room].PlayerMap, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound]}
-	// 	c.Hub.Broadcast <- logic.RouteMsg{Room: c.Room, Data: message}
-
-	// 	// 3 sec added to timer for frontend countdown
-	// 	lobby.LobbyMap[c.Room].Timer = time.AfterFunc(time.Second*time.Duration(lobby.LobbyMap[c.Room].Conf.RoundTime+3), func() {
-	// 		fmt.Println("times up")
-	// 		lobby.LobbyMap[c.Room].Active = false
-
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "WRN", Type: "TIMES_UP"}}
-	// 		lobby.ProcessBonus(c.Room)
-	// 		lobby.ProcessPowerups(c.Room)
-	// 		lobby.ProcessTotal(c.Room)
-
-	// 		var message logic.ClientResp
-	// 		if lobby.LobbyMap[c.Room].Conf.Mode == 2 {
-	// 			message = logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", FullRoundRes: lobby.LobbyMap[c.Room].RawResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound], Polygon: logic.PolyDB[lobby.LobbyMap[c.Room].CurrentCC], RoundRes: lobby.LobbyMap[c.Room].EndResults[lobby.LobbyMap[c.Room].CurrentRound], TotalResults: lobby.LobbyMap[c.Room].TotalResults}
-	// 		} else {
-	// 			message = logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].EndResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound], TotalResults: lobby.LobbyMap[c.Room].TotalResults}
-	// 		}
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Room: c.Room, Data: message}
-	// 		// send end of game msg and cleanup lobby
-	// 		if lobby.LobbyMap[c.Room].CurrentRound >= lobby.LobbyMap[c.Room].Conf.NumRounds {
-	// 			message := logic.ClientResp{Status: "OK", Type: "GAME_END", AllRes: lobby.LobbyMap[c.Room].RawResults, TotalResults: lobby.LobbyMap[c.Room].TotalResults}
-	// 			c.Hub.Broadcast <- logic.RouteMsg{Room: c.Room, Data: message}
-	// 			lobby.ResetLobby(c.Room)
-	// 		}
-	// 	})
-
-	// case "use_powerup":
-	// 	if lobby.LobbyMap[c.Room].CurrentRound == 0 {
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: "GAME_NOT_ACTIVE"}}
-	// 		break
-	// 	}
-	// 	if lobby.LobbyMap[c.Room].CurrentRound == lobby.LobbyMap[c.Room].Conf.NumRounds {
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: "CANT_USE_LAST_ROUND"}}
-	// 		break
-	// 	}
-	// 	clientReq.Powerup.Source = c.ID
-	// 	target, err := lobby.UsePowerup(clientReq.Powerup, c.Room)
-	// 	if err != nil {
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: err.Error()}}
-	// 		break
-	// 	}
-	// 	c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "OK", Type: "POWERUP_USED"}}
-	// 	if target != "" {
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Hub.Clients[c.Room][target], Data: logic.ClientResp{Status: "WRN", Type: "DUEL_FROM", User: c.ID}}
-	// 	}
-
-	// case "submit_location":
-	// 	fmt.Println(*clientReq.Loc)
-	// 	_, _, err := lobby.SubmitResult(c.Room, c.ID, *clientReq.Loc)
-	// 	//err := lobby.AddToResults(c.Room, c.ID, clientReq.Location, distance)
-
-	// 	if err != nil && err.Error() != "ROUND_FINISHED" {
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: err.Error()}}
-	// 		break
-	// 	}
-	// 	c.Hub.Broadcast <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "OK", Type: "NEW_RESULT", User: c.ID, GuessRes: &lobby.LobbyMap[c.Room].RawResults[lobby.LobbyMap[c.Room].CurrentRound][c.ID][len(lobby.LobbyMap[c.Room].RawResults[lobby.LobbyMap[c.Room].CurrentRound][c.ID])-1]}}
-
-	// 	// if round is finished notify lobby
-	// 	if err != nil && err.Error() == "ROUND_FINISHED" {
-	// 		lobby.LobbyMap[c.Room].Active = false
-	// 		fmt.Println("STOP TIMER")
-	// 		lobby.LobbyMap[c.Room].Timer.Stop()
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Room: c.Room, Data: logic.ClientResp{Status: "WRN", Type: err.Error()}}
-	// 		lobby.ProcessBonus(c.Room)
-	// 		lobby.ProcessPowerups(c.Room)
-	// 		lobby.ProcessTotal(c.Room)
-
-	// 		var message logic.ClientResp
-	// 		if lobby.LobbyMap[c.Room].Conf.Mode == 2 {
-	// 			message = logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", FullRoundRes: lobby.LobbyMap[c.Room].RawResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound], Polygon: logic.PolyDB[lobby.LobbyMap[c.Room].CurrentCC], RoundRes: lobby.LobbyMap[c.Room].EndResults[lobby.LobbyMap[c.Room].CurrentRound], TotalResults: lobby.LobbyMap[c.Room].TotalResults}
-	// 		} else {
-	// 			message = logic.ClientResp{Status: "OK", Type: "ROUND_RESULT", RoundRes: lobby.LobbyMap[c.Room].EndResults[lobby.LobbyMap[c.Room].CurrentRound], Round: lobby.LobbyMap[c.Room].CurrentRound, PowerLog: lobby.LobbyMap[c.Room].PowerLogs[lobby.LobbyMap[c.Room].CurrentRound], TotalResults: lobby.LobbyMap[c.Room].TotalResults}
-	// 		}
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Room: c.Room, Data: message}
-	// 		// send end of game msg and cleanup lobby
-	// 		if lobby.LobbyMap[c.Room].CurrentRound >= lobby.LobbyMap[c.Room].Conf.NumRounds {
-	// 			message := logic.ClientResp{Status: "OK", Type: "GAME_END", AllRes: lobby.LobbyMap[c.Room].RawResults, TotalResults: lobby.LobbyMap[c.Room].TotalResults}
-	// 			c.Hub.Broadcast <- logic.RouteMsg{Room: c.Room, Data: message}
-	// 			lobby.ResetLobby(c.Room)
-	// 		}
-	// 	}
-	// case "loc_to_cc":
-	// 	cc, err := reverse.ReverseGeocode(clientReq.Loc.Lng, clientReq.Loc.Lat)
-	// 	if err != nil {
-	// 		c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "ERR", Type: err.Error()}}
-	// 		break
-	// 	}
-	// 	c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Conn, Data: logic.ClientResp{Status: "OK", Type: "CC", CC: cc, Polygon: logic.PolyDB[cc]}}
-
-	// }
+	slog.Info("Received message", "message", clientReq)
 
 	switch clientReq.Cmd {
-	case "test":
-		// Call lobby functions as needed
-	// ...
+	case "update_lobby_settings":
+		slog.Info("update lobby settings", "conf", clientReq.Conf)
+		lobby, err := UpdateLobby(c.ID, c.Room, clientReq.Conf)
+		if err != nil {
+			c.Send <- models.ResponseBase{Status: "ERR", Type: err.Error()}
+		} else {
+			c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "UPDATED_LOBBY", Payload: models.ResponsePayload{Lobby: lobby}}
+		}
+
+	case "start":
+		// if user is lobby admin send coordinates, otherwise return error
+		if c.ID != LobbyMap[c.Room].Admin {
+			c.Send <- models.ResponseBase{Status: "ERR", Type: "NOT_ADMIN"}
+			break
+		}
+		if LobbyMap[c.Room].Active {
+			c.Send <- models.ResponseBase{Status: "ERR", Type: "ALREADY_ACTIVE"}
+			break
+		}
+
+		location, ccode := logic.RndLocation(LobbyMap[c.Room].Conf.CCList, LobbyMap[c.Room].CCSize)
+		UpdateCurrentLocation(c.Room, location, ccode)
+		slog.Info("Start game timer")
+		message := models.ResponsePayload{Loc: &location, Players: LobbyMap[c.Room].PlayerMap, PowerLog: LobbyMap[c.Room].PowerLogs[LobbyMap[c.Room].CurrentRound]}
+		c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "START_ROUND", Payload: message}
+
+		// 3 sec added to timer for frontend countdown
+		LobbyMap[c.Room].Timer = time.AfterFunc(time.Second*time.Duration(LobbyMap[c.Room].Conf.RoundTime+3), func() {
+			slog.Info("Times up")
+			LobbyMap[c.Room].Active = false
+
+			c.Hub.Broadcast <- models.ResponseBase{Status: "WRN", Type: "TIMES_UP"}
+			ProcessBonus(c.Room)
+			ProcessPowerups(c.Room)
+			ProcessTotal(c.Room)
+
+			var message models.ResponsePayload
+			if LobbyMap[c.Room].Conf.Mode == 2 {
+				message = models.ResponsePayload{FullRoundRes: LobbyMap[c.Room].RawResults[LobbyMap[c.Room].CurrentRound], Round: LobbyMap[c.Room].CurrentRound, PowerLog: LobbyMap[c.Room].PowerLogs[LobbyMap[c.Room].CurrentRound], Polygon: logic.PolyDB[LobbyMap[c.Room].CurrentCC], RoundRes: LobbyMap[c.Room].EndResults[LobbyMap[c.Room].CurrentRound], TotalResults: LobbyMap[c.Room].TotalResults}
+			} else {
+				message = models.ResponsePayload{RoundRes: LobbyMap[c.Room].EndResults[LobbyMap[c.Room].CurrentRound], Round: LobbyMap[c.Room].CurrentRound, PowerLog: LobbyMap[c.Room].PowerLogs[LobbyMap[c.Room].CurrentRound], TotalResults: LobbyMap[c.Room].TotalResults}
+			}
+			c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "ROUND_RESULT", Payload: message}
+			// send end of game msg and cleanup lobby
+			if LobbyMap[c.Room].CurrentRound >= LobbyMap[c.Room].Conf.NumRounds {
+				message := models.ResponsePayload{AllRes: LobbyMap[c.Room].RawResults, TotalResults: LobbyMap[c.Room].TotalResults}
+				c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "GAME_END", Payload: message}
+				ResetLobby(c.Room)
+			}
+		})
+
+	case "use_powerup":
+		if LobbyMap[c.Room].CurrentRound == 0 {
+			c.Send <- models.ResponseBase{Status: "ERR", Type: "GAME_NOT_ACTIVE"}
+			break
+		}
+		if LobbyMap[c.Room].CurrentRound == LobbyMap[c.Room].Conf.NumRounds {
+			c.Send <- models.ResponseBase{Status: "ERR", Type: "CANT_USE_LAST_ROUND"}
+			break
+		}
+		clientReq.Powerup.Source = c.ID
+		target, err := UsePowerup(clientReq.Powerup, c.Room)
+		if err != nil {
+			c.Send <- models.ResponseBase{Status: "ERR", Type: err.Error()}
+			break
+		}
+		c.Send <- models.ResponseBase{Status: "OK", Type: "POWERUP_USED"}
+		if target != "" {
+			c.Send <- models.ResponseBase{Status: "WRN", Type: "TODO: nofify duel target"}
+			// c.Hub.Broadcast <- logic.RouteMsg{Conn: c.Hub.Clients[c.Room][target], Data: logic.ClientResp{Status: "WRN", Type: "DUEL_FROM", User: c.ID}}
+		}
+
+	case "submit_location":
+		slog.Info("submit location", "location", *clientReq.Loc)
+		_, _, err := SubmitResult(c.Room, c.ID, *clientReq.Loc)
+		//err := lobby.AddToResults(c.Room, c.ID, clientReq.Location, distance)
+
+		if err != nil && err.Error() != "ROUND_FINISHED" {
+			c.Send <- models.ResponseBase{Status: "ERR", Type: err.Error()}
+			break
+		}
+		c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "NEW_RESULT", Payload: models.ResponsePayload{User: c.ID, GuessRes: &LobbyMap[c.Room].RawResults[LobbyMap[c.Room].CurrentRound][c.ID][len(LobbyMap[c.Room].RawResults[LobbyMap[c.Room].CurrentRound][c.ID])-1]}}
+
+		// if round is finished notify lobby
+		// what does this do??
+		if err != nil && err.Error() == "ROUND_FINISHED" {
+			LobbyMap[c.Room].Active = false
+			LobbyMap[c.Room].Timer.Stop()
+			slog.Info("Stopped timer")
+			c.Hub.Broadcast <- models.ResponseBase{Status: "WRN", Type: err.Error()}
+			ProcessBonus(c.Room)
+			ProcessPowerups(c.Room)
+			ProcessTotal(c.Room)
+
+			var message models.ResponsePayload
+			if LobbyMap[c.Room].Conf.Mode == 2 {
+				message = models.ResponsePayload{FullRoundRes: LobbyMap[c.Room].RawResults[LobbyMap[c.Room].CurrentRound], Round: LobbyMap[c.Room].CurrentRound, PowerLog: LobbyMap[c.Room].PowerLogs[LobbyMap[c.Room].CurrentRound], Polygon: logic.PolyDB[LobbyMap[c.Room].CurrentCC], RoundRes: LobbyMap[c.Room].EndResults[LobbyMap[c.Room].CurrentRound], TotalResults: LobbyMap[c.Room].TotalResults}
+			} else {
+				message = models.ResponsePayload{RoundRes: LobbyMap[c.Room].EndResults[LobbyMap[c.Room].CurrentRound], Round: LobbyMap[c.Room].CurrentRound, PowerLog: LobbyMap[c.Room].PowerLogs[LobbyMap[c.Room].CurrentRound], TotalResults: LobbyMap[c.Room].TotalResults}
+			}
+			c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "ROUND_RESULT", Payload: message}
+			// send end of game msg and cleanup lobby
+			if LobbyMap[c.Room].CurrentRound >= LobbyMap[c.Room].Conf.NumRounds {
+				message := models.ResponsePayload{AllRes: LobbyMap[c.Room].RawResults, TotalResults: LobbyMap[c.Room].TotalResults}
+				c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "GAME_END", Payload: message}
+				ResetLobby(c.Room)
+			}
+		}
+	case "loc_to_cc":
+		cc, err := reverse.ReverseGeocode(clientReq.Loc.Lng, clientReq.Loc.Lat)
+		if err != nil {
+			c.Send <- models.ResponseBase{Status: "ERR", Type: err.Error()}
+			break
+		}
+		c.Send <- models.ResponseBase{Status: "OK", Type: "CC", Payload: models.ResponsePayload{CC: cc, Polygon: logic.PolyDB[cc]}}
+
 	default:
 		slog.Info("echo message", "message", clientReq)
 		c.Send <- clientReq
