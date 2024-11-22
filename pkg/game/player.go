@@ -53,6 +53,8 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 	}
 
 	lobby.NumPlayers = len(lobby.PlayerMap)
+
+	hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "JOINED_LOBBY", Payload: models.ResponsePayload{User: client.ID, Lobby: lobby}}
 }
 
 // removes player map from playerlist in lobby
