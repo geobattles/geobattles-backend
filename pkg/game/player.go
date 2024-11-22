@@ -34,37 +34,54 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 	go client.Read()
 	go client.Write()
 
-	// if there is no lobby admin make this user one
-	if lobby.Admin == "" {
-		lobby.Admin = clientID
+	// reconnect player
+	if player, exists := lobby.PlayerMap[clientID]; exists {
+		player.Connected = true
+		player.Name = clientName
+	} else {
+		// if there is no lobby admin make this user one
+		if lobby.Admin == "" {
+			lobby.Admin = clientID
+		}
+
+		lobby.PlayerMap[clientID] = &Player{
+			Name:      clientName,
+			Connected: true,
+			Color:     genPlayerColor(lobbyID),
+			Powerups:  make([]bool, len(*lobby.Conf.Powerups))}
+
 	}
-	// LobbyMap[lobbyID].PlayerMap[clientID] = &logic.Player{Name: clientName, Color: genPlayerColor(lobbyID), Powerups: *LobbyMap[lobbyID].Conf.Powerups}
-	lobby.PlayerMap[clientID] = &Player{Name: clientName, Color: genPlayerColor(lobbyID), Powerups: make([]bool, len(*lobby.Conf.Powerups))}
+
 	lobby.NumPlayers = len(lobby.PlayerMap)
 }
 
 // removes player map from playerlist in lobby
 func RemovePlayerFromLobby(clientID string, lobbyID string) {
-	delete(LobbyMap[lobbyID].PlayerMap, clientID)
-	LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerMap)
-	// delete from end results
-	for _, results := range LobbyMap[lobbyID].EndResults {
-		delete(results, clientID)
+	lobby := LobbyMap[lobbyID]
+	if player, ok := lobby.PlayerMap[clientID]; ok {
+		player.Connected = false
 	}
+
+	// delete(LobbyMap[lobbyID].PlayerMap, clientID)
+	// LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerMap)
+	// delete from end results
+	// for _, results := range LobbyMap[lobbyID].EndResults {
+	// 	delete(results, clientID)
+	// }
 
 	// if removed player was admin & there are other players left
 	// select one of them as new admin, otherwise make admin empty
 	// if there are no players left delete lobby
-	if LobbyMap[lobbyID].Admin == clientID && LobbyMap[lobbyID].NumPlayers != 0 {
-		for id := range LobbyMap[lobbyID].PlayerMap {
-			LobbyMap[lobbyID].Admin = id
+	if lobby.Admin == clientID {
+		for id := range lobby.PlayerMap {
+			lobby.Admin = id
 			break
 		}
 
-	} else if LobbyMap[lobbyID].NumPlayers == 0 {
+	} else if lobby.NumPlayers == 0 {
 		slog.Info("Deleting lobby", "lobbyID", lobbyID)
-		if LobbyMap[lobbyID].Timer != nil {
-			LobbyMap[lobbyID].Timer.Stop()
+		if lobby.Timer != nil {
+			lobby.Timer.Stop()
 		}
 		delete(LobbyMap, lobbyID)
 	}

@@ -47,13 +47,6 @@ func ServeDeleteLobby(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// var hub *websocket.Hub
-
-// func init() {
-// 	hub = websocket.NewHub()
-// 	go hub.Start()
-// }
-
 func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 	// Added query parameter reader for id of lobby
 	lobbyID := r.URL.Query().Get("id")
@@ -64,8 +57,15 @@ func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 	slog.Info("WebSocket Endpoint Hit", "lobby ID", lobbyID, "uid", uid, " name", displayName)
 
 	// only connect to ws if lobby exists
-	if _, ok := game.LobbyMap[lobbyID]; ok {
-		if game.LobbyMap[lobbyID].CurrentRound != 0 {
+	if lobby, ok := game.LobbyMap[lobbyID]; ok {
+		// check if player is already in lobby
+		if player, ok := lobby.PlayerMap[uid]; ok {
+			if player.Connected {
+				slog.Error("Player already connected")
+				w.WriteHeader(http.StatusConflict)
+				return
+			}
+		} else if lobby.CurrentRound != 0 {
 			slog.Error("Game in progres")
 			w.WriteHeader(http.StatusConflict)
 			return

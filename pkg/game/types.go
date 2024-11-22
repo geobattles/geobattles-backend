@@ -43,10 +43,11 @@ type LobbyConf struct {
 }
 
 type Player struct {
-	Name     string `json:"name"`
-	Color    string `json:"color"`
-	Powerups []bool `json:"powerups,omitempty"`
-	Lives    int    `json:"lives,omitempty"`
+	Name      string `json:"name"`
+	Connected bool   `json:"connected"`
+	Color     string `json:"color"`
+	Powerups  []bool `json:"powerups,omitempty"`
+	Lives     int    `json:"lives,omitempty"`
 }
 
 type Result struct {

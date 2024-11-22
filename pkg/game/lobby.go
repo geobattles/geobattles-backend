@@ -45,7 +45,7 @@ func CreateLobby(conf LobbyConf) *Lobby {
 	newLobby.TotalResults = make(map[string]*Result)
 	newLobby.PowerLogs = make(map[int][]Powerup)
 
-	lobbyID := logic.GenerateRndID(6)
+	lobbyID := logic.GenerateRndID(4)
 	newLobby.ID = lobbyID
 	// validate values and set defaults otherwise
 	if conf.Name == "" {
