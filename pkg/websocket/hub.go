@@ -32,11 +32,6 @@ func (hub *Hub) Start() {
 			slog.Info("Hub: register new client", "client", client.ID)
 			hub.Clients[client] = true
 
-			// TODO: sending broadcast should be moved to wherever register is called
-			// go func() {
-			// 	client.Hub.Broadcast <- &models.ClientResp{Status: "OK", Type: "JOINED_LOBBY", User: client.ID, Lobby: lobby.LobbyMap[client.Room]}
-			// }()
-
 		case client := <-hub.Unregister:
 			slog.Info("Hub: unregister client", "client", client.ID)
 			if _, ok := hub.Clients[client]; ok {
@@ -45,7 +40,7 @@ func (hub *Hub) Start() {
 			}
 
 			// TODO: sending broadcast should be moved to wherever unregister is called
-			// lobby.RemovePlayerFromLobby(client.ID, client.Room)
+			// game.RemovePlayerFromLobby(client.ID, client.Room)
 			//fmt.Println("pool.rooms LOOOG ", pool.Rooms)
 			// go func() {
 			// 	client.Hub.Broadcast <- &models.ClientResp{Status: "OK", Type: "LEFT_LOBBY", User: client.ID, Lobby: lobby.LobbyMap[client.Room]}
