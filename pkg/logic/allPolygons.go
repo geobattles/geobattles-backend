@@ -3,7 +3,7 @@ package logic
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"os"
 )
 
@@ -29,7 +29,7 @@ func readAllPolygons() {
 
 	b, _ := os.ReadFile("assets/full/countries2.json")
 	if err := json.Unmarshal(b, &importAll); err != nil {
-		fmt.Println(err)
+		slog.Error("Error unmarshalling geojson", "error", err.Error())
 	}
 	// if feature (country) has a single polygon convert it to a multipolygon for simplicity
 	for _, feature := range importAll.Features {

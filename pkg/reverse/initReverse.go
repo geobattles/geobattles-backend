@@ -2,7 +2,7 @@ package reverse
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"os"
 )
 
@@ -32,10 +32,10 @@ var fullPolygons geojson
 
 // read fullPolygons geojson and store it in local struct
 func InitReverse() error {
-	fmt.Println("Reading reverse.json")
+	slog.Info("Reading reverse.json")
 	b, _ := os.ReadFile("assets/reverse.json")
 	if err := json.Unmarshal(b, &fullPolygons); err != nil {
-		fmt.Println(err)
+		slog.Error("Error unmarshalling reverse.json", "error", err.Error())
 		return err
 	}
 

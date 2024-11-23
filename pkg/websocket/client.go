@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -51,7 +50,7 @@ func (c *Client) Read() {
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			fmt.Println("Error reading message: ", err)
+			slog.Warn("Error reading message", "error", err.Error())
 			return
 		}
 		slog.Info("Received message", "message", string(message))
@@ -82,7 +81,7 @@ func (c *Client) Write() {
 			}
 
 			if err := c.Conn.WriteJSON(message); err != nil {
-				fmt.Println("error writing unicast", err)
+				slog.Warn("Error writing unicast", "error", err)
 			}
 
 		case <-ticker.C:

@@ -2,7 +2,7 @@ package game
 
 import (
 	"errors"
-	"fmt"
+	"log/slog"
 	"sort"
 )
 
@@ -16,7 +16,6 @@ func UsePowerup(powerup Powerup, lobbyID string) (string, error) {
 		}
 		LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[0] = false
 		LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1] = append(LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1], powerup)
-		// fmt.Println("PWLOG", LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1])
 	case 1:
 		// duel
 		if !LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[1] {
@@ -27,7 +26,6 @@ func UsePowerup(powerup Powerup, lobbyID string) (string, error) {
 		}
 		LobbyMap[lobbyID].PlayerMap[powerup.Source].Powerups[1] = false
 		LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1] = append(LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1], powerup)
-		// fmt.Println("PWLOG", LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound+1])
 		return powerup.Target, nil
 	default:
 		return "", errors.New("WRONG_TYPE")
@@ -37,13 +35,13 @@ func UsePowerup(powerup Powerup, lobbyID string) (string, error) {
 
 // processes powerups from powerlog. double score is given priority in processing order
 func ProcessPowerups(lobbyID string) error {
-	fmt.Println("PROCESS POWER", LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound])
+	slog.Info("Processing power", "PowerLogs", LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound])
 	// sort powerlogs so that type 0 is processed before others
 	sort.Slice(LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound], func(p, q int) bool {
 		return LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound][p].Type < LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound][q].Type
 	})
 	for _, power := range LobbyMap[lobbyID].PowerLogs[LobbyMap[lobbyID].CurrentRound] {
-		fmt.Println("powerup", power)
+		slog.Info("Processing powerup", "Power", power)
 		switch power.Type {
 		case 0:
 			// TODO: dont stack with placement bonus
@@ -58,12 +56,12 @@ func ProcessPowerups(lobbyID string) error {
 			resultTarget := LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][power.Target]
 			// if source player left dont process anything
 			if _, okS := LobbyMap[lobbyID].PlayerMap[power.Source]; !okS {
-				fmt.Println("player left, dont do duel")
+				slog.Info("Player left, dont do duel")
 				break
 			}
 			// if target left refund source and dont process anything
 			if _, okT := LobbyMap[lobbyID].PlayerMap[power.Source]; !okT {
-				fmt.Println("player left, dont do duel, refund player")
+				slog.Info("Player left, dont do duel, refund player")
 				LobbyMap[lobbyID].PlayerMap[power.Source].Powerups[1] = true
 				break
 			}
@@ -99,7 +97,7 @@ func ProcessPowerups(lobbyID string) error {
 // depends on the number of players; with 2 players only first gets 10%
 func ProcessBonus(lobbyID string) error {
 	if !*LobbyMap[lobbyID].Conf.PlaceBonus {
-		fmt.Println("BONUS_DISABLED")
+		slog.Info("Bonus disabled")
 		return errors.New("BONUS_DISABLED")
 	}
 	var playerOrder []string
@@ -120,7 +118,7 @@ func ProcessBonus(lobbyID string) error {
 			return LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[i]].Dist < LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[j]].Dist
 		}
 	})
-	fmt.Println("PLAYER ORDER", playerOrder)
+	slog.Info("Player order", "playerOrder", playerOrder)
 	switch num := len(playerOrder); {
 	case num == 2:
 		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].PlaceScore = int(float64(LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][playerOrder[0]].BaseScore) * 0.1)

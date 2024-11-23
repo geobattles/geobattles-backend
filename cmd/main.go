@@ -179,23 +179,23 @@ func rayIntersect(p, s, e logic.Point) (intersects, on bool) {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Not enough args")
+		slog.Error("Not enough args")
 		return
 	}
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("Error loading .env file")
+		slog.Error("Error loading .env file", "error", err.Error())
 		return
 	}
 	rand.Seed(time.Now().UnixNano())
 
 	mode := os.Args[1]
 	if mode != "rnd" && len(os.Args) < 3 {
-		fmt.Println("Not enough args")
+		slog.Error("Not enough args")
 		return
 	}
 	InitCountryDB()
-	fmt.Println("CHOSEN MODE: ", mode)
+	slog.Info("Chosen mode", "mode", mode)
 
 	var polyName string
 	if len(os.Args) > 3 {
@@ -205,7 +205,7 @@ func main() {
 	var polygonList []string
 	if len(os.Args) > 2 {
 		ccode = os.Args[2]
-		fmt.Println("CHOSEN CCODE: ", ccode)
+		slog.Info("Chosen country", "ccode", ccode)
 		if polyName != "" {
 			polygonList = append(polygonList, polyName)
 		} else {
@@ -214,8 +214,7 @@ func main() {
 			}
 		}
 		sort.Strings(polygonList)
-		fmt.Println("number of polygons selected: ", len(polygonList))
-		fmt.Println(polygonList)
+		slog.Info("Chosen polygons", "count", len(polygonList), "list", polygonList)
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
@@ -227,14 +226,12 @@ func main() {
 
 		for i := 0; i < len(polygonList); i++ {
 			polygon := countryDB.Countries[ccode].Areas.SearchArea[polygonList[i]]
-			//fmt.Println("CURRENT POLYGON: ", polygonList[i])
 			bbox := polygon.Rings[0].Bound()
 			var pt logic.Point
 			var polyAttempt int
 			for j := 0; j < tries; j++ {
 				for polyOK := true; polyOK; polyOK = !polygonContains(polygon.Rings, pt) {
 					pt = logic.RndPointWithinBox(bbox)
-					// fmt.Println("poly contains: ", pt, polygonContains(polygon.Rings, pt))
 					polyAttempt++
 				}
 
@@ -256,7 +253,7 @@ func main() {
 				for apiOK, failsafe := true, 0; apiOK; apiOK = (status == "ZERO_RESULTS") {
 					// failsafe, if location repeatedly fails select different one
 					if failsafe >= 3 {
-						fmt.Println("FAILSAFE ACTIVATED!")
+						slog.Warn("FAILSAFE ACTIVATED!")
 						apiFail++
 						break
 					}
@@ -267,7 +264,7 @@ func main() {
 					}
 					time.Sleep(200 * time.Millisecond)
 					loc, status = logic.CheckStreetViewExists(pt, polygon.Radius)
-					fmt.Println("api check: ", pt, loc, status)
+					slog.Info("api check: ", "point", pt, "location", loc, "status", status)
 					failsafe++
 					apiAttempt++
 				}
@@ -312,7 +309,7 @@ func main() {
 		}
 
 	}
-	fmt.Println("\nRESULTS")
+	slog.Info("Results")
 	w.Flush()
 
 }

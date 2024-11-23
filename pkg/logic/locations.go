@@ -3,6 +3,7 @@ package logic
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/rand"
 	"os"
@@ -22,10 +23,10 @@ var countryDB struct {
 var CountryList []string
 
 func InitCountryDB() {
-	fmt.Println("Populating countriesDB")
+	slog.Info("Populating countriesDB")
 	b, _ := os.ReadFile("assets/countryDB.json")
 	if err := json.Unmarshal(b, &countryDB); err != nil {
-		fmt.Println(err)
+		slog.Error("Error unmarshalling countryDB", "error", err.Error())
 	}
 
 	var sum float64
@@ -38,7 +39,7 @@ func InitCountryDB() {
 		CountryList = append(CountryList, ccode)
 
 		if err := json.Unmarshal(buf, &country.Areas); err != nil {
-			fmt.Println(err)
+			slog.Error("Error unmarshalling country areas", "error", err.Error())
 		}
 
 		for _, polygon := range country.Areas.SearchArea {
@@ -55,7 +56,6 @@ func InitCountryDB() {
 
 // returns valid random street view coordinates
 func RndLocation(countryList []string, totalSize float64) (Coords, string) {
-	//fmt.Println(SelectRndArea())
 	polygon, ccode := SelectRndArea(countryList, totalSize)
 	bbox := polygon.Rings[0].Bound()
 	var status string
@@ -65,7 +65,7 @@ func RndLocation(countryList []string, totalSize float64) (Coords, string) {
 	for apiOK, failCount := true, 0; apiOK; apiOK = (status == "ZERO_RESULTS") {
 		// failsafe, if location repeatedly fails select different one
 		if failCount >= 4 {
-			fmt.Println("FAILSAFE ACTIVATED!")
+			slog.Warn("Failsafe activated")
 			failCount = 0
 			polygon, ccode = SelectRndArea(countryList, totalSize)
 			bbox = polygon.Rings[0].Bound()
@@ -73,10 +73,10 @@ func RndLocation(countryList []string, totalSize float64) (Coords, string) {
 
 		for polyOK := true; polyOK; polyOK = !polygonContains(polygon.Rings, pt) {
 			pt = RndPointWithinBox(bbox)
-			fmt.Println("polygon contains: ", pt, polygonContains(polygon.Rings, pt))
+			slog.Info("Check if polygon contains", "point", pt, "contains", polygonContains(polygon.Rings, pt))
 		}
 		loc, status = CheckStreetViewExists(pt, polygon.Radius)
-		fmt.Println("api check: ", loc, status)
+		slog.Info("api check: ", "location", loc, "status", status)
 		failCount++
 	}
 	return loc, ccode
@@ -86,11 +86,11 @@ func RndLocation(countryList []string, totalSize float64) (Coords, string) {
 // returns random area name within random country
 func SelectRndArea(countryList []string, totalSize float64) (Polygon, string) {
 	ccode := SelectRandomCountry(countryList, totalSize)
-	fmt.Println("Selected country: ", ccode)
+	slog.Info("Selected country", "cc", ccode)
 	rnd := rand.Intn(countryDB.Countries[ccode].Areas.InnerSize)
 	for area, polygon := range countryDB.Countries[ccode].Areas.SearchArea {
 		if rnd <= polygon.Size {
-			fmt.Println("Selected polygon: ", area)
+			slog.Info("Selected polygon", "area", area)
 			return *polygon, ccode
 		}
 		rnd -= polygon.Size

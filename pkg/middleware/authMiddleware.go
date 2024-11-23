@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -30,7 +29,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		fmt.Println(r.Header)
+		slog.Info("Auth middleware", "header", r.Header)
 
 		ctx := r.Context()
 		token := r.Header.Get("Authorization")

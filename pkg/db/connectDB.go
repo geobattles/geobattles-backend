@@ -22,9 +22,7 @@ func ConnectDB() {
 		os.Getenv("DB_PASSWORD"),
 	)
 
-	fmt.Println(os.Getenv("DB_HOST"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"))
+	slog.Info("Connecting to DB", "dsn", dsn)
 
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 

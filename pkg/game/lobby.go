@@ -2,7 +2,6 @@ package game
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 	"math"
 	"time"
@@ -127,7 +126,6 @@ func UpdateLobby(clientID string, ID string, conf LobbyConf) (*Lobby, error) {
 	if LobbyMap[ID].CurrentRound != 0 {
 		return nil, errors.New("GAME_IN_PROGRESS")
 	}
-	fmt.Println("update", conf)
 	slog.Info("Updating lobby settings", "new settings", conf)
 
 	if conf.Name != "" {
@@ -209,14 +207,12 @@ func ResetLobby(lobbyID string) {
 	// for _, player := range LobbyMap[lobbyID].PlayerMap {
 	// 	player.Powerups = *LobbyMap[lobbyID].Conf.Powerups
 	// }
-	fmt.Println("Lobby after reset ", LobbyMap[lobbyID])
 	slog.Info("Lobby reset", "lobbyMap", LobbyMap[lobbyID])
 }
 
 // keeps track of the location of the currently active game in lobby
 // increments round counter every call
 func UpdateCurrentLocation(lobbyID string, location logic.Coords, ccode string) {
-	fmt.Println("updating lobby loaction: ", lobbyID, location)
 	slog.Info("Updating lobby location", "lobbyID", lobbyID, "location", location)
 	LobbyMap[lobbyID].UsersFinished = make(map[string]bool)
 	LobbyMap[lobbyID].CurrentLoc = &location
@@ -294,7 +290,6 @@ func addToResults(lobbyID string, clientID string, location logic.Coords, distan
 	LobbyMap[lobbyID].PlayerMap[clientID].Lives -= 1
 	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], Result{Loc: location, Dist: distance, BaseScore: score, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1})
 	if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Dist > distance || LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Attempt == 0 {
-		fmt.Println("NEW BEST RESULT")
 		slog.Info("New best result")
 		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &Result{Loc: location, Dist: distance, BaseScore: score, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID])}
 	}

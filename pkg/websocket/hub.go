@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"fmt"
 	"log/slog"
 )
 
@@ -23,7 +22,7 @@ func NewHub() *Hub {
 
 func (hub *Hub) Start() {
 	defer func() {
-		fmt.Println("defer return hub")
+		slog.Warn("Hub: defer return")
 	}()
 
 	for {
@@ -39,17 +38,7 @@ func (hub *Hub) Start() {
 				close(client.Send)
 			}
 
-			// TODO: sending broadcast should be moved to wherever unregister is called
-			// game.RemovePlayerFromLobby(client.ID, client.Room)
-			//fmt.Println("pool.rooms LOOOG ", pool.Rooms)
-			// go func() {
-			// 	client.Hub.Broadcast <- &models.ClientResp{Status: "OK", Type: "LEFT_LOBBY", User: client.ID, Lobby: lobby.LobbyMap[client.Room]}
-			// }()
-
 		case message := <-hub.Broadcast:
-			// fmt.Println("msg to send: ", message)
-			// if message doesnt have connection field broadcast it
-			// otherwise only send it to the connection given
 			for client := range hub.Clients {
 				select {
 				case client.Send <- message:

@@ -2,7 +2,6 @@ package models
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/slinarji/go-geo-server/pkg/auth"
@@ -64,7 +63,6 @@ func (user *User) BeforeCreate(tx *gorm.DB) (err error) {
 	if err != nil {
 		return err
 	}
-	fmt.Println(hashedPassword)
 
 	user.Password = hashedPassword
 
