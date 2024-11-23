@@ -224,6 +224,9 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		}
 		c.Send <- models.ResponseBase{Status: "OK", Type: "CC", Payload: models.ResponsePayload{CC: cc, Polygon: logic.PolyDB[cc]}}
 
+	case "ping":
+		c.Send <- models.ResponseBase{Status: "OK", Type: "PONG"}
+
 	default:
 		slog.Info("echo message", "message", clientReq)
 		c.Send <- clientReq
