@@ -101,6 +101,10 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 	slog.Info("Received message", "message", clientReq)
 
 	switch clientReq.Cmd {
+	case "disconnect":
+		RemovePlayerFromLobby(c.ID, c.Room)
+		c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "LEFT_LOBBY", Payload: models.ResponsePayload{User: c.ID, Lobby: LobbyMap[c.Room]}}
+
 	case "update_lobby_settings":
 		slog.Info("update lobby settings", "conf", clientReq.Conf)
 		lobby, err := UpdateLobby(c.ID, c.Room, clientReq.Conf)
@@ -195,6 +199,7 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 			ProcessPowerups(c.Room)
 			ProcessTotal(c.Room)
 
+			// TODO: fix this workaround
 			time.Sleep(100 * time.Millisecond)
 
 			var message models.ResponsePayload

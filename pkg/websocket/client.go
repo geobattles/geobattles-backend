@@ -36,7 +36,11 @@ type Client struct {
 func (c *Client) Read() {
 	defer func() {
 		slog.Info("Defer read")
+		c.MessageHandler(c, []byte("{\"command\":\"disconnect\"}"))
 		c.Hub.Unregister <- c
+		// go func() {
+		// 	client.Hub.Broadcast <- &models.ClientResp{Status: "OK", Type: "LEFT_LOBBY", User: client.ID, Lobby: lobby.LobbyMap[client.Room]}
+		// }()
 		c.Conn.Close()
 	}()
 
