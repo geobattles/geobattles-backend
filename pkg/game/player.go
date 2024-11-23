@@ -199,9 +199,6 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 			ProcessPowerups(c.Room)
 			ProcessTotal(c.Room)
 
-			// TODO: fix this workaround
-			time.Sleep(100 * time.Millisecond)
-
 			var message models.ResponsePayload
 			if LobbyMap[c.Room].Conf.Mode == 2 {
 				message = models.ResponsePayload{FullRoundRes: LobbyMap[c.Room].RawResults[LobbyMap[c.Room].CurrentRound], Round: LobbyMap[c.Room].CurrentRound, PowerLog: LobbyMap[c.Room].PowerLogs[LobbyMap[c.Room].CurrentRound], Polygon: logic.PolyDB[LobbyMap[c.Room].CurrentCC], RoundRes: LobbyMap[c.Room].EndResults[LobbyMap[c.Room].CurrentRound], TotalResults: LobbyMap[c.Room].TotalResults}

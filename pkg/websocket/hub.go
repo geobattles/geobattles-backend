@@ -40,12 +40,16 @@ func (hub *Hub) Start() {
 
 		case message := <-hub.Broadcast:
 			for client := range hub.Clients {
-				select {
-				case client.Send <- message:
-				default:
-					close(client.Send)
-					delete(hub.Clients, client)
-				}
+				// TODO: use buffered channel to prevent blocking
+				client.Send <- message
+
+				// select {
+				// case client.Send <- message:
+				// default:
+				// 	slog.Warn("client.Send full, disconnecting client")
+				// 	close(client.Send)
+				// 	delete(hub.Clients, client)
+				// }
 			}
 
 		}
