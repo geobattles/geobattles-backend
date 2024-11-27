@@ -22,13 +22,14 @@ const (
 )
 
 type Client struct {
-	ID             string
-	Room           string
+	ID string
+	// Room           string
 	Name           string
 	Hub            *Hub
 	Conn           *websocket.Conn
 	Send           chan interface{}
 	MessageHandler func(c *Client, message []byte)
+	Lobby          interface{}
 }
 
 // goroutine to read messages from client

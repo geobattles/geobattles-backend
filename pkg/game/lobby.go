@@ -10,6 +10,8 @@ import (
 
 	"github.com/slinarji/go-geo-server/pkg/defaults"
 	"github.com/slinarji/go-geo-server/pkg/logic"
+	"github.com/slinarji/go-geo-server/pkg/models"
+
 	"github.com/slinarji/go-geo-server/pkg/websocket"
 )
 
@@ -22,12 +24,7 @@ func init() {
 	LobbyMap["U4YPR6"] = &Lobby{ID: "U4YPR6", Hub: hub, Conf: &LobbyConf{Name: "prvi lobby", Mode: 1, MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}, Powerups: defaults.Powerups(), PlaceBonus: defaults.PlaceBonus(), DynLives: defaults.DynLives()}, NumPlayers: 0, PlayerMap: make(map[string]*Player), RawResults: make(map[int]map[string][]Result), EndResults: make(map[int]map[string]*Result), TotalResults: make(map[string]*Result), PowerLogs: make(map[int][]Powerup)}
 }
 
-// initial lobby list for debugging
-// var LobbyMap = map[string]*Lobby{
-// 	"U4YPR6": {ID: "U4YPR6", Conf: &LobbyConf{Name: "prvi lobby", Mode: 1, MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}, Powerups: defaults.Powerups(), PlaceBonus: defaults.PlaceBonus(), DynLives: defaults.DynLives()}, NumPlayers: 0, PlayerMap: make(map[string]*Player), RawResults: make(map[int]map[string][]Result), EndResults: make(map[int]map[string]*Result), TotalResults: make(map[string]*Result), PowerLogs: make(map[int][]Powerup)},
-// }
-
-var ColorList = [12]string{"#e6194B", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#000075", "#469990", "#9A6324", "#dcbeff", "#800000"}
+var colorList = [12]string{"#e6194B", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#000075", "#469990", "#9A6324", "#dcbeff", "#800000"}
 
 // validates values and creates new lobby
 func CreateLobby(conf LobbyConf) *Lobby {
@@ -118,74 +115,124 @@ func CreateLobby(conf LobbyConf) *Lobby {
 	return LobbyMap[lobbyID]
 }
 
-// update existing lobby settings
-func UpdateLobby(clientID string, ID string, conf LobbyConf) (*Lobby, error) {
-	if clientID != LobbyMap[ID].Admin {
-		return nil, errors.New("NOT_ADMIN")
+// update existing lobby config
+func (l *Lobby) updateConf(clientID string, conf LobbyConf) error {
+	if clientID != l.Admin {
+		return errors.New("NOT_ADMIN")
 	}
-	if LobbyMap[ID].CurrentRound != 0 {
-		return nil, errors.New("GAME_IN_PROGRESS")
+
+	if l.CurrentRound != 0 {
+		return errors.New("GAME_IN_PROGRESS")
 	}
 	slog.Info("Updating lobby settings", "new settings", conf)
 
 	if conf.Name != "" {
-		LobbyMap[ID].Conf.Name = conf.Name
+		l.Conf.Name = conf.Name
 	}
 	// if mode is changing apply defaults for new fields if not explicitly set
-	if conf.Mode != 0 && conf.Mode != LobbyMap[ID].Conf.Mode {
-		LobbyMap[ID].Conf.Mode = conf.Mode
+	if conf.Mode != 0 && conf.Mode != l.Conf.Mode {
+		l.Conf.Mode = conf.Mode
 		switch conf.Mode {
 		case 2:
-			LobbyMap[ID].Conf.ScoreFactor = 0
+			l.Conf.ScoreFactor = 0
 
 		case 1:
 			if conf.ScoreFactor > defaults.ScoreFactorLow && conf.ScoreFactor < defaults.ScoreFactorHigh {
-				LobbyMap[ID].Conf.ScoreFactor = conf.ScoreFactor
+				l.Conf.ScoreFactor = conf.ScoreFactor
 			} else {
-				LobbyMap[ID].Conf.ScoreFactor = defaults.ScoreFactor
+				l.Conf.ScoreFactor = defaults.ScoreFactor
 			}
 		}
 	}
 	if conf.ScoreFactor > defaults.ScoreFactorLow && conf.ScoreFactor < defaults.ScoreFactorHigh {
-		LobbyMap[ID].Conf.ScoreFactor = conf.ScoreFactor
+		l.Conf.ScoreFactor = conf.ScoreFactor
 	}
 	if conf.Powerups != nil && len(*conf.Powerups) == 2 {
-		LobbyMap[ID].Conf.Powerups = conf.Powerups
+		l.Conf.Powerups = conf.Powerups
 	}
 	if conf.PlaceBonus != nil {
-		LobbyMap[ID].Conf.PlaceBonus = conf.PlaceBonus
+		l.Conf.PlaceBonus = conf.PlaceBonus
 	}
 
 	if conf.MaxPlayers > 0 {
-		LobbyMap[ID].Conf.MaxPlayers = conf.MaxPlayers
+		l.Conf.MaxPlayers = conf.MaxPlayers
 	}
 	if conf.NumAttempt > 0 {
-		LobbyMap[ID].Conf.NumAttempt = conf.NumAttempt
+		l.Conf.NumAttempt = conf.NumAttempt
 	}
 	if conf.NumRounds > 0 {
-		LobbyMap[ID].Conf.NumRounds = conf.NumRounds
+		l.Conf.NumRounds = conf.NumRounds
 	}
 	if conf.RoundTime > 0 {
-		LobbyMap[ID].Conf.RoundTime = conf.RoundTime
+		l.Conf.RoundTime = conf.RoundTime
 	}
 
 	if conf.CCList != nil {
-		LobbyMap[ID].Conf.CCList = conf.CCList
-		LobbyMap[ID].CCSize = logic.SumCCListSize(conf.CCList)
+		l.Conf.CCList = conf.CCList
+		l.CCSize = logic.SumCCListSize(conf.CCList)
 	}
 
 	if conf.DynLives != nil {
-		LobbyMap[ID].Conf.DynLives = conf.DynLives
+		l.Conf.DynLives = conf.DynLives
 	}
-	return LobbyMap[ID], nil
+	return nil
 }
 
-func genPlayerColor(lobbyID string) string {
+// removes player from lobby, assigns new admin if necessary
+func (l *Lobby) removePlayer(clientID string) {
+	if player, ok := l.PlayerMap[clientID]; ok {
+		player.Connected = false
+	}
+
+	// delete(LobbyMap[lobbyID].PlayerMap, clientID)
+	// LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerMap)
+	// delete from end results
+	// for _, results := range LobbyMap[lobbyID].EndResults {
+	// 	delete(results, clientID)
+	// }
+
+	// if removed player was admin & there are other players left
+	// select one of them as new admin, otherwise make admin empty
+	// if there are no players left delete lobby
+	if l.Admin == clientID {
+		for id := range l.PlayerMap {
+			l.Admin = id
+			break
+		}
+
+	} else if l.NumPlayers == 0 {
+		slog.Info("Deleting lobby", "lobbyID", l.ID)
+		if l.Timer != nil {
+			l.Timer.Stop()
+		}
+		delete(LobbyMap, l.ID)
+	}
+}
+
+func (l *Lobby) startGame(clientID string) (*models.ResponsePayload, error) {
+	if clientID != l.Admin {
+		return nil, errors.New("NOT_ADMIN")
+	}
+	if l.Active {
+		return nil, errors.New("ALREADY_ACTIVE")
+	}
+
+	location, ccode := logic.RndLocation(l.Conf.CCList, l.CCSize)
+	l.setupNewRound(location, ccode)
+	slog.Info("Start game timer")
+	message := models.ResponsePayload{Loc: &location, Players: l.PlayerMap, PowerLog: l.PowerLogs[l.CurrentRound]}
+
+	// l.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "START_ROUND", Payload: message}
+	l.setupRoundTimer()
+	return &message, nil
+}
+
+func (l *Lobby) getPlayerColor() string {
 	var color string
 cycle:
-	for i := 0; i < len(ColorList); i++ {
-		color = ColorList[i]
-		for _, player := range LobbyMap[lobbyID].PlayerMap {
+	for i := 0; i < len(colorList); i++ {
+		color = colorList[i]
+		for _, player := range l.PlayerMap {
 			if player.Color == color {
 				continue cycle
 			}
@@ -195,52 +242,100 @@ cycle:
 	return color
 }
 
-func ResetLobby(lobbyID string) {
-	LobbyMap[lobbyID].RawResults = make(map[int]map[string][]Result)
-	LobbyMap[lobbyID].EndResults = make(map[int]map[string]*Result)
-	LobbyMap[lobbyID].TotalResults = make(map[string]*Result)
+// resets lobby state for new game
+func (l *Lobby) resetLobby() {
+	l.RawResults = make(map[int]map[string][]Result)
+	l.EndResults = make(map[int]map[string]*Result)
+	l.TotalResults = make(map[string]*Result)
 
-	LobbyMap[lobbyID].PowerLogs = make(map[int][]Powerup)
-	LobbyMap[lobbyID].CurrentLoc = nil
-	LobbyMap[lobbyID].UsersFinished = make(map[string]bool)
-	LobbyMap[lobbyID].CurrentRound = 0
-	// for _, player := range LobbyMap[lobbyID].PlayerMap {
-	// 	player.Powerups = *LobbyMap[lobbyID].Conf.Powerups
+	l.PowerLogs = make(map[int][]Powerup)
+	l.CurrentLoc = nil
+	l.UsersFinished = make(map[string]bool)
+	l.CurrentRound = 0
+	// for _, player := range l.PlayerMap {
+	// 	player.Powerups = *l.Conf.Powerups
 	// }
-	slog.Info("Lobby reset", "lobbyMap", LobbyMap[lobbyID])
+	slog.Info("Lobby reset", "lobby", l)
 }
 
-// keeps track of the location of the currently active game in lobby
-// increments round counter every call
-func UpdateCurrentLocation(lobbyID string, location logic.Coords, ccode string) {
-	slog.Info("Updating lobby location", "lobbyID", lobbyID, "location", location)
-	LobbyMap[lobbyID].UsersFinished = make(map[string]bool)
-	LobbyMap[lobbyID].CurrentLoc = &location
-	if LobbyMap[lobbyID].Conf.Mode == 2 {
-		LobbyMap[lobbyID].CurrentCC = ccode
-		LobbyMap[lobbyID].StartTime = time.Now()
+// sets up lobby for new round and results
+func (l *Lobby) setupNewRound(location logic.Coords, ccode string) {
+	slog.Info("Updating lobby location", "lobbyID", l.ID, "location", location)
+	l.UsersFinished = make(map[string]bool)
+	l.CurrentLoc = &location
+	if l.Conf.Mode == 2 {
+		l.CurrentCC = ccode
+		l.StartTime = time.Now()
 	}
-	LobbyMap[lobbyID].Active = true
+	l.Active = true
 
-	LobbyMap[lobbyID].CurrentRound++
-	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound] = make(map[string][]Result)
-	LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound] = make(map[string]*Result)
+	l.CurrentRound++
+	l.RawResults[l.CurrentRound] = make(map[string][]Result)
+	l.EndResults[l.CurrentRound] = make(map[string]*Result)
 
-	for name, player := range LobbyMap[lobbyID].PlayerMap {
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][name] = &Result{}
+	for name, player := range l.PlayerMap {
+		l.EndResults[l.CurrentRound][name] = &Result{}
 
-		if LobbyMap[lobbyID].CurrentRound == 1 {
-			LobbyMap[lobbyID].TotalResults[name] = &Result{}
-			copy(player.Powerups, *LobbyMap[lobbyID].Conf.Powerups)
-			player.Lives = LobbyMap[lobbyID].Conf.NumAttempt
-		} else if *LobbyMap[lobbyID].Conf.DynLives {
-			player.Lives += (LobbyMap[lobbyID].Conf.NumAttempt + 1) / 2
-			if player.Lives > LobbyMap[lobbyID].Conf.NumAttempt+1 {
-				player.Lives = LobbyMap[lobbyID].Conf.NumAttempt + 1
+		if l.CurrentRound == 1 {
+			l.TotalResults[name] = &Result{}
+			copy(player.Powerups, *l.Conf.Powerups)
+			player.Lives = l.Conf.NumAttempt
+		} else if *l.Conf.DynLives {
+			player.Lives += (l.Conf.NumAttempt + 1) / 2
+			if player.Lives > l.Conf.NumAttempt+1 {
+				player.Lives = l.Conf.NumAttempt + 1
 			}
 		} else {
-			player.Lives = LobbyMap[lobbyID].Conf.NumAttempt
+			player.Lives = l.Conf.NumAttempt
 		}
+	}
+}
+
+// sets up events that fire after round timer expires
+func (l *Lobby) setupRoundTimer() {
+	// 3 sec added to timer for frontend countdown
+	l.Timer = time.AfterFunc(time.Second*time.Duration(l.Conf.RoundTime+3), func() {
+		slog.Info("Times up")
+		// TODO: possible race condition if a user submits final guess at the same time?
+		l.Active = false
+
+		// perhaps move this broadcast to processRoundEnd?
+		l.Hub.Broadcast <- models.ResponseBase{Status: "WRN", Type: "TIMES_UP"}
+		l.processRoundEnd()
+	})
+}
+
+// processes bonus points at round and / or game end
+func (l *Lobby) processRoundEnd() {
+	l.processBonus()
+	l.processPowerups()
+	l.processTotal()
+
+	var message models.ResponsePayload
+	if l.Conf.Mode == 2 {
+		message = models.ResponsePayload{
+			FullRoundRes: l.RawResults[l.CurrentRound],
+			Round:        l.CurrentRound,
+			PowerLog:     l.PowerLogs[l.CurrentRound],
+			Polygon:      logic.PolyDB[l.CurrentCC],
+			RoundRes:     l.EndResults[l.CurrentRound],
+			TotalResults: l.TotalResults,
+		}
+	} else {
+		message = models.ResponsePayload{
+			RoundRes:     l.EndResults[l.CurrentRound],
+			Round:        l.CurrentRound,
+			PowerLog:     l.PowerLogs[l.CurrentRound],
+			TotalResults: l.TotalResults,
+		}
+	}
+	l.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "ROUND_RESULT", Payload: message}
+
+	// send end of game msg and cleanup lobby
+	if l.CurrentRound >= l.Conf.NumRounds {
+		message := models.ResponsePayload{AllRes: l.RawResults, TotalResults: l.TotalResults}
+		l.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "GAME_END", Payload: message}
+		l.resetLobby()
 	}
 }
 
@@ -258,46 +353,52 @@ func scoreDistance(x float64, a float64) int {
 }
 
 // calculates distance and score and adds them to the results
-func SubmitResult(lobbyID string, clientID string, location logic.Coords) (float64, int, error) {
-	// immediately return error if game hasnt started yet, times up or player has no more attempts left
-	if LobbyMap[lobbyID].CurrentLoc == nil {
+func (l *Lobby) submitResult(clientID string, location logic.Coords) (float64, int, error) {
+	// immediately return error if game hasnt started yet, time's up or player has no more attempts left
+	if l.CurrentLoc == nil {
 		return -1, -1, errors.New("GAME_NOT_ACTIVE")
 	}
-	if !LobbyMap[lobbyID].Active {
+	if !l.Active {
 		return -1, -1, errors.New("TIMES_UP")
 	}
-	if LobbyMap[lobbyID].PlayerMap[clientID].Lives <= 0 {
+	if l.PlayerMap[clientID].Lives <= 0 {
 		return -1, -1, errors.New("NO_MORE_ATTEMPTS")
 	}
-	// if time has expired throw an error
-	switch LobbyMap[lobbyID].Conf.Mode {
+
+	// lock lobby mutex while processing, unlock after
+	// can probably switch to rwmutex & move it inside processing functions to only guard actually critical sections
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	// if time has expired throw an error?
+	switch l.Conf.Mode {
 	case 2:
-		_, err := processCountryGuess(lobbyID, clientID, location)
+		_, err := l.processCountryGuess(clientID, location)
 		return 0, 0, err
 	default:
-		distance := logic.CalcDistance(*LobbyMap[lobbyID].CurrentLoc, location)
-		score, error := addToResults(lobbyID, clientID, location, distance)
-		return distance, score, error
+		distance := logic.CalcDistance(*l.CurrentLoc, location)
+		score, err := l.addToResults(clientID, location, distance)
+		return distance, score, err
 
 	}
 }
 
 // processes submitted guess in mode 1 (location guessing)
-func addToResults(lobbyID string, clientID string, location logic.Coords, distance float64) (int, error) {
+func (l *Lobby) addToResults(clientID string, location logic.Coords, distance float64) (int, error) {
 
-	score := scoreDistance(distance, float64(LobbyMap[lobbyID].Conf.ScoreFactor))
+	score := scoreDistance(distance, float64(l.Conf.ScoreFactor))
 	// TODO: split this monstrosity, maybe use variables
-	LobbyMap[lobbyID].PlayerMap[clientID].Lives -= 1
-	LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], Result{Loc: location, Dist: distance, BaseScore: score, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1})
-	if LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Dist > distance || LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID].Attempt == 0 {
+	l.PlayerMap[clientID].Lives -= 1
+	l.RawResults[l.CurrentRound][clientID] = append(l.RawResults[l.CurrentRound][clientID], Result{Loc: location, Dist: distance, BaseScore: score, Lives: l.PlayerMap[clientID].Lives, Attempt: len(l.RawResults[l.CurrentRound][clientID]) + 1})
+	if l.EndResults[l.CurrentRound][clientID].Dist > distance || l.EndResults[l.CurrentRound][clientID].Attempt == 0 {
 		slog.Info("New best result")
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &Result{Loc: location, Dist: distance, BaseScore: score, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID])}
+		l.EndResults[l.CurrentRound][clientID] = &Result{Loc: location, Dist: distance, BaseScore: score, Attempt: len(l.RawResults[l.CurrentRound][clientID])}
 	}
 
 	// if this is last attempt indicate finished and check if everyone has finished
-	if LobbyMap[lobbyID].PlayerMap[clientID].Lives <= 0 {
-		LobbyMap[lobbyID].UsersFinished[clientID] = true
-		if len(LobbyMap[lobbyID].UsersFinished) >= LobbyMap[lobbyID].NumPlayers {
+	if l.PlayerMap[clientID].Lives <= 0 {
+		l.UsersFinished[clientID] = true
+		if len(l.UsersFinished) >= l.NumPlayers {
 			return score, errors.New("ROUND_FINISHED")
 		}
 	}
@@ -305,9 +406,9 @@ func addToResults(lobbyID string, clientID string, location logic.Coords, distan
 }
 
 // processes submitted guess in mode 2 (country guessing)
-func processCountryGuess(lobbyID string, clientID string, location logic.Coords) (string, error) {
+func (l *Lobby) processCountryGuess(clientID string, location logic.Coords) (string, error) {
 	// if user has already submitted correct guess
-	if LobbyMap[lobbyID].UsersFinished[clientID] {
+	if l.UsersFinished[clientID] {
 		return "", errors.New("ALREADY_FINISHED")
 	}
 	cc, err := reverse.ReverseGeocode(location.Lng, location.Lat)
@@ -315,28 +416,28 @@ func processCountryGuess(lobbyID string, clientID string, location logic.Coords)
 		return "", err
 	}
 
-	LobbyMap[lobbyID].PlayerMap[clientID].Lives -= 1
-	timeUsed := int(time.Since(LobbyMap[lobbyID].StartTime).Microseconds() - 3*1000000)
+	l.PlayerMap[clientID].Lives -= 1
+	timeUsed := int(time.Since(l.StartTime).Microseconds() - 3*1000000)
 	// guesses submitted within first 4s get full 5000 points
-	score := int(float64(LobbyMap[lobbyID].Conf.RoundTime*1000000-timeUsed) / float64((LobbyMap[lobbyID].Conf.RoundTime-4)*1000000) * 5000)
+	score := int(float64(l.Conf.RoundTime*1000000-timeUsed) / float64((l.Conf.RoundTime-4)*1000000) * 5000)
 	if score > 5000 {
 		score = 5000
 	}
 	// correct result is indicated by ccode = XX and score, false result gets score = 0
-	if cc == LobbyMap[lobbyID].CurrentCC {
-		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], Result{Loc: location, BaseScore: score, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: "XX"})
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &Result{Loc: location, BaseScore: score, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]), CC: "XX"}
+	if cc == l.CurrentCC {
+		l.RawResults[l.CurrentRound][clientID] = append(l.RawResults[l.CurrentRound][clientID], Result{Loc: location, BaseScore: score, Time: timeUsed, Lives: l.PlayerMap[clientID].Lives, Attempt: len(l.RawResults[l.CurrentRound][clientID]) + 1, CC: "XX"})
+		l.EndResults[l.CurrentRound][clientID] = &Result{Loc: location, BaseScore: score, Time: timeUsed, Lives: l.PlayerMap[clientID].Lives, Attempt: len(l.RawResults[l.CurrentRound][clientID]), CC: "XX"}
 
 	} else {
-		LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID] = append(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID], Result{Loc: location, BaseScore: 0, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]) + 1, CC: cc})
-		LobbyMap[lobbyID].EndResults[LobbyMap[lobbyID].CurrentRound][clientID] = &Result{Loc: location, BaseScore: 0, Time: timeUsed, Lives: LobbyMap[lobbyID].PlayerMap[clientID].Lives, Attempt: len(LobbyMap[lobbyID].RawResults[LobbyMap[lobbyID].CurrentRound][clientID]), CC: cc}
+		l.RawResults[l.CurrentRound][clientID] = append(l.RawResults[l.CurrentRound][clientID], Result{Loc: location, BaseScore: 0, Time: timeUsed, Lives: l.PlayerMap[clientID].Lives, Attempt: len(l.RawResults[l.CurrentRound][clientID]) + 1, CC: cc})
+		l.EndResults[l.CurrentRound][clientID] = &Result{Loc: location, BaseScore: 0, Time: timeUsed, Lives: l.PlayerMap[clientID].Lives, Attempt: len(l.RawResults[l.CurrentRound][clientID]), CC: cc}
 
 	}
 
 	// if last/correct guess mark user as finished. end round if all users have finished
-	if LobbyMap[lobbyID].PlayerMap[clientID].Lives <= 0 || LobbyMap[lobbyID].CurrentCC == cc {
-		LobbyMap[lobbyID].UsersFinished[clientID] = true
-		if len(LobbyMap[lobbyID].UsersFinished) >= LobbyMap[lobbyID].NumPlayers {
+	if l.PlayerMap[clientID].Lives <= 0 || l.CurrentCC == cc {
+		l.UsersFinished[clientID] = true
+		if len(l.UsersFinished) >= l.NumPlayers {
 			return cc, errors.New("ROUND_FINISHED")
 		}
 	}

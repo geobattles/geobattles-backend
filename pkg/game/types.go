@@ -1,6 +1,7 @@
 package game
 
 import (
+	"sync"
 	"time"
 
 	"github.com/slinarji/go-geo-server/pkg/logic"
@@ -26,6 +27,7 @@ type Lobby struct {
 	PowerLogs     map[int][]Powerup           `json:"-"`
 	StartTime     time.Time                   `json:"-"`
 	Timer         *time.Timer                 `json:"-"`
+	mu            sync.Mutex                  `json:"-"`
 }
 
 type LobbyConf struct {
