@@ -178,34 +178,38 @@ func (l *Lobby) updateConf(clientID string, conf LobbyConf) error {
 	return nil
 }
 
+func (l *Lobby) getActivePlayers() int {
+	active := 0
+	for _, player := range l.PlayerMap {
+		if player.Connected {
+			active++
+		}
+	}
+	return active
+}
+
 // removes player from lobby, assigns new admin if necessary
 func (l *Lobby) removePlayer(clientID string) {
 	if player, ok := l.PlayerMap[clientID]; ok {
 		player.Connected = false
 	}
 
-	// delete(LobbyMap[lobbyID].PlayerMap, clientID)
-	// LobbyMap[lobbyID].NumPlayers = len(LobbyMap[lobbyID].PlayerMap)
-	// delete from end results
-	// for _, results := range LobbyMap[lobbyID].EndResults {
-	// 	delete(results, clientID)
-	// }
-
 	// if removed player was admin & there are other players left
 	// select one of them as new admin, otherwise make admin empty
 	// if there are no players left delete lobby
-	if l.Admin == clientID {
-		for id := range l.PlayerMap {
-			l.Admin = id
-			break
-		}
-
-	} else if l.NumPlayers == 0 {
+	if l.getActivePlayers() == 0 {
 		slog.Info("Deleting lobby", "lobbyID", l.ID)
 		if l.Timer != nil {
 			l.Timer.Stop()
 		}
 		delete(LobbyMap, l.ID)
+	} else if l.Admin == clientID {
+		for id, player := range l.PlayerMap {
+			if player.Connected {
+				l.Admin = id
+				break
+			}
+		}
 	}
 }
 
@@ -398,7 +402,13 @@ func (l *Lobby) addToResults(clientID string, location logic.Coords, distance fl
 	// if this is last attempt indicate finished and check if everyone has finished
 	if l.PlayerMap[clientID].Lives <= 0 {
 		l.UsersFinished[clientID] = true
-		if len(l.UsersFinished) >= l.NumPlayers {
+		allFinished := true
+		for id, player := range l.PlayerMap {
+			if player.Connected && !l.UsersFinished[id] {
+				allFinished = false
+			}
+		}
+		if allFinished {
 			return score, errors.New("ROUND_FINISHED")
 		}
 	}
@@ -437,7 +447,13 @@ func (l *Lobby) processCountryGuess(clientID string, location logic.Coords) (str
 	// if last/correct guess mark user as finished. end round if all users have finished
 	if l.PlayerMap[clientID].Lives <= 0 || l.CurrentCC == cc {
 		l.UsersFinished[clientID] = true
-		if len(l.UsersFinished) >= l.NumPlayers {
+		allFinished := true
+		for id, player := range l.PlayerMap {
+			if player.Connected && !l.UsersFinished[id] {
+				allFinished = false
+			}
+		}
+		if allFinished {
 			return cc, errors.New("ROUND_FINISHED")
 		}
 	}
