@@ -79,6 +79,14 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		lobby.removePlayer(c.ID)
 		c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "LEFT_LOBBY", Payload: models.ResponsePayload{User: c.ID, Lobby: lobby}}
 
+		// end round if remaining players have submitted all guesses
+		if lobby.Active && lobby.checkAllFinished() {
+			lobby.Active = false
+			lobby.Timer.Stop()
+
+			lobby.processRoundEnd()
+		}
+
 	case "update_lobby_settings":
 		slog.Info("update lobby settings", "conf", clientReq.Conf)
 
@@ -129,7 +137,6 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 			lobby.Active = false
 			lobby.Timer.Stop()
 			slog.Info("Stopped timer")
-			c.Hub.Broadcast <- models.ResponseBase{Status: "WRN", Type: err.Error()}
 
 			lobby.processRoundEnd()
 		}

@@ -303,14 +303,13 @@ func (l *Lobby) setupRoundTimer() {
 		// TODO: possible race condition if a user submits final guess at the same time?
 		l.Active = false
 
-		// perhaps move this broadcast to processRoundEnd?
-		l.Hub.Broadcast <- models.ResponseBase{Status: "WRN", Type: "TIMES_UP"}
 		l.processRoundEnd()
 	})
 }
 
 // processes bonus points at round and / or game end
 func (l *Lobby) processRoundEnd() {
+	l.Hub.Broadcast <- models.ResponseBase{Status: "WRN", Type: "ROUND_FINISHED"}
 	l.processBonus()
 	l.processPowerups()
 	l.processTotal()
@@ -402,17 +401,21 @@ func (l *Lobby) addToResults(clientID string, location logic.Coords, distance fl
 	// if this is last attempt indicate finished and check if everyone has finished
 	if l.PlayerMap[clientID].Lives <= 0 {
 		l.UsersFinished[clientID] = true
-		allFinished := true
-		for id, player := range l.PlayerMap {
-			if player.Connected && !l.UsersFinished[id] {
-				allFinished = false
-			}
-		}
-		if allFinished {
+
+		if l.checkAllFinished() {
 			return score, errors.New("ROUND_FINISHED")
 		}
 	}
 	return score, nil
+}
+
+func (l *Lobby) checkAllFinished() bool {
+	for id, player := range l.PlayerMap {
+		if player.Connected && !l.UsersFinished[id] {
+			return false
+		}
+	}
+	return true
 }
 
 // processes submitted guess in mode 2 (country guessing)
@@ -447,13 +450,8 @@ func (l *Lobby) processCountryGuess(clientID string, location logic.Coords) (str
 	// if last/correct guess mark user as finished. end round if all users have finished
 	if l.PlayerMap[clientID].Lives <= 0 || l.CurrentCC == cc {
 		l.UsersFinished[clientID] = true
-		allFinished := true
-		for id, player := range l.PlayerMap {
-			if player.Connected && !l.UsersFinished[id] {
-				allFinished = false
-			}
-		}
-		if allFinished {
+
+		if l.checkAllFinished() {
 			return cc, errors.New("ROUND_FINISHED")
 		}
 	}
