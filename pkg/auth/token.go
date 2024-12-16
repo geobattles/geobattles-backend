@@ -22,7 +22,6 @@ type TokenClaims struct {
 }
 
 // initialize token signing key
-// TODO read key from env variable
 func init() {
 	signingKey = os.Getenv("JWT_KEY")
 }

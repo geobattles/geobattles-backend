@@ -53,7 +53,6 @@ const letterBytes = "123456789ABCDEFGHJKLMNPRSTUVWXYZ"
 
 var src = rand.NewSource(time.Now().UnixNano())
 
-// TODO: move to utils
 // Generates n long string (max 12) using 32 different characters from letterBytes
 // src.Int63() generates 63 random bits, we use the last 5 as letterBytes index
 // shift 5 places right & repeat; Simplified #7 from https://stackoverflow.com/a/31832326
