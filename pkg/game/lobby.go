@@ -55,7 +55,7 @@ func CreateLobby(conf LobbyConf) *Lobby {
 		newLobby.Conf.Mode = conf.Mode
 	default:
 		newLobby.Conf.Mode = defaults.Mode
-		if conf.ScoreFactor == 0 || conf.ScoreFactor < defaults.ScoreFactorLow || conf.ScoreFactor > defaults.ScoreFactorHigh {
+		if conf.ScoreFactor < defaults.ScoreFactorLow || conf.ScoreFactor > defaults.ScoreFactorHigh {
 			newLobby.Conf.ScoreFactor = defaults.ScoreFactor
 		} else {
 			newLobby.Conf.ScoreFactor = conf.ScoreFactor
@@ -137,14 +137,14 @@ func (l *Lobby) updateConf(clientID string, conf LobbyConf) error {
 			l.Conf.ScoreFactor = 0
 
 		case 1:
-			if conf.ScoreFactor > defaults.ScoreFactorLow && conf.ScoreFactor < defaults.ScoreFactorHigh {
+			if conf.ScoreFactor >= defaults.ScoreFactorLow && conf.ScoreFactor <= defaults.ScoreFactorHigh {
 				l.Conf.ScoreFactor = conf.ScoreFactor
 			} else {
 				l.Conf.ScoreFactor = defaults.ScoreFactor
 			}
 		}
 	}
-	if conf.ScoreFactor > defaults.ScoreFactorLow && conf.ScoreFactor < defaults.ScoreFactorHigh {
+	if conf.ScoreFactor >= defaults.ScoreFactorLow && conf.ScoreFactor <= defaults.ScoreFactorHigh {
 		l.Conf.ScoreFactor = conf.ScoreFactor
 	}
 	if conf.Powerups != nil && len(*conf.Powerups) == 2 {
