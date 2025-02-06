@@ -72,7 +72,7 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		return
 	}
 
-	slog.Info("Client message", "message", clientReq)
+	slog.Debug("Client message", "message", clientReq)
 
 	switch clientReq.Cmd {
 	case "disconnect":
@@ -108,7 +108,7 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		}
 
 	case "use_powerup":
-		slog.Info("use powerup", "clientID", c.ID, "powerup", clientReq.Powerup)
+		slog.Debug("use powerup", "clientID", c.ID, "powerup", clientReq.Powerup)
 		err := lobby.usePowerup(c.ID, clientReq.Powerup)
 
 		if err != nil {
@@ -118,7 +118,7 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		}
 
 	case "submit_location":
-		slog.Info("submit location", "location", *clientReq.Loc)
+		slog.Debug("submit location", "location", *clientReq.Loc)
 		_, _, err := lobby.submitResult(c.ID, *clientReq.Loc)
 
 		if err != nil && err.Error() != "ROUND_FINISHED" {
@@ -136,7 +136,7 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		if err != nil && err.Error() == "ROUND_FINISHED" {
 			lobby.Active = false
 			lobby.Timer.Stop()
-			slog.Info("Stopped timer")
+			slog.Debug("Stopped timer")
 
 			lobby.processRoundEnd()
 		}
@@ -153,7 +153,7 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		c.Send <- models.ResponseBase{Status: "OK", Type: "PONG"}
 
 	default:
-		slog.Info("echo message", "message", clientReq)
+		slog.Debug("echo message", "message", clientReq)
 		c.Send <- clientReq
 	}
 }

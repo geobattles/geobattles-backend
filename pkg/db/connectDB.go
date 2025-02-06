@@ -22,7 +22,7 @@ func ConnectDB() {
 		os.Getenv("DB_PASSWORD"),
 	)
 
-	slog.Info("Connecting to DB", "dsn", dsn)
+	slog.Debug("Connecting to DB", "dsn", dsn)
 
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
@@ -34,5 +34,5 @@ func ConnectDB() {
 
 	DB.AutoMigrate(&models.User{})
 
-	slog.Info("Migrated DB schema")
+	slog.Debug("Migrated DB schema")
 }

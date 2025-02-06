@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -30,8 +31,26 @@ func init() {
 	// in docker we just use ENV variables and this WILL throw an error
 	err := godotenv.Load()
 	if err != nil {
-		slog.Info("Error loading .env file")
+		slog.Warn("Error loading .env file")
 	}
+
+	logLevel := os.Getenv("LOG_LEVEL")
+
+	var lvl slog.Level
+	switch logLevel {
+	case "DEBUG":
+		lvl = slog.LevelDebug
+	case "WARN":
+		lvl = slog.LevelWarn
+	case "ERROR":
+		lvl = slog.LevelError
+	default:
+		lvl = slog.LevelInfo
+	}
+
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: lvl,
+	})))
 
 	db.ConnectDB()
 

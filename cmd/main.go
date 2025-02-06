@@ -45,7 +45,7 @@ var countryDB struct {
 var CountryList []string
 
 func InitCountryDB() {
-	slog.Info("Populating countriesDB")
+	slog.Debug("Populating countriesDB")
 	b, _ := os.ReadFile("assets/countryDB.json")
 	if err := json.Unmarshal(b, &countryDB); err != nil {
 		slog.Error("Error reading countryDB.json", "error", err)
@@ -264,7 +264,7 @@ func main() {
 					}
 					time.Sleep(200 * time.Millisecond)
 					loc, status = logic.CheckStreetViewExists(pt, polygon.Radius)
-					slog.Info("api check: ", "point", pt, "location", loc, "status", status)
+					slog.Debug("api check: ", "point", pt, "location", loc, "status", status)
 					failsafe++
 					apiAttempt++
 				}

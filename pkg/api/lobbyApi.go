@@ -15,7 +15,7 @@ func ServeGetLobby(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(game.LobbyMap)
-	slog.Info("Sent lobby list")
+	slog.Debug("Sent lobby list")
 }
 
 func ServeCreateLobby(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +41,7 @@ func ServeCreateLobby(w http.ResponseWriter, r *http.Request) {
 func ServeDeleteLobby(w http.ResponseWriter, r *http.Request) {
 
 	id := r.URL.Query().Get("id")
-	slog.Info("!! Delete lobby NOT implemented!!", "lobbyId", id)
+	slog.Warn("!! Delete lobby NOT implemented!!", "lobbyId", id)
 	// delete(lobby.LobbyMap, id)
 
 	w.WriteHeader(http.StatusOK)
@@ -54,7 +54,7 @@ func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := ctx.Value("uid").(string)
 	displayName := ctx.Value("displayname").(string)
-	slog.Info("WebSocket Endpoint Hit", "lobby ID", lobbyID, "uid", uid, " name", displayName)
+	slog.Debug("WebSocket Endpoint Hit", "lobby ID", lobbyID, "uid", uid, " name", displayName)
 
 	// only connect to ws if lobby exists
 	if lobby, ok := game.LobbyMap[lobbyID]; ok {

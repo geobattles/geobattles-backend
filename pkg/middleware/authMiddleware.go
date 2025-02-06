@@ -29,7 +29,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		slog.Info("Auth middleware", "header", r.Header)
+		slog.Debug("Auth middleware", "header", r.Header)
 
 		ctx := r.Context()
 		token := r.Header.Get("Authorization")
@@ -70,7 +70,7 @@ func SocketAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 		token := strings.TrimSpace(protocols[1])
 
-		slog.Info("Socket auth middleware", "TOKEN", token)
+		slog.Debug("Socket auth middleware", "TOKEN", token)
 
 		ctx := r.Context()
 

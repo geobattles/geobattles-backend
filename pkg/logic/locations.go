@@ -73,10 +73,10 @@ func RndLocation(countryList []string, totalSize float64) (Coords, string) {
 
 		for polyOK := true; polyOK; polyOK = !polygonContains(polygon.Rings, pt) {
 			pt = RndPointWithinBox(bbox)
-			slog.Info("Check if polygon contains", "point", pt, "contains", polygonContains(polygon.Rings, pt))
+			slog.Debug("Check if polygon contains", "point", pt, "contains", polygonContains(polygon.Rings, pt))
 		}
 		loc, status = CheckStreetViewExists(pt, polygon.Radius)
-		slog.Info("api check: ", "location", loc, "status", status)
+		slog.Debug("api check: ", "location", loc, "status", status)
 		failCount++
 	}
 	return loc, ccode
@@ -86,11 +86,11 @@ func RndLocation(countryList []string, totalSize float64) (Coords, string) {
 // returns random area name within random country
 func SelectRndArea(countryList []string, totalSize float64) (Polygon, string) {
 	ccode := SelectRandomCountry(countryList, totalSize)
-	slog.Info("Selected country", "cc", ccode)
+	slog.Debug("Selected country", "cc", ccode)
 	rnd := rand.Intn(countryDB.Countries[ccode].Areas.InnerSize)
 	for area, polygon := range countryDB.Countries[ccode].Areas.SearchArea {
 		if rnd <= polygon.Size {
-			slog.Info("Selected polygon", "area", area)
+			slog.Debug("Selected polygon", "area", area)
 			return *polygon, ccode
 		}
 		rnd -= polygon.Size

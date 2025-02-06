@@ -31,7 +31,7 @@ func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
 		fmt.Fprintf(w, "%s", err.Error())
 		slog.Error(err.Error())
 	}
-	slog.Info("Sent response", "data", data)
+	slog.Debug("Sent response", "data", data)
 }
 
 // send response with given error code and message

@@ -35,7 +35,7 @@ type Client struct {
 // goroutine to read messages from client
 func (c *Client) Read() {
 	defer func() {
-		slog.Info("Defer read")
+		slog.Debug("Defer read")
 		c.MessageHandler(c, []byte("{\"command\":\"disconnect\"}"))
 		c.Hub.Unregister <- c
 		// go func() {
@@ -54,9 +54,8 @@ func (c *Client) Read() {
 			slog.Warn("Error reading message", "error", err.Error())
 			return
 		}
-		slog.Info("Received message", "message", string(message))
+		slog.Debug("Received message", "message", string(message))
 		if c.MessageHandler != nil {
-			slog.Info("Calling message handler")
 			c.MessageHandler(c, message)
 		}
 	}
@@ -65,7 +64,7 @@ func (c *Client) Read() {
 func (c *Client) Write() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
-		slog.Info("Defer write")
+		slog.Debug("Defer write")
 		ticker.Stop()
 		c.Conn.Close()
 	}()
@@ -76,7 +75,7 @@ func (c *Client) Write() {
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
-				slog.Info("Hub closed channel")
+				slog.Debug("Hub closed channel")
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
@@ -87,7 +86,7 @@ func (c *Client) Write() {
 
 		case <-ticker.C:
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
-			slog.Info("Sending ping")
+			slog.Debug("Sending ping")
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				slog.Error("Error sending ping", "error", err)
 				return

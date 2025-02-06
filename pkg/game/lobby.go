@@ -18,7 +18,7 @@ import (
 var LobbyMap = make(map[string]*Lobby)
 
 func init() {
-	slog.Info("Creating initial lobby")
+	slog.Debug("Creating initial lobby")
 	hub := websocket.NewHub()
 	go hub.Start()
 	LobbyMap["U4YPR6"] = &Lobby{ID: "U4YPR6", Hub: hub, Conf: &LobbyConf{Name: "prvi lobby", Mode: 1, MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}, Powerups: defaults.Powerups(), PlaceBonus: defaults.PlaceBonus(), DynLives: defaults.DynLives()}, NumPlayers: 0, PlayerMap: make(map[string]*Player), RawResults: make(map[int]map[string][]Result), EndResults: make(map[int]map[string]*Result), TotalResults: make(map[string]*Result), PowerLogs: make(map[int][]Powerup)}
@@ -124,7 +124,7 @@ func (l *Lobby) updateConf(clientID string, conf LobbyConf) error {
 	if l.CurrentRound != 0 {
 		return errors.New("GAME_IN_PROGRESS")
 	}
-	slog.Info("Updating lobby settings", "new settings", conf)
+	slog.Debug("Updating lobby settings", "new settings", conf)
 
 	if conf.Name != "" {
 		l.Conf.Name = conf.Name
@@ -223,7 +223,7 @@ func (l *Lobby) startGame(clientID string) (*models.ResponsePayload, error) {
 
 	location, ccode := logic.RndLocation(l.Conf.CCList, l.CCSize)
 	l.setupNewRound(location, ccode)
-	slog.Info("Start game timer")
+	slog.Debug("Start game timer")
 	message := models.ResponsePayload{Loc: &location, Players: l.PlayerMap, PowerLog: l.PowerLogs[l.CurrentRound]}
 
 	// l.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "START_ROUND", Payload: message}
@@ -299,7 +299,7 @@ func (l *Lobby) setupNewRound(location logic.Coords, ccode string) {
 func (l *Lobby) setupRoundTimer() {
 	// 3 sec added to timer for frontend countdown
 	l.Timer = time.AfterFunc(time.Second*time.Duration(l.Conf.RoundTime+3), func() {
-		slog.Info("Times up")
+		slog.Debug("Times up")
 		// TODO: possible race condition if a user submits final guess at the same time?
 		l.Active = false
 
@@ -394,7 +394,7 @@ func (l *Lobby) addToResults(clientID string, location logic.Coords, distance fl
 	l.PlayerMap[clientID].Lives -= 1
 	l.RawResults[l.CurrentRound][clientID] = append(l.RawResults[l.CurrentRound][clientID], Result{Loc: location, Dist: distance, BaseScore: score, Lives: l.PlayerMap[clientID].Lives, Attempt: len(l.RawResults[l.CurrentRound][clientID]) + 1})
 	if l.EndResults[l.CurrentRound][clientID].Dist > distance || l.EndResults[l.CurrentRound][clientID].Attempt == 0 {
-		slog.Info("New best result")
+		slog.Debug("New best result")
 		l.EndResults[l.CurrentRound][clientID] = &Result{Loc: location, Dist: distance, BaseScore: score, Attempt: len(l.RawResults[l.CurrentRound][clientID])}
 	}
 

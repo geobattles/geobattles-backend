@@ -61,7 +61,7 @@ func (l *Lobby) processPowerups() error {
 		return l.PowerLogs[l.CurrentRound][p].Type < l.PowerLogs[l.CurrentRound][q].Type
 	})
 	for _, power := range l.PowerLogs[l.CurrentRound] {
-		slog.Info("Processing powerup", "Power", power)
+		slog.Debug("Processing powerup", "Power", power)
 		switch power.Type {
 		case 0:
 			// TODO: dont stack with placement bonus
@@ -76,12 +76,12 @@ func (l *Lobby) processPowerups() error {
 			resultTarget := l.EndResults[l.CurrentRound][power.Target]
 			// if source player left dont process anything
 			if _, okS := l.PlayerMap[power.Source]; !okS {
-				slog.Info("Player left, dont do duel")
+				slog.Debug("Player left, dont do duel")
 				break
 			}
 			// if target left refund source and dont process anything
 			if _, okT := l.PlayerMap[power.Source]; !okT {
-				slog.Info("Player left, dont do duel, refund player")
+				slog.Debug("Player left, dont do duel, refund player")
 				l.PlayerMap[power.Source].Powerups[1] = true
 				break
 			}
@@ -117,7 +117,7 @@ func (l *Lobby) processPowerups() error {
 // depends on the number of players; with 2 players only first gets 10%
 func (l *Lobby) processBonus() error {
 	if !*l.Conf.PlaceBonus {
-		slog.Info("Bonus disabled")
+		slog.Debug("Bonus disabled")
 		return errors.New("BONUS_DISABLED")
 	}
 	var playerOrder []string
@@ -138,7 +138,7 @@ func (l *Lobby) processBonus() error {
 			return l.EndResults[l.CurrentRound][playerOrder[i]].Dist < l.EndResults[l.CurrentRound][playerOrder[j]].Dist
 		}
 	})
-	slog.Info("Player order", "playerOrder", playerOrder)
+	slog.Debug("Player order", "playerOrder", playerOrder)
 	switch num := len(playerOrder); {
 	case num == 2:
 		l.EndResults[l.CurrentRound][playerOrder[0]].PlaceScore = int(float64(l.EndResults[l.CurrentRound][playerOrder[0]].BaseScore) * 0.1)
