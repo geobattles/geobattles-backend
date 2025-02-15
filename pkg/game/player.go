@@ -72,7 +72,13 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 
 	lobby.NumPlayers = len(lobby.PlayerMap)
 
-	hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "JOINED_LOBBY", Payload: models.ResponsePayload{User: client.ID, Lobby: lobby}}
+	hub.Broadcast <- models.ResponseBase{
+		Status: "OK", Type: "JOINED_LOBBY",
+		Payload: models.ResponsePayload{
+			User:  client.ID,
+			Lobby: lobby,
+		},
+	}
 }
 
 func PlayerMessageHandler(c *websocket.Client, message []byte) {
@@ -86,7 +92,10 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 	err := json.Unmarshal(message, &clientReq)
 	if err != nil {
 		slog.Error("Error unmarshalling client request: ", "error", err)
-		c.Send <- models.ResponseBase{Status: "ERR", Type: "INVALID_REQUEST"}
+		c.Send <- models.ResponseBase{
+			Status: "ERR",
+			Type:   "INVALID_REQUEST",
+		}
 		return
 	}
 
@@ -95,7 +104,14 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 	switch clientReq.Cmd {
 	case "disconnect":
 		lobby.removePlayer(c.ID)
-		c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "LEFT_LOBBY", Payload: models.ResponsePayload{User: c.ID, Lobby: lobby}}
+		c.Hub.Broadcast <- models.ResponseBase{
+			Status: "OK",
+			Type:   "LEFT_LOBBY",
+			Payload: models.ResponsePayload{
+				User:  c.ID,
+				Lobby: lobby,
+			},
+		}
 
 		// end round if remaining players have submitted all guesses
 		if lobby.Active && lobby.checkAllFinished() {
@@ -110,9 +126,15 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 
 		err := lobby.updateConf(c.ID, clientReq.Conf)
 		if err != nil {
-			c.Send <- models.ResponseBase{Status: "ERR", Type: err.Error()}
+			c.Send <- models.ResponseBase{
+				Status: "ERR",
+				Type:   err.Error(),
+			}
 		} else {
-			c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "UPDATED_LOBBY", Payload: models.ResponsePayload{Lobby: lobby}}
+			c.Hub.Broadcast <- models.ResponseBase{
+				Status:  "OK",
+				Type:    "UPDATED_LOBBY",
+				Payload: models.ResponsePayload{Lobby: lobby}}
 		}
 
 	case "start":
@@ -120,9 +142,16 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		msg, err := lobby.startGame(c.ID)
 
 		if err != nil {
-			c.Send <- models.ResponseBase{Status: "ERR", Type: err.Error()}
+			c.Send <- models.ResponseBase{
+				Status: "ERR",
+				Type:   err.Error(),
+			}
 		} else {
-			c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "START_ROUND", Payload: msg}
+			c.Hub.Broadcast <- models.ResponseBase{
+				Status:  "OK",
+				Type:    "START_ROUND",
+				Payload: msg,
+			}
 		}
 
 	case "use_powerup":
@@ -130,9 +159,15 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		err := lobby.usePowerup(c.ID, clientReq.Powerup)
 
 		if err != nil {
-			c.Send <- models.ResponseBase{Status: "ERR", Type: err.Error()}
+			c.Send <- models.ResponseBase{
+				Status: "ERR",
+				Type:   err.Error(),
+			}
 		} else {
-			c.Send <- models.ResponseBase{Status: "OK", Type: "POWERUP_USED"}
+			c.Send <- models.ResponseBase{
+				Status: "OK",
+				Type:   "POWERUP_USED",
+			}
 		}
 
 	case "submit_location":
@@ -140,14 +175,21 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		_, _, err := lobby.submitResult(c.ID, *clientReq.Loc)
 
 		if err != nil && err.Error() != "ROUND_FINISHED" {
-			c.Send <- models.ResponseBase{Status: "ERR", Type: err.Error()}
+			c.Send <- models.ResponseBase{
+				Status: "ERR",
+				Type:   err.Error(),
+			}
 			break
 		}
 		msg := models.ResponsePayload{
 			User:     c.ID,
 			GuessRes: &lobby.RawResults[lobby.CurrentRound][c.ID][len(lobby.RawResults[lobby.CurrentRound][c.ID])-1],
 		}
-		c.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "NEW_RESULT", Payload: msg}
+		c.Hub.Broadcast <- models.ResponseBase{
+			Status:  "OK",
+			Type:    "NEW_RESULT",
+			Payload: msg,
+		}
 
 		// if round is finished notify lobby
 		// what does this do??
@@ -162,13 +204,26 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 	case "loc_to_cc":
 		cc, err := reverse.ReverseGeocode(clientReq.Loc.Lng, clientReq.Loc.Lat)
 		if err != nil {
-			c.Send <- models.ResponseBase{Status: "ERR", Type: err.Error()}
+			c.Send <- models.ResponseBase{
+				Status: "ERR",
+				Type:   err.Error(),
+			}
 			break
 		}
-		c.Send <- models.ResponseBase{Status: "OK", Type: "CC", Payload: models.ResponsePayload{CC: cc, Polygon: logic.PolyDB[cc]}}
+		c.Send <- models.ResponseBase{
+			Status: "OK",
+			Type:   "CC",
+			Payload: models.ResponsePayload{
+				CC:      cc,
+				Polygon: logic.PolyDB[cc],
+			},
+		}
 
 	case "ping":
-		c.Send <- models.ResponseBase{Status: "OK", Type: "PONG"}
+		c.Send <- models.ResponseBase{
+			Status: "OK",
+			Type:   "PONG",
+		}
 
 	default:
 		slog.Debug("echo message", "message", clientReq)

@@ -224,9 +224,13 @@ func (l *Lobby) startGame(clientID string) (*models.ResponsePayload, error) {
 	location, ccode := logic.RndLocation(l.Conf.CCList, l.CCSize)
 	l.setupNewRound(location, ccode)
 	slog.Debug("Start game timer")
-	message := models.ResponsePayload{Loc: &location, Players: l.PlayerMap, PowerLog: l.PowerLogs[l.CurrentRound]}
 
-	// l.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "START_ROUND", Payload: message}
+	message := models.ResponsePayload{
+		Loc:      &location,
+		Players:  l.PlayerMap,
+		PowerLog: l.PowerLogs[l.CurrentRound],
+	}
+
 	l.setupRoundTimer()
 	return &message, nil
 }
@@ -333,12 +337,23 @@ func (l *Lobby) processRoundEnd() {
 			TotalResults: l.TotalResults,
 		}
 	}
-	l.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "ROUND_RESULT", Payload: message}
+	l.Hub.Broadcast <- models.ResponseBase{
+		Status:  "OK",
+		Type:    "ROUND_RESULT",
+		Payload: message,
+	}
 
 	// send end of game msg and cleanup lobby
 	if l.CurrentRound >= l.Conf.NumRounds {
-		message := models.ResponsePayload{AllRes: l.RawResults, TotalResults: l.TotalResults}
-		l.Hub.Broadcast <- models.ResponseBase{Status: "OK", Type: "GAME_END", Payload: message}
+		message := models.ResponsePayload{
+			AllRes:       l.RawResults,
+			TotalResults: l.TotalResults,
+		}
+		l.Hub.Broadcast <- models.ResponseBase{
+			Status:  "OK",
+			Type:    "GAME_END",
+			Payload: message,
+		}
 		l.resetLobby()
 	}
 }

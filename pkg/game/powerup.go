@@ -43,7 +43,11 @@ func (l *Lobby) usePowerup(sourceID string, powerup Powerup) error {
 		// notify target player
 		for client := range l.Hub.Clients {
 			if client.ID == powerup.Target {
-				client.Send <- models.ResponseBase{Status: "WRN", Type: "DUEL_FROM", Payload: models.ResponsePayload{User: sourceID}}
+				client.Send <- models.ResponseBase{
+					Status:  "WRN",
+					Type:    "DUEL_FROM",
+					Payload: models.ResponsePayload{User: sourceID},
+				}
 			}
 		}
 
