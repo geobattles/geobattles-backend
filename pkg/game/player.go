@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"log/slog"
+	"time"
 
 	ws "github.com/gorilla/websocket"
 	"github.com/slinarji/go-geo-server/pkg/logic"
@@ -38,6 +39,23 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 	if player, exists := lobby.PlayerMap[clientID]; exists {
 		player.Connected = true
 		player.Name = clientName
+
+		// send data to resume mid round
+		if lobby.Active && lobby.RountTimer.Timer != nil {
+			message := models.ResponsePayload{
+				Loc:           &lobby.CurrentLoc,
+				Players:       lobby.PlayerMap,
+				PowerLog:      lobby.PowerLogs[lobby.CurrentRound],
+				FullRoundRes:  lobby.RawResults[lobby.CurrentRound],
+				TimeRemaining: time.Duration(time.Until(lobby.RountTimer.End).Milliseconds()),
+			}
+			client.Send <- models.ResponseBase{
+				Status:  "OK",
+				Type:    "START_ROUND",
+				Payload: message,
+			}
+		}
+
 	} else {
 		// if there is no lobby admin make this user one
 		if lobby.Admin == "" {
@@ -82,7 +100,7 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		// end round if remaining players have submitted all guesses
 		if lobby.Active && lobby.checkAllFinished() {
 			lobby.Active = false
-			lobby.Timer.Stop()
+			lobby.RountTimer.Timer.Stop()
 
 			lobby.processRoundEnd()
 		}
@@ -135,7 +153,7 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		// what does this do??
 		if err != nil && err.Error() == "ROUND_FINISHED" {
 			lobby.Active = false
-			lobby.Timer.Stop()
+			lobby.RountTimer.Timer.Stop()
 			slog.Debug("Stopped timer")
 
 			lobby.processRoundEnd()

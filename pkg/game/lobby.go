@@ -199,8 +199,8 @@ func (l *Lobby) removePlayer(clientID string) {
 	// if there are no players left delete lobby
 	if l.getActivePlayers() == 0 {
 		slog.Info("Deleting lobby", "lobbyID", l.ID)
-		if l.Timer != nil {
-			l.Timer.Stop()
+		if l.RountTimer.Timer != nil {
+			l.RountTimer.Timer.Stop()
 		}
 		delete(LobbyMap, l.ID)
 	} else if l.Admin == clientID {
@@ -298,13 +298,14 @@ func (l *Lobby) setupNewRound(location logic.Coords, ccode string) {
 // sets up events that fire after round timer expires
 func (l *Lobby) setupRoundTimer() {
 	// 3 sec added to timer for frontend countdown
-	l.Timer = time.AfterFunc(time.Second*time.Duration(l.Conf.RoundTime+3), func() {
+	l.RountTimer.Timer = time.AfterFunc(time.Second*time.Duration(l.Conf.RoundTime+3), func() {
 		slog.Debug("Times up")
 		// TODO: possible race condition if a user submits final guess at the same time?
 		l.Active = false
 
 		l.processRoundEnd()
 	})
+	l.RountTimer.End = time.Now().Add(time.Second * time.Duration(l.Conf.RoundTime+3))
 }
 
 // processes bonus points at round and / or game end

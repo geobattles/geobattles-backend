@@ -26,7 +26,7 @@ type Lobby struct {
 	CCSize        float64                     `json:"-"`
 	PowerLogs     map[int][]Powerup           `json:"-"`
 	StartTime     time.Time                   `json:"-"`
-	Timer         *time.Timer                 `json:"-"`
+	RountTimer    RoundTimer                  `json:"-"`
 	mu            sync.Mutex                  `json:"-"`
 }
 
@@ -73,9 +73,13 @@ type Powerup struct {
 }
 
 type ClientReq struct {
-	Cmd string        `json:"command"`
-	Loc *logic.Coords `json:"location"`
-	//CC      string    `json:"cc,omitempty"`
-	Conf    LobbyConf `json:"conf"`
-	Powerup Powerup   `json:"powerup"`
+	Cmd     string        `json:"command"`
+	Loc     *logic.Coords `json:"location,omitempty"`
+	Conf    LobbyConf     `json:"conf,omitempty"`
+	Powerup Powerup       `json:"powerup,omitempty"`
+}
+
+type RoundTimer struct {
+	Timer *time.Timer
+	End   time.Time
 }
