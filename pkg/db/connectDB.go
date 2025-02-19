@@ -32,7 +32,12 @@ func ConnectDB() {
 
 	slog.Info("Connected to DB")
 
-	DB.AutoMigrate(&models.User{})
+	DB.AutoMigrate(
+		&models.User{},
+		&models.Game{},
+		&models.Round{},
+		&models.Result{},
+	)
 
 	slog.Debug("Migrated DB schema")
 }

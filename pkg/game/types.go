@@ -15,7 +15,7 @@ type Lobby struct {
 	Conf          *LobbyConf                  `json:"conf"`
 	NumPlayers    int                         `json:"numPlayers"`
 	PlayerMap     map[string]*Player          `json:"playerList"`
-	CurrentLoc    *logic.Coords               `json:"-"`
+	CurrentLoc    []*logic.Coords             `json:"-"`
 	CurrentCC     string                      `json:"-"`
 	CurrentRound  int                         `json:"currentRound"`
 	RawResults    map[int]map[string][]Result `json:"results"`

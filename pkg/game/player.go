@@ -43,7 +43,7 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 		// send data to resume mid round
 		if lobby.Active && lobby.RountTimer.Timer != nil {
 			message := models.ResponsePayload{
-				Loc:           &lobby.CurrentLoc,
+				Loc:           &lobby.CurrentLoc[lobby.CurrentRound-1],
 				Players:       lobby.PlayerMap,
 				PowerLog:      lobby.PowerLogs[lobby.CurrentRound],
 				FullRoundRes:  lobby.RawResults[lobby.CurrentRound],

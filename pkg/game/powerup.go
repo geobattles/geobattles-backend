@@ -160,7 +160,9 @@ func (l *Lobby) processBonus() error {
 // processes total score for each player (total score = base + place + double + duel)
 func (l *Lobby) processTotal() error {
 	for player, result := range l.EndResults[l.CurrentRound] {
-		l.TotalResults[player].Total += result.BaseScore + result.PlaceScore + result.DoubleScore + result.DuelScore
+		roundTotal := result.BaseScore + result.PlaceScore + result.DoubleScore + result.DuelScore
+		l.EndResults[l.CurrentRound][player].Total = roundTotal
+		l.TotalResults[player].Total += roundTotal
 	}
 	return nil
 }

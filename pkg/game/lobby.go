@@ -8,6 +8,7 @@ import (
 
 	"github.com/slinarji/go-geo-server/pkg/reverse"
 
+	"github.com/slinarji/go-geo-server/pkg/db"
 	"github.com/slinarji/go-geo-server/pkg/defaults"
 	"github.com/slinarji/go-geo-server/pkg/logic"
 	"github.com/slinarji/go-geo-server/pkg/models"
@@ -252,12 +253,14 @@ cycle:
 
 // resets lobby state for new game
 func (l *Lobby) resetLobby() {
+	l.saveResults()
+
 	l.RawResults = make(map[int]map[string][]Result)
 	l.EndResults = make(map[int]map[string]*Result)
 	l.TotalResults = make(map[string]*Result)
 
 	l.PowerLogs = make(map[int][]Powerup)
-	l.CurrentLoc = nil
+	l.CurrentLoc = make([]*logic.Coords, 0, l.Conf.NumRounds)
 	l.UsersFinished = make(map[string]bool)
 	l.CurrentRound = 0
 	// for _, player := range l.PlayerMap {
@@ -266,11 +269,44 @@ func (l *Lobby) resetLobby() {
 	slog.Info("Lobby reset", "lobby", l)
 }
 
+// save results to db
+func (l *Lobby) saveResults() {
+	rounds := make([]models.Round, l.Conf.NumRounds)
+
+	for roundIdx, roundRes := range l.EndResults {
+		slog.Warn("IDX", "currentLoc", l.CurrentLoc, "idx", roundIdx, "rounds", rounds)
+		rounds[roundIdx-1].Loc = *l.CurrentLoc[roundIdx-1]
+		rounds[roundIdx-1].Results = make([]models.Result, 0, len(roundRes))
+
+		for userID, res := range roundRes {
+			rounds[roundIdx-1].Results = append(rounds[roundIdx-1].Results, models.Result{
+				UserID: userID,
+				Loc:    res.Loc,
+				Dist:   res.Dist,
+				Total:  res.Total,
+			})
+		}
+	}
+
+	game := models.Game{
+		Timestamp: time.Now(),
+		Rounds:    rounds,
+	}
+
+	result := db.DB.Create(&game)
+
+	if result.Error != nil {
+		slog.Error("Error saving game results", "error", result.Error.Error())
+	} else {
+		slog.Info("Saved game results", "gameID", game.ID)
+	}
+}
+
 // sets up lobby for new round and results
 func (l *Lobby) setupNewRound(location logic.Coords, ccode string) {
 	slog.Info("Updating lobby location", "lobbyID", l.ID, "location", location)
 	l.UsersFinished = make(map[string]bool)
-	l.CurrentLoc = &location
+	l.CurrentLoc = append(l.CurrentLoc, &location)
 	if l.Conf.Mode == 2 {
 		l.CurrentCC = ccode
 		l.StartTime = time.Now()
@@ -374,7 +410,7 @@ func scoreDistance(x float64, a float64) int {
 // calculates distance and score and adds them to the results
 func (l *Lobby) submitResult(clientID string, location logic.Coords) (float64, int, error) {
 	// immediately return error if game hasnt started yet, time's up or player has no more attempts left
-	if l.CurrentLoc == nil {
+	if len(l.CurrentLoc) == 0 {
 		return -1, -1, errors.New("GAME_NOT_ACTIVE")
 	}
 	if !l.Active {
@@ -395,7 +431,7 @@ func (l *Lobby) submitResult(clientID string, location logic.Coords) (float64, i
 		_, err := l.processCountryGuess(clientID, location)
 		return 0, 0, err
 	default:
-		distance := logic.CalcDistance(*l.CurrentLoc, location)
+		distance := logic.CalcDistance(*l.CurrentLoc[l.CurrentRound-1], location)
 		score, err := l.addToResults(clientID, location, distance)
 		return distance, score, err
 
