@@ -25,6 +25,7 @@ type response struct {
 
 // writes response with given status code and payload
 func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	err := json.NewEncoder(w).Encode(data)
 	if err != nil {
@@ -36,6 +37,7 @@ func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
 
 // send response with given error code and message
 func ERROR(w http.ResponseWriter, statusCode int, err error) {
+	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
 		JSON(w, statusCode, struct {
 			Error string `json:"error"`
