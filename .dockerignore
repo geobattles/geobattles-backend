@@ -1,5 +1,7 @@
 .editorconfig
 .git
+.github
+.devcontainer
 .env
 AUTHORS.md
 CONTRIBUTING.md
@@ -11,3 +13,4 @@ arm/
 powerpc/
 mips/
 cmd/
+.DS_Store
