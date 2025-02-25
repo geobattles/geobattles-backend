@@ -16,10 +16,21 @@ var DB *gorm.DB
 // initialize connection to the database and migrate models
 func ConnectDB() {
 	var err error
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=db port=5432 sslmode=disable TimeZone=UTC client_encoding=UTF8",
+
+	user := os.Getenv("DB_USER")
+	if user == "" {
+		user = "postgres"
+	}
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		dbName = "db"
+	}
+
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=5432 sslmode=disable TimeZone=UTC client_encoding=UTF8",
 		os.Getenv("DB_HOST"),
-		os.Getenv("DB_USER"),
+		user,
 		os.Getenv("DB_PASSWORD"),
+		dbName,
 	)
 
 	slog.Debug("Connecting to DB", "dsn", dsn)
