@@ -136,3 +136,46 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	JSON(w, http.StatusOK, token)
 }
+
+// updates user password and / or displayname
+func UpdateUser(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	user := models.User{}
+	err = json.Unmarshal(body, &user)
+	if err != nil {
+		ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	ctx := r.Context()
+	uid := ctx.Value("uid").(string)
+	user.ID = uid
+
+	fieldsToUpdate := make([]string, 0, 2)
+	if user.DisplayName != "" {
+		fieldsToUpdate = append(fieldsToUpdate, "DisplayName")
+	}
+	if user.Password != "" {
+		fieldsToUpdate = append(fieldsToUpdate, "Password")
+	}
+
+	if len(fieldsToUpdate) == 0 {
+		ERROR(w, http.StatusBadRequest, fmt.Errorf("nothing to update"))
+		return
+	}
+
+	result := db.DB.Model(&user).Select(fieldsToUpdate).Updates(user)
+
+	if result.Error != nil {
+		ERROR(w, http.StatusConflict, result.Error)
+		return
+	}
+
+	JSON(w, http.StatusOK, nil)
+
+}
