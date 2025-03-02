@@ -40,22 +40,6 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 		player.Connected = true
 		player.Name = clientName
 
-		// send data to resume mid round
-		if lobby.Active && lobby.RountTimer.Timer != nil {
-			message := models.ResponsePayload{
-				Loc:           &lobby.CurrentLoc[lobby.CurrentRound-1],
-				Players:       lobby.PlayerMap,
-				PowerLog:      lobby.PowerLogs[lobby.CurrentRound],
-				FullRoundRes:  lobby.RawResults[lobby.CurrentRound],
-				TimeRemaining: time.Duration(time.Until(lobby.RountTimer.End).Milliseconds()),
-			}
-			client.Send <- models.ResponseBase{
-				Status:  "OK",
-				Type:    "START_ROUND",
-				Payload: message,
-			}
-		}
-
 	} else {
 		// if there is no lobby admin make this user one
 		if lobby.Admin == "" {
@@ -78,6 +62,22 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 			User:  client.ID,
 			Lobby: lobby,
 		},
+	}
+
+	// send data to resume mid round
+	if lobby.Active && lobby.RountTimer.Timer != nil {
+		message := models.ResponsePayload{
+			Loc:           &lobby.CurrentLoc[lobby.CurrentRound-1],
+			Players:       lobby.PlayerMap,
+			PowerLog:      lobby.PowerLogs[lobby.CurrentRound],
+			FullRoundRes:  lobby.RawResults[lobby.CurrentRound],
+			TimeRemaining: time.Duration(time.Until(lobby.RountTimer.End).Milliseconds()),
+		}
+		client.Send <- models.ResponseBase{
+			Status:  "OK",
+			Type:    "REJOIN_ROUND",
+			Payload: message,
+		}
 	}
 }
 
