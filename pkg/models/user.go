@@ -85,3 +85,16 @@ func (guest *Guest) BeforeCreate(tx *gorm.DB) (err error) {
 
 	return nil
 }
+
+// BeforeUpdate GORM hook to handle pre-processing before updating a user in the database
+func (user *User) BeforeUpdate(tx *gorm.DB) (err error) {
+	// Hash the password before updating the record
+	hashedPassword, err := auth.HashPassword(user.Password)
+	if err != nil {
+		return err
+	}
+
+	user.Password = hashedPassword
+
+	return nil
+}
