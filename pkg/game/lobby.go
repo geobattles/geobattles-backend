@@ -18,13 +18,6 @@ import (
 
 var LobbyMap = make(map[string]*Lobby)
 
-func init() {
-	slog.Debug("Creating initial lobby")
-	hub := websocket.NewHub()
-	go hub.Start()
-	LobbyMap["U4YPR6"] = &Lobby{ID: "U4YPR6", Hub: hub, Conf: &LobbyConf{Name: "prvi lobby", Mode: 1, MaxPlayers: 8, ScoreFactor: 100, NumAttempt: 3, NumRounds: 2, RoundTime: 30, CCList: []string{}, Powerups: defaults.Powerups(), PlaceBonus: defaults.PlaceBonus(), DynLives: defaults.DynLives()}, NumPlayers: 0, PlayerMap: make(map[string]*Player), RawResults: make(map[int]map[string][]Result), EndResults: make(map[int]map[string]*Result), TotalResults: make(map[string]*Result), PowerLogs: make(map[int][]Powerup)}
-}
-
 var colorList = [12]string{"#e6194B", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#000075", "#469990", "#9A6324", "#dcbeff", "#800000"}
 
 // validates values and creates new lobby
