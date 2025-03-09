@@ -99,7 +99,7 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		return
 	}
 
-	slog.Debug("Client message", "message", clientReq)
+	slog.Debug("Parsing client msg", "msg", clientReq)
 
 	switch clientReq.Cmd {
 	case "disconnect":
@@ -224,6 +224,10 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 			Status: "OK",
 			Type:   "PONG",
 		}
+
+	case "pong":
+		c.Conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+		slog.Debug("Received pong message")
 
 	default:
 		slog.Debug("echo message", "message", clientReq)

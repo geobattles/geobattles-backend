@@ -12,14 +12,18 @@ const (
 	writeWait = 10 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
+	pongWait = 10 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
+	pingPeriod = 2 * time.Second
 
 	// Maximum message size allowed from peer.
 	maxMessageSize = 1024
 )
+
+type commandMsg struct {
+	Cmd string `json:"command"`
+}
 
 type Client struct {
 	ID string
@@ -38,15 +42,11 @@ func (c *Client) Read() {
 		slog.Debug("Defer read")
 		c.MessageHandler(c, []byte("{\"command\":\"disconnect\"}"))
 		c.Hub.Unregister <- c
-		// go func() {
-		// 	client.Hub.Broadcast <- &models.ClientResp{Status: "OK", Type: "LEFT_LOBBY", User: client.ID, Lobby: lobby.LobbyMap[client.Room]}
-		// }()
 		c.Conn.Close()
 	}()
 
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
 	for {
 		_, message, err := c.Conn.ReadMessage()
@@ -54,6 +54,17 @@ func (c *Client) Read() {
 			slog.Warn("Error reading message", "error", err.Error())
 			return
 		}
+
+		// // Currently handled by c.MessageHandler, might be moved here in the future
+		// // Check if this is a pong message
+		// var cmdMsg commandMsg
+		// if err := json.Unmarshal(message, &cmdMsg); err == nil && cmdMsg.Cmd == "pong" {
+		//     // This is a pong response, reset the deadline
+		//     c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+		//     slog.Debug("Received pong message")
+		//     continue // Skip further processing for pong messages
+		// }
+
 		slog.Debug("Received message", "message", string(message))
 		if c.MessageHandler != nil {
 			c.MessageHandler(c, message)
@@ -87,7 +98,9 @@ func (c *Client) Write() {
 		case <-ticker.C:
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			slog.Debug("Sending ping")
-			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+
+			pingMsg := commandMsg{Cmd: "ping"}
+			if err := c.Conn.WriteJSON(pingMsg); err != nil {
 				slog.Error("Error sending ping", "error", err)
 				return
 			}

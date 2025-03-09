@@ -267,7 +267,6 @@ func (l *Lobby) saveResults() {
 	rounds := make([]models.Round, l.Conf.NumRounds)
 
 	for roundIdx, roundRes := range l.EndResults {
-		slog.Warn("IDX", "currentLoc", l.CurrentLoc, "idx", roundIdx, "rounds", rounds)
 		rounds[roundIdx-1].Loc = *l.CurrentLoc[roundIdx-1]
 		rounds[roundIdx-1].Results = make([]models.Result, 0, len(roundRes))
 
