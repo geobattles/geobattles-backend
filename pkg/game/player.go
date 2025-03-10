@@ -64,6 +64,9 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 		},
 	}
 
+	// TODO: this is a workaround to ensure rejoin is sent after broadcast
+	time.Sleep(200 * time.Millisecond)
+
 	// send data to resume mid round
 	if lobby.Active && lobby.RountTimer.Timer != nil {
 		message := models.ResponsePayload{
