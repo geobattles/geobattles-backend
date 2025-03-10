@@ -3,7 +3,7 @@
 {
 	"name": "Go",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/go:1-1.23-bookworm",
+	"image": "mcr.microsoft.com/devcontainers/go:dev-1.24-bookworm",
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
@@ -15,10 +15,7 @@
 		"ghcr.io/itsmechlark/features/postgresql:1": {
 			"version": "latest"
 		}
-	},
-
-	// Use 'postCreateCommand' to run commands after the container is created.
-	"postStartCommand": "sudo service postgresql start"
+	}
 
 	// Configure tool-specific properties.
 	// "customizations": {},
