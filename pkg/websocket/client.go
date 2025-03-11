@@ -12,10 +12,10 @@ const (
 	writeWait = 10 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 10 * time.Second
+	PongWait = 10 * time.Second
 
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = 2 * time.Second
+	// Send pings to peer with this period. Must be less than PongWait.
+	pingPeriod = 1 * time.Second
 
 	// Maximum message size allowed from peer.
 	maxMessageSize = 1024
@@ -46,7 +46,7 @@ func (c *Client) Read() {
 	}()
 
 	c.Conn.SetReadLimit(maxMessageSize)
-	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.Conn.SetReadDeadline(time.Now().Add(PongWait))
 
 	for {
 		_, message, err := c.Conn.ReadMessage()
@@ -60,7 +60,7 @@ func (c *Client) Read() {
 		// var cmdMsg commandMsg
 		// if err := json.Unmarshal(message, &cmdMsg); err == nil && cmdMsg.Cmd == "pong" {
 		//     // This is a pong response, reset the deadline
-		//     c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+		//     c.Conn.SetReadDeadline(time.Now().Add(PongWait))
 		//     slog.Debug("Received pong message")
 		//     continue // Skip further processing for pong messages
 		// }

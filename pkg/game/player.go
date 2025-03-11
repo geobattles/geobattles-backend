@@ -219,14 +219,8 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 			},
 		}
 
-	case "ping":
-		c.Send <- models.ResponseBase{
-			Status: "OK",
-			Type:   "PONG",
-		}
-
 	case "pong":
-		c.Conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+		c.Conn.SetReadDeadline(time.Now().Add(websocket.PongWait))
 		slog.Debug("Received pong message")
 
 	default:
