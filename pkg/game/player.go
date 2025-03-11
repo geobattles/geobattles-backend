@@ -56,18 +56,15 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 
 	lobby.NumPlayers = len(lobby.PlayerMap)
 
-	hub.Broadcast <- models.ResponseBase{
+	hub.BroadcastMessage(models.ResponseBase{
 		Status: "OK", Type: "JOINED_LOBBY",
 		Payload: models.ResponsePayload{
 			User:  client.ID,
 			Lobby: lobby,
 		},
-	}
+	})
 
-	// TODO: this is a workaround to ensure rejoin is sent after broadcast
-	time.Sleep(200 * time.Millisecond)
-
-	// send data to resume mid round
+	// if round is active send current location to allow client to resume playing
 	if lobby.Active && lobby.RountTimer.Timer != nil {
 		message := models.ResponsePayload{
 			Loc:           &lobby.CurrentLoc[lobby.CurrentRound-1],

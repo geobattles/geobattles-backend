@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"log/slog"
+	"sync"
 )
 
 type Hub struct {
@@ -9,8 +10,10 @@ type Hub struct {
 	Unregister chan *Client
 	Clients    map[*Client]bool
 	Broadcast  chan interface{}
+	mu         sync.Mutex
 }
 
+// Creates a new pool of client connections
 func NewHub() *Hub {
 	return &Hub{
 		Register:   make(chan *Client),
@@ -20,6 +23,17 @@ func NewHub() *Hub {
 	}
 }
 
+// Sends a message to all clients of the hub
+func (hub *Hub) BroadcastMessage(message interface{}) {
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+
+	for client := range hub.Clients {
+		client.Send <- message
+	}
+}
+
+// Starts the hub which handles client connections and broadcasts messages
 func (hub *Hub) Start() {
 	defer func() {
 		slog.Warn("Hub: defer return")
@@ -39,10 +53,7 @@ func (hub *Hub) Start() {
 			}
 
 		case message := <-hub.Broadcast:
-			for client := range hub.Clients {
-				client.Send <- message
-			}
-
+			hub.BroadcastMessage(message)
 		}
 	}
 }
