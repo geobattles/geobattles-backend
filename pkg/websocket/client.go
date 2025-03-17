@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"encoding/json"
 	"log/slog"
 	"time"
 
@@ -55,15 +56,12 @@ func (c *Client) Read() {
 			return
 		}
 
-		// // Currently handled by c.MessageHandler, might be moved here in the future
-		// // Check if this is a pong message
-		// var cmdMsg commandMsg
-		// if err := json.Unmarshal(message, &cmdMsg); err == nil && cmdMsg.Cmd == "pong" {
-		//     // This is a pong response, reset the deadline
-		//     c.Conn.SetReadDeadline(time.Now().Add(PongWait))
-		//     slog.Debug("Received pong message")
-		//     continue // Skip further processing for pong messages
-		// }
+		// Check if this is a pong message
+		var cmdMsg commandMsg
+		if err := json.Unmarshal(message, &cmdMsg); err == nil && cmdMsg.Cmd == "pong" {
+			c.Conn.SetReadDeadline(time.Now().Add(PongWait))
+			continue // Skip further processing for pong messages
+		}
 
 		slog.Debug("Received message", "message", string(message))
 		if c.MessageHandler != nil {
@@ -97,7 +95,6 @@ func (c *Client) Write() {
 
 		case <-ticker.C:
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
-			slog.Debug("Sending ping")
 
 			pingMsg := commandMsg{Cmd: "ping"}
 			if err := c.Conn.WriteJSON(pingMsg); err != nil {

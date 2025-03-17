@@ -219,10 +219,6 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 			},
 		}
 
-	case "pong":
-		c.Conn.SetReadDeadline(time.Now().Add(websocket.PongWait))
-		slog.Debug("Received pong message")
-
 	default:
 		slog.Debug("echo message", "message", clientReq)
 		c.Send <- clientReq
