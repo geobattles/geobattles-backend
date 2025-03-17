@@ -28,7 +28,7 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 		Lobby:          lobby,
 	}
 
-	hub.Register <- client
+	hub.RegisterClient(client)
 
 	slog.Info("Added player to lobby", "lobby map", LobbyMap)
 

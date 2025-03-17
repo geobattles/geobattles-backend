@@ -33,6 +33,15 @@ func (hub *Hub) BroadcastMessage(message interface{}) {
 	}
 }
 
+// Regsiters a new client connection with the hub
+func (hub *Hub) RegisterClient(client *Client) {
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+
+	hub.Clients[client] = true
+	slog.Info("Hub: registered new client", "client", client.ID)
+}
+
 // Starts the hub which handles client connections and broadcasts messages
 func (hub *Hub) Start() {
 	defer func() {
@@ -42,8 +51,7 @@ func (hub *Hub) Start() {
 	for {
 		select {
 		case client := <-hub.Register:
-			slog.Info("Hub: register new client", "client", client.ID)
-			hub.Clients[client] = true
+			hub.RegisterClient(client)
 
 		case client := <-hub.Unregister:
 			slog.Info("Hub: unregister client", "client", client.ID)
