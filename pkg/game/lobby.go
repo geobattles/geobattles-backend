@@ -6,14 +6,14 @@ import (
 	"math"
 	"time"
 
-	"github.com/slinarji/go-geo-server/pkg/reverse"
+	"github.com/geobattles/geobattles-backend/pkg/reverse"
 
-	"github.com/slinarji/go-geo-server/pkg/db"
-	"github.com/slinarji/go-geo-server/pkg/defaults"
-	"github.com/slinarji/go-geo-server/pkg/logic"
-	"github.com/slinarji/go-geo-server/pkg/models"
+	"github.com/geobattles/geobattles-backend/pkg/db"
+	"github.com/geobattles/geobattles-backend/pkg/defaults"
+	"github.com/geobattles/geobattles-backend/pkg/logic"
+	"github.com/geobattles/geobattles-backend/pkg/models"
 
-	"github.com/slinarji/go-geo-server/pkg/websocket"
+	"github.com/geobattles/geobattles-backend/pkg/websocket"
 )
 
 var LobbyMap = make(map[string]*Lobby)

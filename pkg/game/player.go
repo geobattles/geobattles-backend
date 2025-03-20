@@ -5,11 +5,11 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/geobattles/geobattles-backend/pkg/logic"
+	"github.com/geobattles/geobattles-backend/pkg/models"
+	"github.com/geobattles/geobattles-backend/pkg/reverse"
+	"github.com/geobattles/geobattles-backend/pkg/websocket"
 	ws "github.com/gorilla/websocket"
-	"github.com/slinarji/go-geo-server/pkg/logic"
-	"github.com/slinarji/go-geo-server/pkg/models"
-	"github.com/slinarji/go-geo-server/pkg/reverse"
-	"github.com/slinarji/go-geo-server/pkg/websocket"
 )
 
 // adds player as map[id]name to playerlist in lobby

@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"sort"
 
-	"github.com/slinarji/go-geo-server/pkg/models"
+	"github.com/geobattles/geobattles-backend/pkg/models"
 )
 
 // uses given powerup. adds succesfully used powerup to powerlog

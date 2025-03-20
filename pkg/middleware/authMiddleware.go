@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/slinarji/go-geo-server/pkg/api"
-	"github.com/slinarji/go-geo-server/pkg/auth"
+	"github.com/geobattles/geobattles-backend/pkg/api"
+	"github.com/geobattles/geobattles-backend/pkg/auth"
 )
 
 type contextKey string

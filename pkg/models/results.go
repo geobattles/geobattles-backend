@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"github.com/slinarji/go-geo-server/pkg/logic"
+	"github.com/geobattles/geobattles-backend/pkg/logic"
 )
 
 type Game struct {

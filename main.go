@@ -8,11 +8,11 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 
-	"github.com/slinarji/go-geo-server/pkg/api"
-	"github.com/slinarji/go-geo-server/pkg/db"
-	"github.com/slinarji/go-geo-server/pkg/logic"
-	"github.com/slinarji/go-geo-server/pkg/middleware"
-	"github.com/slinarji/go-geo-server/pkg/reverse"
+	"github.com/geobattles/geobattles-backend/pkg/api"
+	"github.com/geobattles/geobattles-backend/pkg/db"
+	"github.com/geobattles/geobattles-backend/pkg/logic"
+	"github.com/geobattles/geobattles-backend/pkg/middleware"
+	"github.com/geobattles/geobattles-backend/pkg/reverse"
 )
 
 func setupRoutes(r *mux.Router) {

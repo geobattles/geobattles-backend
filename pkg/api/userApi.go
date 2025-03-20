@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/slinarji/go-geo-server/pkg/auth"
-	"github.com/slinarji/go-geo-server/pkg/db"
-	"github.com/slinarji/go-geo-server/pkg/models"
+	"github.com/geobattles/geobattles-backend/pkg/auth"
+	"github.com/geobattles/geobattles-backend/pkg/db"
+	"github.com/geobattles/geobattles-backend/pkg/models"
 )
 
 type registerResponse struct {
