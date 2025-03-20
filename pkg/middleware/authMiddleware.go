@@ -11,13 +11,6 @@ import (
 	"github.com/geobattles/geobattles-backend/pkg/auth"
 )
 
-type contextKey string
-
-const (
-	uidKey         contextKey = "uid"
-	displayNameKey contextKey = "displayname"
-)
-
 // authorization middleware. handles cors and validates jwt token
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -42,8 +35,8 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// ctx = context.WithValue(ctx, uidKey, claims.UID)
 		// ctx = context.WithValue(ctx, displayNameKey, claims.DisplayName)
 
-		ctx = context.WithValue(ctx, "uid", claims.UID)
-		ctx = context.WithValue(ctx, "displayname", claims.DisplayName)
+		ctx = context.WithValue(ctx, api.UidKey, claims.UID)
+		ctx = context.WithValue(ctx, api.DisplayNameKey, claims.DisplayName)
 
 		next(w, r.WithContext(ctx))
 	}
@@ -82,8 +75,8 @@ func SocketAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// ctx = context.WithValue(ctx, uidKey, claims.UID)
 		// ctx = context.WithValue(ctx, displayNameKey, claims.DisplayName)
 
-		ctx = context.WithValue(ctx, "uid", claims.UID)
-		ctx = context.WithValue(ctx, "displayname", claims.DisplayName)
+		ctx = context.WithValue(ctx, api.UidKey, claims.UID)
+		ctx = context.WithValue(ctx, api.DisplayNameKey, claims.DisplayName)
 
 		next(w, r.WithContext(ctx))
 	}
