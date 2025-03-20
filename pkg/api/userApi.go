@@ -23,6 +23,13 @@ type response struct {
 	Status string `json:"status,omitempty"`
 }
 
+type contextKey string
+
+const (
+	UidKey         contextKey = "uid"
+	DisplayNameKey contextKey = "displayname"
+)
+
 // writes response with given status code and payload
 func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
@@ -153,7 +160,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	uid := ctx.Value("uid").(string)
+	uid := ctx.Value(UidKey).(string)
 	user.ID = uid
 
 	fieldsToUpdate := make([]string, 0, 2)

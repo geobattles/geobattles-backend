@@ -52,8 +52,8 @@ func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 	lobbyID := r.URL.Query().Get("id")
 
 	ctx := r.Context()
-	uid := ctx.Value("uid").(string)
-	displayName := ctx.Value("displayname").(string)
+	uid := ctx.Value(UidKey).(string)
+	displayName := ctx.Value(DisplayNameKey).(string)
 	slog.Debug("WebSocket Endpoint Hit", "lobby ID", lobbyID, "uid", uid, " name", displayName)
 
 	// only connect to ws if lobby exists
