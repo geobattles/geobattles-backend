@@ -16,15 +16,15 @@ import (
 )
 
 func setupRoutes(r *mux.Router) {
-	r.HandleFunc("/register/user", middleware.Cors(api.RegisterUser)).Methods("POST", "OPTIONS")       // register user
-	r.HandleFunc("/register/guest", middleware.Cors(api.RegisterGuest)).Methods("POST", "OPTIONS")     // register guest
-	r.HandleFunc("/login", middleware.Cors(api.LoginUser)).Methods("POST", "OPTIONS")                  // login user
-	r.HandleFunc("/refresh", middleware.Cors(api.RefreshToken)).Methods("POST", "OPTIONS")             // refresh access token
-	r.HandleFunc("/updateUser", middleware.AuthMiddleware(api.UpdateUser)).Methods("POST", "OPTIONS")  // update user password / displayname
-	r.HandleFunc("/countryList", middleware.Cors(api.ServeCountryList)).Methods("GET", "OPTIONS")      // send list of available countries
-	r.HandleFunc("/lobby", middleware.Cors(api.ServeGetLobby)).Methods("GET", "OPTIONS")               // got list of all lobbies
-	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeCreateLobby)).Methods("POST", "OPTIONS") // create lobby
-	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeDeleteLobby)).Methods("DELETE")          // delete lobby
+	r.HandleFunc("/auth/register/user", middleware.Cors(api.RegisterUser)).Methods("POST", "OPTIONS")   // register user
+	r.HandleFunc("/auth/register/guest", middleware.Cors(api.RegisterGuest)).Methods("POST", "OPTIONS") // register guest
+	r.HandleFunc("/auth/login", middleware.Cors(api.LoginUser)).Methods("POST", "OPTIONS")              // login user
+	r.HandleFunc("/auth/refresh", middleware.Cors(api.RefreshToken)).Methods("POST", "OPTIONS")         // refresh access token
+	r.HandleFunc("/updateUser", middleware.AuthMiddleware(api.UpdateUser)).Methods("POST", "OPTIONS")   // update user password / displayname
+	r.HandleFunc("/countryList", middleware.Cors(api.ServeCountryList)).Methods("GET", "OPTIONS")       // send list of available countries
+	r.HandleFunc("/lobby", middleware.Cors(api.ServeGetLobby)).Methods("GET", "OPTIONS")                // got list of all lobbies
+	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeCreateLobby)).Methods("POST", "OPTIONS")  // create lobby
+	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeDeleteLobby)).Methods("DELETE")           // delete lobby
 	r.HandleFunc("/lobbySocket", middleware.SocketAuthMiddleware(api.ServeLobbySocket))
 }
 
