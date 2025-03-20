@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/slinarji/go-geo-server/pkg/game"
-	"github.com/slinarji/go-geo-server/pkg/websocket"
+	"github.com/geobattles/geobattles-backend/pkg/game"
+	"github.com/geobattles/geobattles-backend/pkg/websocket"
 )
 
 func ServeGetLobby(w http.ResponseWriter, r *http.Request) {

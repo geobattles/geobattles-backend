@@ -26,7 +26,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/slinarji/go-geo-server/pkg/logic"
+	"github.com/geobattles/geobattles-backend/pkg/logic"
 
 	"github.com/joho/godotenv"
 )

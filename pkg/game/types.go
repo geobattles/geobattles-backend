@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/slinarji/go-geo-server/pkg/logic"
-	"github.com/slinarji/go-geo-server/pkg/websocket"
+	"github.com/geobattles/geobattles-backend/pkg/logic"
+	"github.com/geobattles/geobattles-backend/pkg/websocket"
 )
 
 type Lobby struct {

@@ -1,4 +1,4 @@
-module github.com/slinarji/go-geo-server
+module github.com/geobattles/geobattles-backend
 
 go 1.24
 

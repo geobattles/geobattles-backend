@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/slinarji/go-geo-server/pkg/logic"
+	"github.com/geobattles/geobattles-backend/pkg/logic"
 )
 
 func ServeCountryList(w http.ResponseWriter, r *http.Request) {

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/slinarji/go-geo-server/pkg/auth"
-	"github.com/slinarji/go-geo-server/pkg/logic"
+	"github.com/geobattles/geobattles-backend/pkg/auth"
+	"github.com/geobattles/geobattles-backend/pkg/logic"
 	"gorm.io/gorm"
 )
 

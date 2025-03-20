@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/slinarji/go-geo-server/pkg/models"
+	"github.com/geobattles/geobattles-backend/pkg/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

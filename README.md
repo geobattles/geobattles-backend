@@ -18,7 +18,7 @@ docker run -d -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgrespwd -e POST
 _Configure environment variables or add them to .env file. See example.env_
 
 ```
-git clone https://github.com/slinarji/go-geo-server
+git clone https://github.com/geobattles/geobattles-backend
 cd go-geo-server
 go get .
 go run .
