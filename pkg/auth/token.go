@@ -1,24 +1,38 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 var signingKey string
 
-// token object containing jwt token and its expiry
-type Token struct {
-	Auth_token string
-	Expiry     int64
+const (
+	accessTokenValidity  = time.Minute * 15   // 15 minutes
+	refreshTokenValidity = time.Hour * 24 * 7 // 7 days
+)
+
+type TokenPair struct {
+	AccessToken   string
+	RefreshToken  string
+	AccessExpiry  int64
+	RefreshExpiry int64
 }
 
-type TokenClaims struct {
-	UID         interface{}
-	DisplayName interface{}
+type AccessClaims struct {
+	UserName    string `json:"user_name"`
+	DisplayName string `json:"display_name"`
+	IsGuest     bool   `json:"guest"`
+	jwt.RegisteredClaims
+}
+
+type RefreshClaims struct {
+	jwt.RegisteredClaims
 }
 
 // initialize token signing key
@@ -27,52 +41,106 @@ func init() {
 }
 
 // create jwt with user id and expiry
-func CreateToken(uID string, userName string, displayName string, isGuest bool) (Token, error) {
-	claims := jwt.MapClaims{}
-	claims["uid"] = uID
-	claims["user_name"] = userName
-	claims["display_name"] = displayName
-	claims["guest"] = isGuest
+func CreateTokenPair(uID string, userName string, displayName string, isGuest bool) (TokenPair, error) {
+	accessExpiry := time.Now().UTC().Add(accessTokenValidity)
+	accessToken, err := createAccessToken(uID, userName, displayName, isGuest, accessExpiry)
+	if err != nil {
+		return TokenPair{}, err
+	}
 
-	// set token expiry 365d from creation TODO: reduce and implement token refresh
-	expiry := time.Now().UTC().Add(time.Hour * 24 * 365).Unix()
-	claims["exp"] = expiry
+	refreshExpiry := time.Now().UTC().Add(refreshTokenValidity)
+	tokenID := uuid.NewString() // Generate unique ID for this token
+	refreshToken, err := createRefreshToken(uID, tokenID, refreshExpiry)
+	if err != nil {
+		return TokenPair{}, err
+	}
+
+	return TokenPair{
+		AccessToken:   accessToken,
+		RefreshToken:  refreshToken,
+		AccessExpiry:  accessExpiry.Unix(),
+		RefreshExpiry: refreshExpiry.Unix(),
+	}, nil
+}
+
+// Create signed short lived access token with user claims
+func createAccessToken(uID string, userName string, displayName string, isGuest bool, expiry time.Time) (string, error) {
+	claims := AccessClaims{
+		UserName:    userName,
+		DisplayName: displayName,
+		IsGuest:     isGuest,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   uID,
+			ExpiresAt: jwt.NewNumericDate(expiry),
+		},
+	}
 
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	// sign token using symetric cypher
 	signed, err := t.SignedString([]byte(signingKey))
 	if err != nil {
-		return Token{}, err
+		return "", err
 	}
 
-	return Token{
-		Auth_token: signed,
-		Expiry:     expiry,
-	}, nil
+	return signed, nil
+}
+
+// Create signed long lived refresh token with limited claims
+func createRefreshToken(uID string, tokenID string, expiry time.Time) (string, error) {
+	claims := RefreshClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   uID,
+			ExpiresAt: jwt.NewNumericDate(expiry),
+			ID:        tokenID,
+		},
+	}
+
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	// sign token using symetric cypher
+	signed, err := t.SignedString([]byte(signingKey))
+	if err != nil {
+		return "", err
+	}
+
+	return signed, nil
 }
 
 // validate jwt and return users uid, throws error if token has expired
-func ValidateToken(token string) (*TokenClaims, error) {
-	// parse token and validate signing method
-	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
-		}
+func ValidateAccessToken(token string) (*AccessClaims, error) {
+	parsedToken, err := jwt.ParseWithClaims(token, &AccessClaims{}, func(t *jwt.Token) (interface{}, error) {
 		return []byte(signingKey), nil
-	})
+	}, jwt.WithLeeway(time.Second*10), jwt.WithValidMethods([]string{"HS256"}))
 
-	if err != nil {
-		return nil, fmt.Errorf("validate: %w", err)
+	switch {
+	case parsedToken.Valid:
+		if claims, ok := parsedToken.Claims.(*AccessClaims); ok {
+			return claims, nil
+		} else {
+			return nil, errors.New("error parsing claims")
+		}
+	case errors.Is(err, jwt.ErrTokenExpired):
+		return nil, fmt.Errorf("expired")
+	default:
+		return nil, fmt.Errorf("error parsing token")
 	}
+}
 
-	claims, ok := parsedToken.Claims.(jwt.MapClaims)
-	if !ok || !parsedToken.Valid {
-		return nil, fmt.Errorf("invalid token")
-	}
-	// check if token has expired
-	if int64(claims["exp"].(float64)) < time.Now().UTC().Unix() {
-		return nil, fmt.Errorf("token expired")
-	}
+// validate jwt and return users uid, throws error if token has expired
+func ValidateRefreshToken(token string) (*RefreshClaims, error) {
+	parsedToken, err := jwt.ParseWithClaims(token, &RefreshClaims{}, func(t *jwt.Token) (interface{}, error) {
+		return []byte(signingKey), nil
+	}, jwt.WithLeeway(time.Second*10), jwt.WithValidMethods([]string{"HS256"}))
 
-	return &TokenClaims{UID: claims["uid"], DisplayName: claims["display_name"]}, nil
+	switch {
+	case parsedToken.Valid:
+		if claims, ok := parsedToken.Claims.(*RefreshClaims); ok {
+			return claims, nil
+		} else {
+			return nil, errors.New("error parsing claims")
+		}
+	case errors.Is(err, jwt.ErrTokenExpired):
+		return nil, fmt.Errorf("expired")
+	default:
+		return nil, fmt.Errorf("error parsing token")
+	}
 }
