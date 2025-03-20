@@ -80,13 +80,13 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.CreateTokenPair(user.ID, user.UserName, user.DisplayName, user.IsGuest)
+	tokenPair, err := auth.CreateTokenPair(user.ID, user.UserName, user.DisplayName, user.IsGuest)
 	if err != nil {
 		ERROR(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	JSON(w, http.StatusCreated, token)
+	JSON(w, http.StatusCreated, tokenPair)
 }
 
 // creates guest and returns id
@@ -112,13 +112,13 @@ func RegisterGuest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.CreateTokenPair(guest.ID, "", guest.DisplayName, guest.IsGuest)
+	tokenPair, err := auth.CreateTokenPair(guest.ID, "", guest.DisplayName, guest.IsGuest)
 	if err != nil {
 		ERROR(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	JSON(w, http.StatusCreated, token)
+	JSON(w, http.StatusCreated, tokenPair)
 }
 
 // validates user credentials and returns jwt auth_token
@@ -148,13 +148,13 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.CreateTokenPair(dbUser.ID, dbUser.UserName, dbUser.DisplayName, dbUser.IsGuest)
+	tokenPair, err := auth.CreateTokenPair(dbUser.ID, dbUser.UserName, dbUser.DisplayName, dbUser.IsGuest)
 	if err != nil {
 		ERROR(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	JSON(w, http.StatusOK, token)
+	JSON(w, http.StatusOK, tokenPair)
 }
 
 func RefreshToken(w http.ResponseWriter, r *http.Request) {
@@ -173,19 +173,14 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if token has been revoked in database
 	tokenID := claims.ID
 	userID := claims.Subject
 
-	var storedToken models.RefreshToken
-	result := db.DB.First(&storedToken, "id = ? AND revoked = false", tokenID)
-	if result.Error != nil {
-		ERROR(w, http.StatusUnauthorized, fmt.Errorf("invalid or revoked token"))
+	// Revoke the old token
+	if err := auth.InvalidateRefreshToken(tokenID); err != nil {
+		ERROR(w, http.StatusInternalServerError, err)
 		return
 	}
-
-	// Revoke the old token
-	db.DB.Model(&storedToken).Update("revoked", true)
 
 	// Get user details to generate new token pair
 	var user models.User
