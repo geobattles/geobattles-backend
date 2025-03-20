@@ -19,6 +19,7 @@ func setupRoutes(r *mux.Router) {
 	r.HandleFunc("/auth/register/user", middleware.Cors(api.RegisterUser)).Methods("POST", "OPTIONS")   // register user
 	r.HandleFunc("/auth/register/guest", middleware.Cors(api.RegisterGuest)).Methods("POST", "OPTIONS") // register guest
 	r.HandleFunc("/auth/login", middleware.Cors(api.LoginUser)).Methods("POST", "OPTIONS")              // login user
+	r.HandleFunc("/auth/logout", middleware.Cors(api.LogoutUser)).Methods("GET", "OPTIONS")             // logout user
 	r.HandleFunc("/auth/refresh", middleware.Cors(api.RefreshToken)).Methods("POST", "OPTIONS")         // refresh access token
 	r.HandleFunc("/updateUser", middleware.AuthMiddleware(api.UpdateUser)).Methods("POST", "OPTIONS")   // update user password / displayname
 	r.HandleFunc("/countryList", middleware.Cors(api.ServeCountryList)).Methods("GET", "OPTIONS")       // send list of available countries

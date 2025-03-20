@@ -197,28 +197,21 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 // updates user password and / or displayname
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		ERROR(w, http.StatusUnprocessableEntity, err)
-		return
-	}
-
-	user := models.User{}
-	err = json.Unmarshal(body, &user)
-	if err != nil {
-		ERROR(w, http.StatusUnprocessableEntity, err)
+	var updateRequest models.User
+	if err := json.NewDecoder(r.Body).Decode(&updateRequest); err != nil {
+		ERROR(w, http.StatusBadRequest, fmt.Errorf("invalid request format: %w", err))
 		return
 	}
 
 	ctx := r.Context()
 	uid := ctx.Value(UidKey).(string)
-	user.ID = uid
 
+	// check what to update
 	fieldsToUpdate := make([]string, 0, 2)
-	if user.DisplayName != "" {
+	if updateRequest.DisplayName != "" {
 		fieldsToUpdate = append(fieldsToUpdate, "DisplayName")
 	}
-	if user.Password != "" {
+	if updateRequest.Password != "" {
 		fieldsToUpdate = append(fieldsToUpdate, "Password")
 	}
 
@@ -227,13 +220,53 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := db.DB.Model(&user).Select(fieldsToUpdate).Updates(user)
+	// update user in db
+	updateRequest.ID = uid
+	result := db.DB.Model(&updateRequest).Select(fieldsToUpdate).Updates(updateRequest)
 
 	if result.Error != nil {
 		ERROR(w, http.StatusConflict, result.Error)
 		return
 	}
 
-	JSON(w, http.StatusOK, nil)
+	// get the complete updated user info
+	var updatedUser models.User
+	if err := db.DB.First(&updatedUser, "id = ?", uid).Error; err != nil {
+		ERROR(w, http.StatusInternalServerError, fmt.Errorf("error retrieving updated user: %w", err))
+		return
+	}
 
+	// invalidate all existing refresh tokens
+	if err := auth.InvalidateAllUserRefreshTokens(uid); err != nil {
+		ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// Generate and return new token pair
+	tokenPair, err := auth.CreateTokenPair(
+		updatedUser.ID,
+		updatedUser.UserName,
+		updatedUser.DisplayName,
+		updatedUser.IsGuest,
+	)
+	if err != nil {
+		ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	JSON(w, http.StatusOK, tokenPair)
+}
+
+// revokes all refresh tokens for user
+func LogoutUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	uid := ctx.Value(UidKey).(string)
+
+	// invalidate all existing refresh tokens
+	if err := auth.InvalidateAllUserRefreshTokens(uid); err != nil {
+		ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	JSON(w, http.StatusOK, nil)
 }
