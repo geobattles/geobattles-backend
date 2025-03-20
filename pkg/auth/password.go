@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"errors"
+	"log/slog"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -9,7 +12,8 @@ func HashPassword(password string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	if err != nil {
-		return "", err
+		slog.Error("Error hashing password", "error", err)
+		return "", errors.New("error hashing password")
 	}
 	return string(hashedPassword), nil
 }
