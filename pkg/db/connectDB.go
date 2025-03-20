@@ -48,6 +48,7 @@ func ConnectDB() {
 		&models.Game{},
 		&models.Round{},
 		&models.Result{},
+		&models.RefreshToken{},
 	)
 
 	slog.Debug("Migrated DB schema")
