@@ -3,7 +3,6 @@ module github.com/geobattles/geobattles-backend
 go 1.24
 
 require (
-	github.com/golang-jwt/jwt/v4 v4.5.1
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
@@ -13,6 +12,8 @@ require (
 )
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.7.2 // indirect
