@@ -79,7 +79,11 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.CreateToken(user.ID, user.UserName, user.DisplayName, user.IsGuest)
+	token, err := auth.CreateTokenPair(user.ID, user.UserName, user.DisplayName, user.IsGuest)
+	if err != nil {
+		ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	JSON(w, http.StatusCreated, token)
 }
@@ -107,7 +111,11 @@ func RegisterGuest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.CreateToken(guest.ID, "", guest.DisplayName, guest.IsGuest)
+	token, err := auth.CreateTokenPair(guest.ID, "", guest.DisplayName, guest.IsGuest)
+	if err != nil {
+		ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	JSON(w, http.StatusCreated, token)
 }
@@ -139,9 +147,56 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.CreateToken(dbUser.ID, dbUser.UserName, dbUser.DisplayName, dbUser.IsGuest)
+	token, err := auth.CreateTokenPair(dbUser.ID, dbUser.UserName, dbUser.DisplayName, dbUser.IsGuest)
+	if err != nil {
+		ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	JSON(w, http.StatusOK, token)
+}
+
+func RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		ERROR(w, http.StatusBadRequest, err)
+		return
+	}
+
+	claims, err := auth.ValidateRefreshToken(req.RefreshToken)
+	if err != nil {
+		ERROR(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	// Check if token has been revoked in database
+	tokenID := claims.ID
+	userID := claims.Subject
+
+	var storedToken models.RefreshToken
+	result := db.DB.First(&storedToken, "id = ? AND revoked = false", tokenID)
+	if result.Error != nil {
+		ERROR(w, http.StatusUnauthorized, fmt.Errorf("invalid or revoked token"))
+		return
+	}
+
+	// Revoke the old token
+	db.DB.Model(&storedToken).Update("revoked", true)
+
+	// Get user details to generate new token pair
+	var user models.User
+	db.DB.First(&user, "id = ?", userID)
+
+	tokenPair, err := auth.CreateTokenPair(userID, user.UserName, user.DisplayName, user.IsGuest)
+	if err != nil {
+		ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	JSON(w, http.StatusOK, tokenPair)
 }
 
 // updates user password and / or displayname

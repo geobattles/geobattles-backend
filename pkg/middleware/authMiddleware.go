@@ -27,7 +27,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		ctx := r.Context()
 		token := r.Header.Get("Authorization")
 
-		claims, err := auth.ValidateToken(token)
+		claims, err := auth.ValidateAccessToken(token)
 		if err != nil {
 			api.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 			return
@@ -35,8 +35,10 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// ctx = context.WithValue(ctx, uidKey, claims.UID)
 		// ctx = context.WithValue(ctx, displayNameKey, claims.DisplayName)
 
-		ctx = context.WithValue(ctx, api.UidKey, claims.UID)
+		ctx = context.WithValue(ctx, api.UidKey, claims.Subject)
 		ctx = context.WithValue(ctx, api.DisplayNameKey, claims.DisplayName)
+
+		slog.Debug("Auth middleware", "claims", claims)
 
 		next(w, r.WithContext(ctx))
 	}
@@ -67,7 +69,7 @@ func SocketAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		ctx := r.Context()
 
-		claims, err := auth.ValidateToken(token)
+		claims, err := auth.ValidateAccessToken(token)
 		if err != nil {
 			api.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 			return
@@ -75,7 +77,7 @@ func SocketAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// ctx = context.WithValue(ctx, uidKey, claims.UID)
 		// ctx = context.WithValue(ctx, displayNameKey, claims.DisplayName)
 
-		ctx = context.WithValue(ctx, api.UidKey, claims.UID)
+		ctx = context.WithValue(ctx, api.UidKey, claims.Subject)
 		ctx = context.WithValue(ctx, api.DisplayNameKey, claims.DisplayName)
 
 		next(w, r.WithContext(ctx))
