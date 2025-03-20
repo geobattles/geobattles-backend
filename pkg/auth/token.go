@@ -3,9 +3,12 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
+	"github.com/geobattles/geobattles-backend/pkg/db"
+	"github.com/geobattles/geobattles-backend/pkg/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
@@ -52,6 +55,11 @@ func CreateTokenPair(uID string, userName string, displayName string, isGuest bo
 	tokenID := uuid.NewString() // Generate unique ID for this token
 	refreshToken, err := createRefreshToken(uID, tokenID, refreshExpiry)
 	if err != nil {
+		return TokenPair{}, err
+	}
+
+	// store refresh token in database
+	if err := storeRefreshToken(tokenID, uID, refreshExpiry); err != nil {
 		return TokenPair{}, err
 	}
 
@@ -143,4 +151,22 @@ func ValidateRefreshToken(token string) (*RefreshClaims, error) {
 	default:
 		return nil, fmt.Errorf("error parsing token")
 	}
+}
+
+// Store refresh token in database
+func storeRefreshToken(tokenID string, uID string, expiry time.Time) error {
+	token := models.RefreshToken{
+		ID:        tokenID,
+		UserID:    uID,
+		Revoked:   false,
+		ExpiresAt: expiry.Unix(),
+		CreatedAt: time.Now().UTC().Unix(),
+	}
+
+	if err := db.DB.Create(&token).Error; err != nil {
+		slog.Error("Error storing refresh token", "error", err)
+		return errors.New("error storing refresh token")
+	}
+
+	return nil
 }
