@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/geobattles/geobattles-backend/pkg/auth"
 	"github.com/geobattles/geobattles-backend/pkg/logic"
 	"gorm.io/gorm"
 )
@@ -59,7 +58,7 @@ func (user *User) BeforeCreate(tx *gorm.DB) (err error) {
 		return errors.New("password cannot be empty")
 	}
 	// Hash the password before creating the record
-	hashedPassword, err := auth.HashPassword(user.Password)
+	hashedPassword, err := logic.HashPassword(user.Password)
 	if err != nil {
 		return err
 	}
@@ -90,7 +89,7 @@ func (guest *Guest) BeforeCreate(tx *gorm.DB) (err error) {
 func (user *User) BeforeUpdate(tx *gorm.DB) (err error) {
 	// Hash the password before updating the record
 	if user.Password != "" {
-		hashedPassword, err := auth.HashPassword(user.Password)
+		hashedPassword, err := logic.HashPassword(user.Password)
 		if err != nil {
 			return err
 		}

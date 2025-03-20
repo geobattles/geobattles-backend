@@ -10,6 +10,7 @@ import (
 
 	"github.com/geobattles/geobattles-backend/pkg/auth"
 	"github.com/geobattles/geobattles-backend/pkg/db"
+	"github.com/geobattles/geobattles-backend/pkg/logic"
 	"github.com/geobattles/geobattles-backend/pkg/models"
 )
 
@@ -142,7 +143,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if auth.VerifyPassword(dbUser.Password, user.Password) != nil {
+	if logic.VerifyPassword(dbUser.Password, user.Password) != nil {
 		ERROR(w, http.StatusUnauthorized, fmt.Errorf("wrong password"))
 		return
 	}
