@@ -8,10 +8,24 @@ GeoBattles features a **Battle Royale** mode where players can play solo or comp
 
 The game offers real-time multiplayer functionality, live statistics, and interactive map elements.
 
-## This repository contains code for the backend server written in go. Frontend can be found [here](https://github.com/geobattles/geobattles-frontend).
+#### This repository contains code for the backend server written in go. Frontend can be found [here](https://github.com/geobattles/geobattles-frontend).
 
-# Production setup
-The easiest way to run both the frontend and backend is using the prebuild docker images using docker compose. Create a folder for your setup, for example `geobattles`. Copy and paste the following into a file named `docker-compose.yaml` inside that folder. Run it with `docker compose up -d`
+## 🚀 Getting Started
+## Production Setup
+The easiest way to run both the frontend and backend is using the prebuilt Docker images using Docker Compose.
+
+<details>
+<summary>📝 Google API Setup (required)</summary>
+
+This project relies on Google Maps and StreetView APIs. Head over to Google Cloud [console](https://console.cloud.google.com), enable `Maps JavaScript API` and `Street View Static API` and generate an API key.
+
+> :warning:  
+> Be sure to properly secure your API key and setup usage quotas to avoid unexpected charges. You can use different keys for frontend and backend and further restrict them. Frontend only needs `Maps JavaScript API` and can be restricted to your website domain. Backend only needs `Street View Static API` and can be restricted to your server's public IP.
+
+</details><br/>
+
+1. Create a folder for the project, for example `geobattles`.
+2. Create a `docker-compose.yaml` file with the following content:
 ```docker
 services:
   backend:
@@ -49,8 +63,14 @@ services:
     volumes:
       - .db:/var/lib/postgresql/data
 ```
+3. Run it with `docker compose up -d`
 
-You will also want to run a reverse proxy in front of the services for ssl termination. The below nginx snippets work with linuxserver [swag](https://github.com/linuxserver/docker-swag) container.
+### SSL Configuration
+You will also want to setup SSL termination. Below are example nginx configurations for use with the [swag](https://github.com/linuxserver/docker-swag) container.
+
+<details>
+<summary>nginx server block</summary>
+
 ```nginx
 # backend
 server {
@@ -88,42 +108,46 @@ server {
     }
 }
 ```
+</details><br/>
 
-
-
-# Development setup
+## 🛠️ Development setup
+### Requirements
 
 -   Go >=1.24 or Docker
 -   API key for Google Street View Static API
 -   Postgres database
 
-### Clone the repo
+### Setup Steps
+1. Clone the repository
 ```
 git clone https://github.com/geobattles/geobattles-backend
 cd geobattles-backend
 ```
 
-### Run server either locally or with docker
-#### Locall go install
-Copy `example.env` to `.env` and insert your values.
+2. Chose your development method
+#### With Go installed locally
+```bash
+# Copy environment file and configure it
+cp example.env to .env
 
-Download dependencies and run:
-```
+# Download dependencies and run:
 go get .
 go run .
 ```
-### With Docker
-Build and run Docker image:
 
-`docker build  . -t <image_name>`
+#### With Docker
+```shell
+# Build image
+docker build  . -t geobattles-backend
 
-```
+# Run container
 docker run \
--p 8080:8080 \
--e GMAPS_API=<GMAPS_API_KEY>
--e DB_HOST=<POSTGRES_URL>
--e DB_PASSWORD=<POSTGRES_PWD>
-<image_name>
+  -p 8080:8080 \
+  -e GMAPS_API=<GMAPS_API_KEY> \
+  -e DB_HOST=<POSTGRES_URL> \
+  -e DB_PASSWORD=<POSTGRES_PWD> \
+  geobattles-backend
 ```
 
-For all available env variables see `example.env`
+> [!NOTE]  
+> For all available env variables see `example.env`
