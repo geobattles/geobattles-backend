@@ -35,6 +35,18 @@ func AddPlayerToLobby(clientID string, clientName string, lobbyID string, conn *
 	go client.Read()
 	go client.Write()
 
+	// If lobby is in retention mode (marked as empty but waiting for deletion)
+	if lobby.IsEmpty {
+		slog.Info("Player rejoined a lobby in retention state", "lobbyID", lobbyID, "playerID", clientID)
+		// Cancel the retention timer
+		if lobby.RetentionTimer != nil {
+			lobby.RetentionTimer.Stop()
+			lobby.RetentionTimer = nil
+		}
+		// Mark lobby as active again
+		lobby.IsEmpty = false
+	}
+
 	// reconnect player
 	if player, exists := lobby.PlayerMap[clientID]; exists {
 		player.Connected = true

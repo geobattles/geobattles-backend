@@ -188,16 +188,31 @@ func (l *Lobby) removePlayer(clientID string) {
 		player.Connected = false
 	}
 
-	// if removed player was admin & there are other players left
-	// select one of them as new admin, otherwise make admin empty
-	// if there are no players left delete lobby
+	// If all players are disconnected
 	if l.getActivePlayers() == 0 {
-		slog.Info("Deleting lobby", "lobbyID", l.ID)
+		slog.Info("No active players left in lobby", "lobbyID", l.ID)
+
+		// Mark the lobby as empty
+		l.IsEmpty = true
+
+		// Stop round timer if it exists
 		if l.RountTimer.Timer != nil {
 			l.RountTimer.Timer.Stop()
 		}
-		delete(LobbyMap, l.ID)
+
+		// Cancel any existing retention timer
+		if l.RetentionTimer != nil {
+			l.RetentionTimer.Stop()
+		}
+
+		// Set a timer to delete the lobby after retention period
+		l.RetentionTimer = time.AfterFunc(LobbyRetentionTime, func() {
+			slog.Info("Deleting inactive lobby after retention period", "lobbyID", l.ID)
+			delete(LobbyMap, l.ID)
+		})
 	} else if l.Admin == clientID {
+		// If removed player was admin & there are other players left,
+		// select one of them as new admin
 		for id, player := range l.PlayerMap {
 			if player.Connected {
 				l.Admin = id

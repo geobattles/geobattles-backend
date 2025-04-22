@@ -8,6 +8,11 @@ import (
 	"github.com/geobattles/geobattles-backend/pkg/websocket"
 )
 
+const (
+	// Time to keep a lobby alive after all players have disconnected
+	LobbyRetentionTime = 5 * time.Minute
+)
+
 type Lobby struct {
 	ID            string                      `json:"ID"`
 	Hub           *websocket.Hub              `json:"-"`
@@ -28,6 +33,9 @@ type Lobby struct {
 	StartTime     time.Time                   `json:"-"`
 	RountTimer    RoundTimer                  `json:"-"`
 	mu            sync.Mutex                  `json:"-"`
+	// Timer for lobby deletion when empty
+	RetentionTimer *time.Timer `json:"-"`
+	IsEmpty        bool        `json:"isEmpty"`
 }
 
 type LobbyConf struct {
