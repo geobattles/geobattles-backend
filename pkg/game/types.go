@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -8,45 +9,82 @@ import (
 	"github.com/geobattles/geobattles-backend/pkg/websocket"
 )
 
+// Lobby is never serialized. mu owns ALL state below except immutable id/hub.
+// Registry operations must be performed with mu released. Effects are encoded and
+// nonblocking-enqueued in the transaction; socket closes/DB writes run afterward.
 type Lobby struct {
-	ID            string                      `json:"ID"`
-	Hub           *websocket.Hub              `json:"-"`
-	Admin         string                      `json:"admin"`
-	Conf          *LobbyConf                  `json:"conf"`
-	NumPlayers    int                         `json:"numPlayers"`
-	PlayerMap     map[string]*Player          `json:"playerList"`
-	CurrentLoc    []*logic.Coords             `json:"-"`
-	CurrentCC     string                      `json:"-"`
-	CurrentRound  int                         `json:"currentRound"`
-	RawResults    map[int]map[string][]Result `json:"results"`
-	EndResults    map[int]map[string]*Result  `json:"endResults"`
-	TotalResults  map[string]*Result          `json:"totalResults"`
-	Active        bool                        `json:"-"`
-	UsersFinished map[string]bool             `json:"-"`
-	CCSize        float64                     `json:"-"`
-	PowerLogs     map[int][]Powerup           `json:"-"`
-	StartTime     time.Time                   `json:"-"`
-	RountTimer    RoundTimer                  `json:"-"`
-	mu            sync.Mutex                  `json:"-"`
+	id             string
+	hub            *websocket.Hub
+	mu             sync.Mutex
+	admin          string
+	conf           *LobbyConf
+	players        map[string]*Player
+	locations      []logic.Coords
+	currentCC      string
+	round          int
+	rawResults     map[int]map[string][]Result
+	endResults     map[int]map[string]*Result
+	totalResults   map[string]*Result
+	active         bool
+	finished       map[string]bool
+	ccSize         float64
+	powerLogs      map[int][]Powerup
+	startTime      time.Time
+	roundTimer     *time.Timer
+	deadline       time.Time
+	phase          string
+	gameID         string
+	seq            uint64
+	closed         bool
+	starting       bool
+	generation     uint64
+	roundGen       uint64
+	finalizedGen   uint64
+	startCancel    context.CancelFunc
+	startInitiator *websocket.Client
+	leases         map[string]*playerLease
+	reservations   map[string]*Admission
+	nextLease      uint64
+	nextMember     uint64
+	emptyTimer     *time.Timer
+	persisted      bool
+}
+
+const (
+	PhaseWaiting  = "WAITING"
+	PhasePlaying  = "PLAYING"
+	PhaseMidRound = "MID-ROUND"
+	PhaseFinished = "FINISHED"
+)
+
+type playerLease struct {
+	client     *websocket.Client
+	generation uint64
+	present    uint64 // successful membership order; preserved through recovery
+	grace      *time.Timer
+	expires    time.Time
 }
 
 type LobbyConf struct {
-	Name        string   `json:"name"`
-	Mode        int      `json:"mode"`
-	MaxPlayers  int      `json:"maxPlayers"`
-	NumAttempt  int      `json:"numAttempt"`
-	NumRounds   int      `json:"numRounds"`
-	RoundTime   int      `json:"roundTime"`
-	ScoreFactor int      `json:"scoreFactor,omitempty"`
-	CCList      []string `json:"ccList"`
-	Powerups    *[]bool  `json:"powerups,omitempty"`
-	PlaceBonus  *bool    `json:"placeBonus,omitempty"`
-	DynLives    *bool    `json:"dynLives"`
+	Name         string   `json:"name"`
+	Mode         int      `json:"mode"`
+	MaxPlayers   int      `json:"maxPlayers"`
+	NumAttempt   int      `json:"numAttempt"`
+	NumRounds    int      `json:"numRounds"`
+	RoundTime    int      `json:"roundTime"`
+	ScoreFactor  int      `json:"scoreFactor,omitempty"`
+	ScoringMode  string   `json:"scoringMode"`
+	ScoreScaleKm float64  `json:"scoreScaleKm"` // read-only effective half-score decay distance
+	CCList       []string `json:"ccList"`
+	Powerups     *[]bool  `json:"powerups,omitempty"`
+	PlaceBonus   *bool    `json:"placeBonus,omitempty"`
+	DynLives     *bool    `json:"dynLives"`
 }
 
 type Player struct {
 	Name      string `json:"name"`
 	Connected bool   `json:"connected"`
+	Ready     bool   `json:"ready"`
 	Color     string `json:"color"`
 	Powerups  []bool `json:"powerups,omitempty"`
 	Lives     int    `json:"lives,omitempty"`
@@ -74,12 +112,8 @@ type Powerup struct {
 
 type ClientReq struct {
 	Cmd     string        `json:"command"`
+	Ready   *bool         `json:"ready,omitempty"`
 	Loc     *logic.Coords `json:"location,omitempty"`
 	Conf    LobbyConf     `json:"conf,omitempty"`
 	Powerup Powerup       `json:"powerup,omitempty"`
-}
-
-type RoundTimer struct {
-	Timer *time.Timer
-	End   time.Time
 }

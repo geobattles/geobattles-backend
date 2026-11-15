@@ -18,3 +18,24 @@
 go.work
 
 .env
+.env.*
+.local/
+__pycache__/
+*.pyc
+
+# Local credentials and database/runtime artifacts
+.envrc
+.envrc.*
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*.json
+*service-account*.json
+.ssh/
+.aws/
+.config/gcloud/
+.db/
+logs/
+*.log

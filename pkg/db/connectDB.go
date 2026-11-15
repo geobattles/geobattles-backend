@@ -1,22 +1,21 @@
 package db
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 
 	"github.com/geobattles/geobattles-backend/pkg/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
 
-// initialize connection to the database and migrate models
-func ConnectDB() {
-	var err error
-
+// ConnectDB publishes the database connection only after migrating its models.
+func ConnectDB() error {
 	user := os.Getenv("DB_USER")
 	if user == "" {
 		user = "postgres"
@@ -33,23 +32,35 @@ func ConnectDB() {
 		dbName,
 	)
 
-	slog.Debug("Connecting to DB", "dsn", dsn)
-
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	// GORM's default error logger can print SQL parameter values (including
+	// password hashes/token rows) or connection details. Log safe context here.
+	candidate, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 
 	if err != nil {
-		log.Fatalf("Failed to connect to the database: %v", err)
+		// Open can return a handle with an allocated pool after a failed ping.
+		if candidate != nil {
+			if sqlDB, poolErr := candidate.DB(); poolErr == nil {
+				_ = sqlDB.Close()
+			}
+		}
+		return errors.New("Failed to connect to the database; check local database configuration and availability")
 	}
 
-	slog.Info("Connected to DB")
-
-	DB.AutoMigrate(
+	if err := candidate.AutoMigrate(
 		&models.User{},
 		&models.Game{},
 		&models.Round{},
 		&models.Result{},
 		&models.RefreshToken{},
-	)
+	); err != nil {
+		if sqlDB, poolErr := candidate.DB(); poolErr == nil {
+			_ = sqlDB.Close()
+		}
+		return errors.New("Failed to migrate the database schema; check local database permissions and schema compatibility")
+	}
 
+	DB = candidate
+	slog.Info("Connected to DB")
 	slog.Debug("Migrated DB schema")
+	return nil
 }

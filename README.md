@@ -1,153 +1,57 @@
-# GeoBattles
+# GeoBattles backend
 
-GeoBattles is an open-source interactive geolocation guessing game where players compete to identify locations from Google Street View panoramas.
+GeoBattles is an open-source geography-guessing game with real-time multiplayer, Street View panoramas and limited-life Battle Royale rounds. This repository contains the Go API, WebSocket game server and PostgreSQL persistence. The [Nuxt frontend](https://github.com/geobattles/geobattles-frontend) is maintained separately.
 
-## 🌍 About the Game
+## Contributing
 
-GeoBattles features a **Battle Royale** mode where players can play solo or compete against others to guess locations, with limited lives.
+Use the Go version in [.go-version](.go-version), Git, Bash and Make. No database, Google key or Python runtime is needed for static checks:
 
-The game offers real-time multiplayer functionality, live statistics, and interactive map elements.
-
-#### This repository contains code for the backend server written in go. Frontend can be found [here](https://github.com/geobattles/geobattles-frontend).
-
-## 🚀 Getting Started
-## Production Setup
-The easiest way to run both the frontend and backend is using the prebuilt Docker images using Docker Compose.
-
-<details>
-<summary>📝 Google API Setup (required)</summary>
-
-This project relies on Google Maps and StreetView APIs. Head over to Google Cloud [console](https://console.cloud.google.com), enable `Maps JavaScript API` and `Street View Static API` and generate an API key.
-
-> :warning:  
-> Be sure to properly secure your API key and setup usage quotas to avoid unexpected charges. You can use different keys for frontend and backend and further restrict them. Frontend only needs `Maps JavaScript API` and can be restricted to your website domain. Backend only needs `Street View Static API` and can be restricted to your server's public IP.
-
-</details><br/>
-
-1. Create a folder for the project, for example `geobattles`.
-2. Create a `docker-compose.yaml` file with the following content:
-```docker
-services:
-  backend:
-    image: ghcr.io/geobattles/geobattles-backend:latest
-    restart: unless-stopped
-    environment:
-      GMAPS_API: "<GMAPS_API_KEY>"
-      DB_HOST: "database"
-      DB_USER: "geobattles"
-      DB_PASSWORD: "<POSTGRES_PWD>"
-      LOG_LEVEL: "INFO"
-    ports:
-      - "8080:8080"
-    depends_on:
-    - database
-
-  frontend:
-    image: ghcr.io/geobattles/geobattles-frontend:latest
-    restart: unless-stopped
-    environment:
-      NUXT_PUBLIC_GMAPS_API: "GMAPS_API_KEY"
-      NUXT_PUBLIC_BACKEND_HOST: "<PUBLIC_BACKEND_URL>"
-    ports:
-      - "3000:3000"
-    depends_on:
-    - backend
-
-  database:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: "geobattles"
-      POSTGRES_PASSWORD: "<POSTGRES_PWD>"
-      POSTGRES_DB: "db"
-    volumes:
-      - .db:/var/lib/postgresql/data
-```
-3. Run it with `docker compose up -d`
-
-### SSL Configuration
-You will also want to setup SSL termination. Below are example nginx configurations for use with the [swag](https://github.com/linuxserver/docker-swag) container.
-
-<details>
-<summary>nginx server block</summary>
-
-```nginx
-# backend
-server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-
-    server_name <api.yourdomain.tld>;
-
-    include /config/nginx/ssl.conf;
-
-    client_max_body_size 0;
-
-    location / {
-        include /config/nginx/proxy.conf;
-
-        proxy_pass http://<backend_local_ip>:8080;
-    }
-}
-
-# frontend
-server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-
-    server_name <yourdomain.tld>;
-
-    include /config/nginx/ssl.conf;
-
-    client_max_body_size 0;
-
-    location / {
-        include /config/nginx/proxy.conf;
-
-        proxy_pass http://<frontend_local_ip>:3000;
-    }
-}
-```
-</details><br/>
-
-## 🛠️ Development setup
-### Requirements
-
--   Go >=1.24 or Docker
--   API key for Google Street View Static API
--   Postgres database
-
-### Setup Steps
-1. Clone the repository
-```
-git clone https://github.com/geobattles/geobattles-backend
-cd geobattles-backend
+```sh
+go mod download
+make check
 ```
 
-2. Chose your development method
-#### With Go installed locally
-```bash
-# Copy environment file and configure it
-cp example.env to .env
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the supported native and devcontainer workflows. Application unit tests remain opt-in; the frontend repository contains separate opt-in keyless socket integration and browser checks. Static checks do not start the application.
 
-# Download dependencies and run:
-go get .
-go run .
+## Local development
+
+Docker Compose v2+ is needed for the isolated local database:
+
+```sh
+make setup
+make db-up
+make dev
 ```
 
-#### With Docker
-```shell
-# Build image
-docker build  . -t geobattles-backend
+`make setup` generates private local credentials without printing or overwriting existing configuration. `make dev` validates the local database/listener and withholds the backend Google key. Use `make dev-maps` only for approved manual play or budgeted gameplay checks. Preserve existing `.env` files; never reuse production credentials or point development at production.
 
-# Run container
-docker run \
-  -p 8080:8080 \
-  -e GMAPS_API=<GMAPS_API_KEY> \
-  -e DB_HOST=<POSTGRES_URL> \
-  -e DB_PASSWORD=<POSTGRES_PWD> \
-  geobattles-backend
+Initialize the frontend separately using its contributor instructions. For a trusted same-network preview, see [local LAN deployment](docs/local-lan-deployment.md). That HTTP-only stack is not a production template.
+
+## Docker and production releases
+
+The deployment model remains a Go backend on port **8080**, a Nuxt SSR frontend on port **3000**, PostgreSQL and a reverse proxy. Both app images run non-root; backend assets are bundled under `/app/assets`. Build with an explicit nonsecret version:
+
+```sh
+docker build --build-arg VERSION="$(git rev-parse HEAD)" -t geobattles-backend:local-check .
 ```
 
-> [!NOTE]  
-> For all available env variables see `example.env`
+Building does not start the server. Starting it validates signing configuration, connects to PostgreSQL and runs `AutoMigrate`.
+
+**Follow the [production release checklist](docs/production-release.md) before deployment.** Release the matching frontend/backend pair, use HTTPS/WSS, keep application/database ports private and preserve a matching rollback pair. Keep one backend replica: active lobbies and timers are in memory and do not survive restart. The current DB connector uses port 5432 and disables TLS; incompatible managed databases require a reviewed connector change. Do not treat a floating `latest` tag as a reviewed release or recreate production data during upgrades.
+
+Branch and pull-request CI only validates. Image publication is a separate manual workflow restricted to `master`, requiring maintainer approval. Checks do not authorize deployment or publication.
+
+## Google configuration
+
+Use separate browser and backend keys. Restrict the frontend key to required browser APIs and website referrers; restrict the backend key to Street View Static API and the server's outbound IP where supported. Browser keys are public configuration, not server secrets. Set API quotas and billing alerts; alerts alone are not a spending cap. Builds and keyless checks need no Google requests.
+
+## Documentation and security
+
+Start with the [documentation index](docs/README.md).
+
+- [Architecture](docs/architecture.md), [decisions](docs/decisions.md) and [roadmap](docs/roadmap.md)
+- [Local development](docs/local-development.md) and [database startup](docs/database-startup.md)
+- [Socket contract](docs/socket-contract.md), [lobby lifecycle](docs/lobby-lifecycle.md) and [region scoring](docs/region-scoring.md)
+- [Security reporting](SECURITY.md)
+
+GeoBattles is licensed under [GPLv3](LICENSE).
