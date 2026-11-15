@@ -239,8 +239,13 @@ func (l *Lobby) afterRemovalLocked(e *lobbyEffects, id string) {
 func (l *Lobby) expireEmpty() {
 	var e lobbyEffects
 	l.mu.Lock()
-	if l.emptyTimer != nil && len(l.players) == 0 {
-		l.closeLocked(&e)
+	if l.emptyTimer != nil {
+		// The initial wait is spent. Pending admissions now own the empty
+		// lobby's lifetime; the last Cancel must be able to close it.
+		l.emptyTimer = nil
+		if len(l.players) == 0 && len(l.reservations) == 0 {
+			l.closeLocked(&e)
+		}
 	}
 	l.mu.Unlock()
 	l.applyEffects(e)

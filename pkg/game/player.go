@@ -95,7 +95,15 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 			}
 		}
 	case "loc_to_cc":
+		// Keep this reader's commands serial without holding up lobby timers
+		// or other players during the polygon search.
+		l.mu.Unlock()
 		cc, err := reverse.ReverseGeocode(req.Loc.Lng, req.Loc.Lat)
+		l.mu.Lock()
+		if !l.ownsLocked(c) || c.Closed() {
+			l.mu.Unlock()
+			return
+		}
 		if err != nil {
 			l.errorLocked(&e, c, req.Cmd, err.Error())
 		} else {
