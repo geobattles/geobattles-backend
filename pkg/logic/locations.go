@@ -67,6 +67,15 @@ func InitCountryDB() error {
 	if err != nil {
 		return err
 	}
+	nextPolygons, err := readAllPolygons()
+	if err != nil {
+		return err
+	}
+	for _, code := range codes {
+		if len(nextPolygons[code]) == 0 {
+			return fmt.Errorf("missing full country polygons %s: %w", code, ErrLocationData)
+		}
+	}
 	// Preserve the exact existing weighted sampling policy, independently of
 	// geographical center/span. Region configuration never writes these weights.
 	for _, code := range codes {
@@ -79,8 +88,7 @@ func InitCountryDB() error {
 			country.Areas.InnerSize += polygon.Size
 		}
 	}
-	countryDB, CountryList, catalog, catalogByCode = loaded, codes, nextCatalog, byCode
-	readAllPolygons()
+	countryDB, CountryList, catalog, catalogByCode, PolyDB = loaded, codes, nextCatalog, byCode, nextPolygons
 	return nil
 }
 
