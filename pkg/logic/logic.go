@@ -1,15 +1,10 @@
 package logic
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"log/slog"
 	"math"
 	"math/rand"
-	"net/http"
-	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,6 +17,8 @@ func CalcDistance(loc_1 Coords, loc_2 Coords) float64 {
 	var delta_lambda float64 = (loc_2.Lng - loc_1.Lng) * math.Pi / 180
 
 	var a float64 = math.Pow(math.Sin(delta_fi/2), 2) + math.Cos(fi_1)*math.Cos(fi_2)*math.Pow(math.Sin(delta_lambda/2), 2)
+	// Floating-point rounding near antipodes can put a just outside [0, 1].
+	a = min(1, max(0, a))
 	var c = 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 	return R * c
 }
@@ -32,31 +29,17 @@ func RndPointWithinBox(b Bound) Point {
 	return Point{lng, lat}
 }
 
-// checks if pano exists near requested location, returns exact location and status code
-func CheckStreetViewExists(loc Point, radius int) (Coords, string) {
-	res, err := http.Get(fmt.Sprintf("https://maps.googleapis.com/maps/api/streetview/metadata?location=%f,%f&key=%s&radius=%d&source=outdoor", loc[1], loc[0], os.Getenv("GMAPS_API"), radius))
-	if err != nil {
-		slog.Error("Error checking streetview metadata", "error", err.Error())
-	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		slog.Error("Error reading streetview metadata", "error", err.Error())
-	}
-
-	var response ApiMetaResponse
-	json.Unmarshal(body, &response)
-	return response.Loc, response.Status
-}
-
 const letterBytes = "123456789ABCDEFGHJKLMNPRSTUVWXYZ"
 
 var src = rand.NewSource(time.Now().UnixNano())
+var srcMu sync.Mutex
 
 // Generates n long string (max 12) using 32 different characters from letterBytes
 // src.Int63() generates 63 random bits, we use the last 5 as letterBytes index
 // shift 5 places right & repeat; Simplified #7 from https://stackoverflow.com/a/31832326
 func GenerateRndID(n int) string {
+	srcMu.Lock()
+	defer srcMu.Unlock()
 	sb := strings.Builder{}
 	sb.Grow(n)
 	// A src.Int63() generates 63 random bits, enough for 12 x 5bits!

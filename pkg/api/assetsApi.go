@@ -13,3 +13,12 @@ func ServeCountryList(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(logic.CountryList)
 	slog.Debug("Sent country list")
 }
+
+func ServeCountryCatalog(w http.ResponseWriter, r *http.Request) {
+	catalog, err := logic.GetCountryCatalog()
+	if err != nil {
+		ERROR(w, http.StatusServiceUnavailable, err)
+		return
+	}
+	JSON(w, http.StatusOK, catalog)
+}

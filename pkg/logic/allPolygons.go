@@ -1,9 +1,8 @@
 package logic
 
 import (
-	"bytes"
 	"encoding/json"
-	"log/slog"
+	"fmt"
 	"os"
 )
 
@@ -13,43 +12,75 @@ type property struct {
 
 type feature struct {
 	Properties property
-	Geometry   map[string]json.RawMessage
-}
-
-var importAll struct {
-	Features []feature
+	Geometry   struct {
+		Type        string
+		Coordinates json.RawMessage
+	}
 }
 
 var PolyDB map[string]json.RawMessage
 
 // TODO: individually simplify country polygons; larger ones should be simplified more, smaller less
-// helper function to populate PolyDB from geojson on disk
-func readAllPolygons() {
-	PolyDB = make(map[string]json.RawMessage)
-
-	b, _ := os.ReadFile("assets/full/countries2.json")
-	if err := json.Unmarshal(b, &importAll); err != nil {
-		slog.Error("Error unmarshalling geojson", "error", err.Error())
+// Load a detached polygon map; InitCountryDB publishes it only after all assets validate.
+func readAllPolygons() (map[string]json.RawMessage, error) {
+	b, err := os.ReadFile("assets/full/countries2.json")
+	if err != nil {
+		return nil, fmt.Errorf("read full country polygons: %w", err)
 	}
-	// if feature (country) has a single polygon convert it to a multipolygon for simplicity
-	for _, feature := range importAll.Features {
-		if bytes.Equal([]byte(`"Polygon"`), feature.Geometry["type"]) {
-			if PolyDB[feature.Properties.Iso_a2] == nil {
-				PolyDB[feature.Properties.Iso_a2] = append([]byte(`[`), append(feature.Geometry["coordinates"], []byte(`]`)...)...)
-			} else {
-				PolyDB[feature.Properties.Iso_a2] = PolyDB[feature.Properties.Iso_a2][:len(PolyDB[feature.Properties.Iso_a2])-1]
-				PolyDB[feature.Properties.Iso_a2] = append(PolyDB[feature.Properties.Iso_a2], append([]byte(`,`), append(feature.Geometry["coordinates"], []byte(`]`)...)...)...)
-
+	var loaded struct {
+		Type     string
+		Features []feature
+	}
+	if err := json.Unmarshal(b, &loaded); err != nil {
+		return nil, fmt.Errorf("decode full country polygons: %w", err)
+	}
+	if loaded.Type != "FeatureCollection" || len(loaded.Features) == 0 {
+		return nil, ErrLocationData
+	}
+	partsByCode := make(map[string][]json.RawMessage)
+	for _, feature := range loaded.Features {
+		code := feature.Properties.Iso_a2
+		if code == "" {
+			return nil, ErrLocationData
+		}
+		var parts []json.RawMessage
+		switch feature.Geometry.Type {
+		case "Polygon":
+			parts = []json.RawMessage{feature.Geometry.Coordinates}
+		case "MultiPolygon":
+			if err := json.Unmarshal(feature.Geometry.Coordinates, &parts); err != nil {
+				return nil, fmt.Errorf("invalid full country polygons %s: %w", code, err)
 			}
-
-		} else {
-			if PolyDB[feature.Properties.Iso_a2] == nil {
-				PolyDB[feature.Properties.Iso_a2] = feature.Geometry["coordinates"]
-			} else {
-				PolyDB[feature.Properties.Iso_a2] = PolyDB[feature.Properties.Iso_a2][:len(PolyDB[feature.Properties.Iso_a2])-1]
-				feature.Geometry["coordinates"] = append(feature.Geometry["coordinates"][:0], feature.Geometry["coordinates"][1:]...)
-				PolyDB[feature.Properties.Iso_a2] = append(PolyDB[feature.Properties.Iso_a2], append([]byte(`,`), feature.Geometry["coordinates"]...)...)
+		default:
+			return nil, fmt.Errorf("invalid full country geometry %s: %w", code, ErrLocationData)
+		}
+		if len(parts) == 0 {
+			return nil, ErrLocationData
+		}
+		for _, part := range parts {
+			var rings []Ring
+			if err := json.Unmarshal(part, &rings); err != nil {
+				return nil, fmt.Errorf("invalid full country rings %s: %w", code, err)
+			}
+			if len(rings) == 0 {
+				return nil, ErrLocationData
+			}
+			for _, ring := range rings {
+				if len(ring) < 4 || ring[0] != ring[len(ring)-1] {
+					return nil, fmt.Errorf("invalid full country ring %s: %w", code, ErrLocationData)
+				}
 			}
 		}
+		// Keep every part for repeated codes without modifying decoded coordinate buffers.
+		partsByCode[code] = append(partsByCode[code], parts...)
 	}
+	out := make(map[string]json.RawMessage, len(partsByCode))
+	for code, parts := range partsByCode {
+		coordinates, err := json.Marshal(parts)
+		if err != nil {
+			return nil, fmt.Errorf("encode full country polygons %s: %w", code, err)
+		}
+		out[code] = coordinates
+	}
+	return out, nil
 }

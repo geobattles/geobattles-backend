@@ -1,0 +1,20 @@
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	# Do not enable access logs: query strings/subprotocols can contain private data.
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	# Same-origin HTTP + WebSocket API. Strip only this deployment prefix.
+	handle_path /api/* {
+		reverse_proxy backend:8080
+	}
+
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -22,8 +21,6 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		slog.Debug("Auth middleware", "header", r.Header)
-
 		ctx := r.Context()
 		token := r.Header.Get("Authorization")
 
@@ -37,8 +34,6 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		ctx = context.WithValue(ctx, api.UidKey, claims.Subject)
 		ctx = context.WithValue(ctx, api.DisplayNameKey, claims.DisplayName)
-
-		slog.Debug("Auth middleware", "claims", claims)
 
 		next(w, r.WithContext(ctx))
 	}
@@ -64,8 +59,6 @@ func SocketAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		token := strings.TrimSpace(protocols[1])
-
-		slog.Debug("Socket auth middleware", "TOKEN", token)
 
 		ctx := r.Context()
 

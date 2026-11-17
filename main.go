@@ -1,21 +1,29 @@
 package main
 
 import (
+	"flag"
 	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 
 	"github.com/geobattles/geobattles-backend/pkg/api"
+	"github.com/geobattles/geobattles-backend/pkg/auth"
 	"github.com/geobattles/geobattles-backend/pkg/db"
 	"github.com/geobattles/geobattles-backend/pkg/logic"
 	"github.com/geobattles/geobattles-backend/pkg/middleware"
 	"github.com/geobattles/geobattles-backend/pkg/reverse"
 )
 
-func setupRoutes(r *mux.Router) {
+// version is public build identity, set by -ldflags "-X main.version=...".
+var version = "dev"
+
+func setupRoutes(r *mux.Router, diagnostics *api.Diagnostics) {
+	// Diagnostics own method handling so failures and preflights also use no-store.
+	r.HandleFunc("/healthz", diagnostics.ServeHealth)
+	r.HandleFunc("/readyz", diagnostics.ServeReady)
+	r.HandleFunc("/version", diagnostics.ServeVersion)
 	r.HandleFunc("/auth/register/user", middleware.Cors(api.RegisterUser)).Methods("POST", "OPTIONS")   // register user
 	r.HandleFunc("/auth/register/guest", middleware.Cors(api.RegisterGuest)).Methods("POST", "OPTIONS") // register guest
 	r.HandleFunc("/auth/login", middleware.Cors(api.LoginUser)).Methods("POST", "OPTIONS")              // login user
@@ -23,20 +31,14 @@ func setupRoutes(r *mux.Router) {
 	r.HandleFunc("/auth/refresh", middleware.Cors(api.RefreshToken)).Methods("POST", "OPTIONS")         // refresh access token
 	r.HandleFunc("/updateUser", middleware.AuthMiddleware(api.UpdateUser)).Methods("POST", "OPTIONS")   // update user password / displayname
 	r.HandleFunc("/countryList", middleware.Cors(api.ServeCountryList)).Methods("GET", "OPTIONS")       // send list of available countries
-	r.HandleFunc("/lobby", middleware.Cors(api.ServeGetLobby)).Methods("GET", "OPTIONS")                // got list of all lobbies
-	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeCreateLobby)).Methods("POST", "OPTIONS")  // create lobby
-	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeDeleteLobby)).Methods("DELETE")           // delete lobby
+	r.HandleFunc("/countryCatalog", middleware.Cors(api.ServeCountryCatalog)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/lobby", middleware.Cors(api.ServeGetLobby)).Methods("GET", "OPTIONS")               // got list of all lobbies
+	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeCreateLobby)).Methods("POST", "OPTIONS") // create lobby
+	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeDeleteLobby)).Methods("DELETE")          // delete lobby
 	r.HandleFunc("/lobbySocket", middleware.SocketAuthMiddleware(api.ServeLobbySocket))
 }
 
-func init() {
-	// try to read .env file
-	// in docker we just use ENV variables and this WILL throw an error
-	err := godotenv.Load()
-	if err != nil {
-		slog.Warn("Error loading .env file")
-	}
-
+func configureLogging() {
 	logLevel := os.Getenv("LOG_LEVEL")
 
 	var lvl slog.Level
@@ -54,22 +56,48 @@ func init() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: lvl,
 	})))
+}
 
-	db.ConnectDB()
+func main() {
+	dev := flag.Bool("dev", false, "Require isolated local development configuration from .env")
+	allowPaidMaps := flag.Bool("allow-paid-maps", false, "Forward the development Maps key; requires -dev and prior spending approval")
+	flag.Parse()
+	if err := loadConfiguration(*dev, *allowPaidMaps); err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
+	configureLogging()
+	if err := auth.Configure(os.Getenv("JWT_KEY")); err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
 
-	logic.InitCountryDB()
+	if err := db.ConnectDB(); err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
+
+	if err := logic.InitCountryDB(); err != nil {
+		slog.Error("Country assets failed validation", "error", err.Error())
+		os.Exit(1)
+	}
 	err2 := reverse.InitReverse()
 	if err2 != nil {
 		slog.Error(err2.Error())
 	}
-}
-
-func main() {
+	database, databaseErr := db.DB.DB()
+	assetsInitialized := err2 == nil && len(logic.CountryList) > 0 && len(logic.PolyDB) > 0
+	diagnostics := api.NewDiagnostics(database, databaseErr == nil && assetsInitialized, version)
 	router := mux.NewRouter()
-	setupRoutes(router)
+	setupRoutes(router, diagnostics)
 
-	slog.Info("Server is ready")
-	err := http.ListenAndServe("0.0.0.0:8080", router)
+	listenAddr := os.Getenv("LISTEN_ADDR")
+	if listenAddr == "" {
+		listenAddr = "0.0.0.0:8080"
+	}
+
+	slog.Info("Starting HTTP server", "address", listenAddr)
+	err := http.ListenAndServe(listenAddr, router)
 	if err != nil {
 		slog.Error(err.Error())
 	}

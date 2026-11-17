@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -37,10 +38,8 @@ func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.WriteHeader(statusCode)
 	err := json.NewEncoder(w).Encode(data)
 	if err != nil {
-		fmt.Fprintf(w, "%s", err.Error())
-		slog.Error(err.Error())
+		slog.Error("Error encoding HTTP response")
 	}
-	slog.Debug("Sent response", "data", data)
 }
 
 // send response with given error code and message
@@ -59,24 +58,25 @@ func ERROR(w http.ResponseWriter, statusCode int, err error) {
 
 // creates user and returns id
 func RegisterUser(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		ERROR(w, http.StatusUnprocessableEntity, err)
+		ERROR(w, http.StatusUnprocessableEntity, errors.New("invalid request body"))
 		return
 	}
 
 	user := models.User{}
 	err = json.Unmarshal(body, &user)
 	if err != nil {
-		ERROR(w, http.StatusUnprocessableEntity, err)
+		ERROR(w, http.StatusUnprocessableEntity, errors.New("invalid request body"))
 		return
 	}
 
 	result := db.DB.Create(&user)
 
 	if result.Error != nil {
-		slog.Error("Error creating user", "error", result.Error.Error())
-		ERROR(w, http.StatusConflict, result.Error)
+		slog.Error("Error creating user")
+		ERROR(w, http.StatusConflict, errors.New("could not create user; check account fields or choose another username"))
 		return
 	}
 
@@ -91,24 +91,25 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 // creates guest and returns id
 func RegisterGuest(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		ERROR(w, http.StatusUnprocessableEntity, err)
+		ERROR(w, http.StatusUnprocessableEntity, errors.New("invalid request body"))
 		return
 	}
 
 	guest := models.Guest{}
 	err = json.Unmarshal(body, &guest)
 	if err != nil {
-		ERROR(w, http.StatusUnprocessableEntity, err)
+		ERROR(w, http.StatusUnprocessableEntity, errors.New("invalid request body"))
 		return
 	}
 
 	result := db.DB.Create(&guest)
 
 	if result.Error != nil {
-		slog.Error("Error creating guest", "error", result.Error.Error())
-		ERROR(w, http.StatusConflict, result.Error)
+		slog.Error("Error creating guest")
+		ERROR(w, http.StatusConflict, errors.New("could not create guest; check display name"))
 		return
 	}
 
@@ -123,28 +124,29 @@ func RegisterGuest(w http.ResponseWriter, r *http.Request) {
 
 // validates user credentials and returns jwt auth_token
 func LoginUser(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		ERROR(w, http.StatusUnprocessableEntity, err)
+		ERROR(w, http.StatusUnprocessableEntity, errors.New("invalid request body"))
 		return
 	}
 
 	user := models.User{}
 	err = json.Unmarshal(body, &user)
 	if err != nil {
-		ERROR(w, http.StatusUnprocessableEntity, err)
+		ERROR(w, http.StatusUnprocessableEntity, errors.New("invalid request body"))
 		return
 	}
 
 	var dbUser models.User
 	result := db.DB.First(&dbUser, "is_guest = False AND user_name = ?", strings.ToLower(user.UserName))
 	if result.Error != nil {
-		ERROR(w, http.StatusUnauthorized, result.Error)
+		ERROR(w, http.StatusUnauthorized, errors.New("invalid credentials"))
 		return
 	}
 
 	if logic.VerifyPassword(dbUser.Password, user.Password) != nil {
-		ERROR(w, http.StatusUnauthorized, fmt.Errorf("wrong password"))
+		ERROR(w, http.StatusUnauthorized, errors.New("invalid credentials"))
 		return
 	}
 
@@ -158,12 +160,13 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func RefreshToken(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		ERROR(w, http.StatusBadRequest, err)
+		ERROR(w, http.StatusBadRequest, errors.New("invalid request body"))
 		return
 	}
 
@@ -184,7 +187,10 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	// Get user details to generate new token pair
 	var user models.User
-	db.DB.First(&user, "id = ?", userID)
+	if err := db.DB.First(&user, "id = ?", userID).Error; err != nil {
+		ERROR(w, http.StatusUnauthorized, errors.New("account unavailable; sign in again"))
+		return
+	}
 
 	tokenPair, err := auth.CreateTokenPair(userID, user.UserName, user.DisplayName, user.IsGuest)
 	if err != nil {
@@ -197,9 +203,10 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 // updates user password and / or displayname
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
 	var updateRequest models.User
 	if err := json.NewDecoder(r.Body).Decode(&updateRequest); err != nil {
-		ERROR(w, http.StatusBadRequest, fmt.Errorf("invalid request format: %w", err))
+		ERROR(w, http.StatusBadRequest, errors.New("invalid request format"))
 		return
 	}
 
@@ -225,14 +232,14 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	result := db.DB.Model(&updateRequest).Select(fieldsToUpdate).Updates(updateRequest)
 
 	if result.Error != nil {
-		ERROR(w, http.StatusConflict, result.Error)
+		ERROR(w, http.StatusConflict, errors.New("could not update user"))
 		return
 	}
 
 	// get the complete updated user info
 	var updatedUser models.User
 	if err := db.DB.First(&updatedUser, "id = ?", uid).Error; err != nil {
-		ERROR(w, http.StatusInternalServerError, fmt.Errorf("error retrieving updated user: %w", err))
+		ERROR(w, http.StatusInternalServerError, errors.New("could not retrieve updated user"))
 		return
 	}
 

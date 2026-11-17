@@ -16,6 +16,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -263,7 +264,16 @@ func main() {
 						polyAttempt++
 					}
 					time.Sleep(200 * time.Millisecond)
-					loc, status = logic.CheckStreetViewExists(pt, polygon.Radius)
+					var err error
+					loc, err = logic.CheckStreetViewExists(context.Background(), pt, polygon.Radius)
+					status = "OK"
+					if err != nil {
+						if err != logic.ErrStreetViewNotFound {
+							slog.Error("Metadata lookup failed", "reason", err.Error())
+							return
+						}
+						status = "ZERO_RESULTS"
+					}
 					slog.Debug("api check: ", "point", pt, "location", loc, "status", status)
 					failsafe++
 					apiAttempt++

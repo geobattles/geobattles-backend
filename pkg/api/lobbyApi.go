@@ -2,7 +2,7 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,7 +14,7 @@ import (
 func ServeGetLobby(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(game.LobbyMap)
+	json.NewEncoder(w).Encode(game.ListLobbies())
 	slog.Debug("Sent lobby list")
 }
 
@@ -22,18 +22,24 @@ func ServeCreateLobby(w http.ResponseWriter, r *http.Request) {
 	// w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	var lobbyConf game.LobbyConf
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 	reqBody, err := io.ReadAll(r.Body)
 	if err != nil {
-		slog.Error(err.Error())
+		slog.Warn("Invalid lobby request body")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	if err = json.Unmarshal(reqBody, &lobbyConf); err != nil {
-		slog.Error(err.Error())
+		slog.Warn("Invalid lobby configuration JSON")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	json.NewEncoder(w).Encode(game.CreateLobby(lobbyConf))
+	lobby, err := game.CreateLobby(lobbyConf)
+	if err != nil {
+		ERROR(w, http.StatusBadRequest, err)
+		return
+	}
+	JSON(w, http.StatusOK, lobby)
 
 	slog.Info("Created new lobby")
 }
@@ -42,7 +48,6 @@ func ServeDeleteLobby(w http.ResponseWriter, r *http.Request) {
 
 	id := r.URL.Query().Get("id")
 	slog.Warn("!! Delete lobby NOT implemented!!", "lobbyId", id)
-	// delete(lobby.LobbyMap, id)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -52,34 +57,26 @@ func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 	lobbyID := r.URL.Query().Get("id")
 
 	ctx := r.Context()
-	uid := ctx.Value(UidKey).(string)
-	displayName := ctx.Value(DisplayNameKey).(string)
-	slog.Debug("WebSocket Endpoint Hit", "lobby ID", lobbyID, "uid", uid, " name", displayName)
-
-	// only connect to ws if lobby exists
-	if lobby, ok := game.LobbyMap[lobbyID]; ok {
-		// check if player is already in lobby
-		if player, ok := lobby.PlayerMap[uid]; ok {
-			if player.Connected {
-				slog.Error("Player already connected")
-				w.WriteHeader(http.StatusConflict)
-				return
-			}
-		} else if lobby.CurrentRound != 0 {
-			slog.Error("Game in progres")
-			w.WriteHeader(http.StatusConflict)
-			return
-		}
-
-		conn, err := websocket.Upgrade(w, r)
-		if err != nil {
-			fmt.Fprintf(w, "%+v\n", err)
-			return
-		}
-
-		game.AddPlayerToLobby(uid, displayName, lobbyID, conn)
-
-	} else {
-		w.WriteHeader(http.StatusBadRequest)
+	uid, hasID := ctx.Value(UidKey).(string)
+	displayName, hasName := ctx.Value(DisplayNameKey).(string)
+	if !hasID || uid == "" || !hasName {
+		ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
+		return
 	}
+
+	admission, err := game.ReserveAdmission(lobbyID, uid, displayName)
+	if err != nil {
+		status := http.StatusConflict
+		if err.Error() == "LOBBY_NOT_FOUND" {
+			status = http.StatusBadRequest
+		}
+		ERROR(w, status, err)
+		return
+	}
+	defer admission.Cancel() // failed upgrade/expired reservation rollback
+	conn, err := websocket.Upgrade(w, r)
+	if err != nil {
+		return // Upgrade already wrote the protocol response.
+	}
+	admission.Join(conn)
 }

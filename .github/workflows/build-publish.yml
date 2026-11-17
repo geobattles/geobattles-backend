@@ -1,7 +1,11 @@
-name: Build and Push Image
+name: Publish image (manual)
 
+# Publication is an explicitly approved action, never a push or PR side effect.
 on:
-  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   REGISTRY: ghcr.io
@@ -9,15 +13,31 @@ env:
 
 jobs:
   build-and-push:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
-      
     steps:
-      - name: Checkout repository
+      - name: Check out master source
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up pinned Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: .go-version
+          cache: false
+
+      - name: Download modules
+        run: go mod download
+        env:
+          GOTOOLCHAIN: local
+
+      - name: Static checks before publication
+        run: make check
 
       - name: Docker metadata
         id: meta
@@ -25,16 +45,13 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=ref,event=pr
             type=sha
-            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }},priority=1100
+            type=raw,value=latest
 
-      # - name: Set up QEMU
-      #   uses: docker/setup-qemu-action@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - name: Setup Docker buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log into registry
@@ -44,21 +61,13 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=${{ github.sha }}
           push: true
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/buildcache:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/buildcache:buildcache,mode=max

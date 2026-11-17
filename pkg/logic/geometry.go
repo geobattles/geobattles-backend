@@ -2,6 +2,7 @@
 package logic
 
 import (
+	"encoding/json"
 	"math"
 )
 
@@ -11,6 +12,21 @@ import (
 // each ring is made of multiple points, each point is a coordinate pair
 
 type Point [2]float64
+
+// Fixed-length Go arrays otherwise accept short/long JSON arrays (and nulls)
+// by zero-filling/truncating. Geographic assets must contain exactly two axes.
+func (p *Point) UnmarshalJSON(data []byte) error {
+	var axes []*float64
+	if err := json.Unmarshal(data, &axes); err != nil || len(axes) != 2 || axes[0] == nil || axes[1] == nil {
+		return ErrLocationData
+	}
+	if !(Coords{Lng: *axes[0], Lat: *axes[1]}).Valid() {
+		return ErrLocationData
+	}
+	*p = Point{*axes[0], *axes[1]}
+	return nil
+}
+
 type Ring []Point
 type Polygon struct {
 	Size   int

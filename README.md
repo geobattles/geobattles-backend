@@ -6,148 +6,233 @@ GeoBattles is an open-source interactive geolocation guessing game where players
 
 GeoBattles features a **Battle Royale** mode where players can play solo or compete against others to guess locations, with limited lives.
 
-The game offers real-time multiplayer functionality, live statistics, and interactive map elements.
+The game offers real-time multiplayer, live statistics and interactive maps, with world, continent and country selection.
 
-#### This repository contains code for the backend server written in go. Frontend can be found [here](https://github.com/geobattles/geobattles-frontend).
+This repository contains the **Go backend**: the HTTP API, WebSocket game server and PostgreSQL persistence. The [Nuxt frontend](https://github.com/geobattles/geobattles-frontend) is maintained separately.
 
 ## 🚀 Getting Started
-## Production Setup
-The easiest way to run both the frontend and backend is using the prebuilt Docker images using Docker Compose.
+
+### Production Setup
+
+Run the frontend, backend and PostgreSQL with Docker Compose, behind an HTTPS reverse proxy. The example uses the prebuilt `:latest` images for a simple setup. For repeatable production updates and rollback, you can replace `:latest` with compatible version tags or image digests. Images can also be built from source as described below.
+
+Before deploying, follow the [production release checklist](docs/production-release.md) for configuration, database backup, verification and rollback. The example below uses a private same-host database network, matching the current connector's fixed PostgreSQL port 5432 and disabled database TLS.
 
 <details>
-<summary>📝 Google API Setup (required)</summary>
+<summary>📝 Google API Setup (required for gameplay)</summary>
 
-This project relies on Google Maps and StreetView APIs. Head over to Google Cloud [console](https://console.cloud.google.com), enable `Maps JavaScript API` and `Street View Static API` and generate an API key.
+Open the [Google Cloud console](https://console.cloud.google.com), enable the required APIs and create separate keys:
 
-> :warning:  
-> Be sure to properly secure your API key and setup usage quotas to avoid unexpected charges. You can use different keys for frontend and backend and further restrict them. Frontend only needs `Maps JavaScript API` and can be restricted to your website domain. Backend only needs `Street View Static API` and can be restricted to your server's public IP.
+- **Frontend:** Maps JavaScript API, restricted to your website's referrers.
+- **Backend:** Street View Static API, restricted to the server's outbound IP where supported.
 
-</details><br/>
+> [!WARNING]
+> Restrict each key to its required API and configure quotas and billing alerts. Browser keys are public configuration, not server secrets; billing alerts alone are not a spending cap. Builds and static checks do not need Google requests.
 
-1. Create a folder for the project, for example `geobattles`.
-2. Create a `docker-compose.yaml` file with the following content:
-```docker
-services:
-  backend:
-    image: ghcr.io/geobattles/geobattles-backend:latest
-    restart: unless-stopped
-    environment:
-      GMAPS_API: "<GMAPS_API_KEY>"
-      DB_HOST: "database"
-      DB_USER: "geobattles"
-      DB_PASSWORD: "<POSTGRES_PWD>"
-      LOG_LEVEL: "INFO"
-    ports:
-      - "8080:8080"
-    depends_on:
-    - database
+</details>
 
-  frontend:
-    image: ghcr.io/geobattles/geobattles-frontend:latest
-    restart: unless-stopped
-    environment:
-      NUXT_PUBLIC_GMAPS_API: "GMAPS_API_KEY"
-      NUXT_PUBLIC_BACKEND_HOST: "<PUBLIC_BACKEND_URL>"
-    ports:
-      - "3000:3000"
-    depends_on:
-    - backend
+1. Create a project folder, for example `geobattles`.
+2. Prepare a private `.env` file in that folder with these Compose inputs. Never commit it or share its values:
 
-  database:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: "geobattles"
-      POSTGRES_PASSWORD: "<POSTGRES_PWD>"
-      POSTGRES_DB: "db"
-    volumes:
-      - .db:/var/lib/postgresql/data
-```
-3. Run it with `docker compose up -d`
+   | Variable                   | Value                                                                                                              |
+   | -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+   | `GMAPS_API`                | Restricted backend Street View key                                                                                 |
+   | `NUXT_PUBLIC_GMAPS_API`    | Restricted browser Maps key                                                                                        |
+   | `NUXT_PUBLIC_BACKEND_HOST` | Public HTTPS API origin, for example `https://api.example.com`                                                     |
+   | `DB_PASSWORD`              | Random database password; use 64 lowercase hexadecimal characters to avoid the current connector's DSN limitations |
+   | `JWT_KEY`                  | Strong, stable signing secret of at least 32 characters                                                            |
+
+3. Create `docker-compose.yaml`:
+
+   ```yaml
+   name: geobattles
+
+   services:
+     backend:
+       image: ghcr.io/geobattles/geobattles-backend:latest
+       restart: unless-stopped
+       environment:
+         GMAPS_API: ${GMAPS_API:?Set the backend Street View key}
+         JWT_KEY: ${JWT_KEY:?Set a strong stable signing key}
+         DB_HOST: database
+         DB_USER: geobattles
+         DB_NAME: db
+         DB_PASSWORD: ${DB_PASSWORD:?Set the database password}
+         LISTEN_ADDR: 0.0.0.0:8080
+         LOG_LEVEL: INFO
+       depends_on:
+         database:
+           condition: service_healthy
+       healthcheck:
+         test:
+           [
+             "CMD",
+             "wget",
+             "-q",
+             "-O",
+             "/dev/null",
+             "http://127.0.0.1:8080/readyz",
+           ]
+         interval: 10s
+         timeout: 3s
+         retries: 10
+         start_period: 20s
+       networks: [web, database]
+
+     frontend:
+       image: ghcr.io/geobattles/geobattles-frontend:latest
+       restart: unless-stopped
+       environment:
+         NUXT_PUBLIC_GMAPS_API: ${NUXT_PUBLIC_GMAPS_API:?Set the browser Maps key}
+         NUXT_PUBLIC_BACKEND_HOST: ${NUXT_PUBLIC_BACKEND_HOST:?Set the public HTTPS API origin}
+         NUXT_BACKEND_SERVER_HOST: http://backend:8080
+       depends_on:
+         backend:
+           condition: service_healthy
+       networks: [web]
+
+     database:
+       image: postgres:17-alpine@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065
+       restart: unless-stopped
+       environment:
+         POSTGRES_USER: geobattles
+         POSTGRES_PASSWORD: ${DB_PASSWORD:?Set the database password}
+         POSTGRES_DB: db
+       volumes:
+         - ./.db:/var/lib/postgresql/data
+       healthcheck:
+         test:
+           ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+         interval: 3s
+         timeout: 3s
+         retries: 20
+       networks: [database]
+
+   networks:
+     web:
+       name: geobattles_web
+     database:
+       internal: true
+   ```
+
+4. Validate without printing resolved secrets, then start the stack when ready:
+
+   ```sh
+   docker compose --env-file .env config --quiet
+   docker compose --env-file .env up -d --wait
+   ```
+
+Only the reverse proxy should publish ports. Attach it to the `geobattles_web` network so it can reach `backend:8080` and `frontend:3000`; the application and database ports above are not published to the host.
+
+Starting the backend validates its signing configuration and runs database migrations. The example retains the original `.db` data directory and SQL database name `db`; preserve existing data and secrets rather than replacing or reinitializing them during upgrades. Run **one backend replica**: active lobbies and timers live in memory and disappear on restart, so drain occupied rooms before replacing it.
 
 ### SSL Configuration
-You will also want to setup SSL termination. Below are example nginx configurations for use with the [swag](https://github.com/linuxserver/docker-swag) container.
+
+Terminate HTTPS/WSS at your reverse proxy. For example, a [SWAG](https://github.com/linuxserver/docker-swag) container attached to `geobattles_web` can use the following server blocks. Replace the example domains and configure certificates in the proxy; its SSL include path is SWAG-specific.
 
 <details>
-<summary>nginx server block</summary>
+<summary>nginx server blocks</summary>
 
 ```nginx
-# backend
+# Backend API and WebSockets
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
-
-    server_name <api.yourdomain.tld>;
+    server_name api.example.com;
 
     include /config/nginx/ssl.conf;
 
-    client_max_body_size 0;
-
     location / {
-        include /config/nginx/proxy.conf;
-
-        proxy_pass http://<backend_local_ip>:8080;
+        proxy_pass http://backend:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 3600s;
     }
 }
 
-# frontend
+# Nuxt frontend
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
-
-    server_name <yourdomain.tld>;
+    server_name game.example.com;
 
     include /config/nginx/ssl.conf;
 
-    client_max_body_size 0;
-
     location / {
-        include /config/nginx/proxy.conf;
-
-        proxy_pass http://<frontend_local_ip>:3000;
+        proxy_pass http://frontend:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
-</details><br/>
+
+</details>
+
+Preserve the application's raw-JWT `Authorization` header and WebSocket subprotocols; do not replace them with proxy Basic Auth. A same-origin `/api` gateway is another option; see the [release guide](docs/production-release.md#2-supply-runtime-configuration-privately) for its routing and SSR requirements.
 
 ## 🛠️ Development setup
+
 ### Requirements
 
--   Go >=1.24 or Docker
--   API key for Google Street View Static API
--   Postgres database
+- Go **1.27.4**, pinned in [.go-version](.go-version), plus Git, Bash and Make.
+- Docker Compose v2+ for the isolated local PostgreSQL database or container stack.
+- Restricted Google keys for gameplay; no key, database or Python runtime is needed for static checks.
 
 ### Setup Steps
-1. Clone the repository
-```
-git clone https://github.com/geobattles/geobattles-backend
-cd geobattles-backend
-```
 
-2. Chose your development method
+1. Clone the backend:
+
+   ```sh
+   git clone https://github.com/geobattles/geobattles-backend geo-backend
+   cd geo-backend
+   ```
+
+2. Choose your development method.
+
 #### With Go installed locally
-```bash
-# Copy environment file and configure it
-cp example.env to .env
 
-# Download dependencies and run:
-go get .
-go run .
+```sh
+go mod download
+make check
+make setup
+make db-up
+make dev
 ```
+
+`make check` checks formatting, modules, vet and compilation without starting the application. `make setup` creates private local credentials only when `.env` is absent; it never overwrites your configuration. `make dev` validates the isolated development database and listens on `127.0.0.1:8080`, with the backend Google key withheld.
+
+For Maps-enabled manual play, configure the restricted keys, stop the keyless backend and use `make dev-maps`. Starting rounds can spend Google quota. Set up the frontend separately following its contributor guide; see [local development](docs/local-development.md) for both repositories and safe shutdown commands.
 
 #### With Docker
-```shell
-# Build image
-docker build  . -t geobattles-backend
 
-# Run container
-docker run \
-  -p 8080:8080 \
-  -e GMAPS_API=<GMAPS_API_KEY> \
-  -e DB_HOST=<POSTGRES_URL> \
-  -e DB_PASSWORD=<POSTGRES_PWD> \
-  geobattles-backend
+Build the backend image from this repository without starting services:
+
+```sh
+docker build --build-arg VERSION="$(git rev-parse HEAD)" -t geobattles-backend:local .
 ```
 
-> [!NOTE]  
-> For all available env variables see `example.env`
+For the complete local frontend/backend/database stack, keep sibling clones named `geo-backend` and `geo-frontend`, and prepare their private `.env` files separately. From the backend repository:
+
+```sh
+env -u DB_PASSWORD docker compose --env-file .env -f deploy/compose.lan.yml config --quiet
+env -u DB_PASSWORD docker compose --env-file .env -f deploy/compose.lan.yml up -d --build --wait
+```
+
+The versioned files are [deploy/compose.lan.yml](deploy/compose.lan.yml) and [deploy/Caddyfile.lan](deploy/Caddyfile.lan). Open `http://localhost:8088`, or the host's LAN address from another device. This is an **HTTP development preview, not a production template**; see [LAN deployment](docs/local-lan-deployment.md) for configuration, versioning and restart precautions.
+
+> [!NOTE]
+> See [example.env](example.env) for backend configuration names and placeholders. Preserve existing `.env` files and never use production credentials or databases for development.
+
+## Contributing and documentation
+
+- [Contributing](CONTRIBUTING.md): supported toolchains, checks and devcontainer workflow.
+- [Documentation index](docs/README.md): architecture, API/socket contracts, region scoring and operational guides.
+- [Runtime diagnostics](docs/runtime-diagnostics.md): `/healthz`, `/readyz` and `/version`.
+- [Security reporting](SECURITY.md).
+
+GeoBattles is licensed under [GPLv3](LICENSE).
