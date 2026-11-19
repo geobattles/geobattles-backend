@@ -13,6 +13,7 @@
 - [Socket contract](socket-contract.md): readiness, ordering, heartbeat, match identity and archives
 - [Backend guardrails](backend-guardrails.md): validation, provider failures and token compatibility
 - [Region scoring](region-scoring.md): country catalog and automatic/manual curves
+- [Location selection](location-selection.md): search areas, returned-point bounds and country coverage
 
 ## Operate safely
 

@@ -14,8 +14,9 @@ const (
 	WorldSpanKm   = math.Pi * EarthRadiusKm
 	MinimumHalfKm = 1.0
 	PerfectMeters = 100.0
-	// Raw input bound, before deduplication; HTTP/socket byte limits still apply.
-	MaxCountryCodes = 120
+	// Fixed safety bound, not the catalog count; allow new countries without
+	// changing validation each time. HTTP/socket byte limits still apply.
+	MaxCountryCodes = 256
 )
 
 // LegacyHalfKm is the exponential half-score decay distance, not the perfect
@@ -221,7 +222,7 @@ func NormalizeCountryCodes(codes []string) ([]string, error) {
 }
 
 // SelectionSpanKm combines country extents and their separation. Callers get
-// the same result using only the public catalog; at most 120 unique countries.
+// the same result using only the public catalog; at most 256 unique countries.
 func SelectionSpanKm(codes []string) (float64, error) {
 	codes, err := NormalizeCountryCodes(codes)
 	if err != nil {

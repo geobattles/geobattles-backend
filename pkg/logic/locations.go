@@ -18,6 +18,8 @@ type country struct {
 	Size           float64 // original asset metadata, never a sampling weight
 	SamplingWeight float64 `json:"-"`
 	Areas          MultiPolygon
+	StrictBounds   bool `json:"strictBounds"`
+	bounds         [][]Ring
 }
 
 type countryStore struct {
@@ -74,6 +76,11 @@ func InitCountryDB() error {
 	for _, code := range codes {
 		if len(nextPolygons[code]) == 0 {
 			return fmt.Errorf("missing full country polygons %s: %w", code, ErrLocationData)
+		}
+		if country := loaded.Countries[code]; country.StrictBounds {
+			if err := json.Unmarshal(nextPolygons[code], &country.bounds); err != nil || len(country.bounds) == 0 {
+				return fmt.Errorf("invalid strict country bounds %s: %w", code, ErrLocationData)
+			}
 		}
 	}
 	// Preserve the exact existing weighted sampling policy, independently of
@@ -152,6 +159,11 @@ func RndLocationContext(parent context.Context, countryList []string, totalSize 
 		if ctx.Err() != nil {
 			return Coords{}, "", ErrLocationTimeout
 		}
+		// A search radius can snap to imagery outside a curated area or country.
+		// Opted-in countries reject that result within the same retry budget.
+		if err == nil && !countryDB.Countries[ccode].allowsPanorama(polygon, loc) {
+			err = ErrStreetViewNotFound
+		}
 		if err == nil {
 			return loc, ccode, nil
 		}
@@ -168,6 +180,24 @@ func RndLocationContext(parent context.Context, countryList []string, totalSize 
 		}
 	}
 	return Coords{}, "", lastErr
+}
+
+// Legacy areas remain search hints. Strict countries make the selected polygon
+// (including its holes) and the full country outline hard acceptance boundaries.
+func (c *country) allowsPanorama(area Polygon, loc Coords) bool {
+	if !c.StrictBounds {
+		return true
+	}
+	point := Point{loc.Lng, loc.Lat}
+	if !polygonContains(area.Rings, point) {
+		return false
+	}
+	for _, rings := range c.bounds {
+		if polygonContains(rings, point) {
+			return true
+		}
+	}
+	return false
 }
 
 // SelectRndArea fails safely if asset/configuration data is unavailable.

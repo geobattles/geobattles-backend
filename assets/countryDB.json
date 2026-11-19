@@ -275,6 +275,12 @@
             "ccode": "JO",
             "size": 16245
         },
+        "KZ": {
+            "name": "Kazakhstan",
+            "ccode": "KZ",
+            "size": 84,
+            "strictBounds": true
+        },
         "KE": {
             "name": "Kenya",
             "ccode": "KE",

@@ -37,8 +37,9 @@ positive and at most `worldSpanKm`. Catalog access returns detached copies.
 file, derived from [UN M49](https://unstats.un.org/unsd/methodology/m49/overview/),
 with explicit geographic choices:
 
-- Russia (`RU`) is Europe; Turkey (`TR`) is Asia. A transcontinental country is
-  selected whole, not split into different playable polygons per continent.
+- Russia (`RU`) is Europe; Turkey (`TR`) and Kazakhstan (`KZ`) are Asia. A
+  transcontinental country is selected whole, not split into different playable
+  polygons per continent.
 - North America includes Central America and the Caribbean. Greenland, Bermuda,
   Martinique, Saint Pierre and Miquelon, Puerto Rico and the US Virgin Islands
   are North America, independent of their sovereign state's continent.
@@ -51,7 +52,7 @@ with explicit geographic choices:
 - Only supported country codes appear. No Antarctica option is manufactured.
   Startup rejects unknown, duplicated, missing countries or missing/invalid
   continent definitions, rather than returning a partial catalog. Current
-  counts: AF 17, AS 27, EU 46, NA 13, OC 7, SA 10; total 120.
+  counts: AF 17, AS 28, EU 46, NA 13, OC 7, SA 10; total 121.
 
 The names are the existing country metadata names, not a new translated naming
 system. The local visual selector may localize display names without changing
@@ -92,7 +93,7 @@ selectionSpanKm = min(worldSpanKm,
 
 Haversine distance uses radius **6371 km**, radians and a `[0,1]` clamp on its
 intermediate value. For `[]` or every supported code, use `worldSpanKm` exactly.
-Pair work is bounded to 120 unique countries. Geographically separated custom
+Pair work is bounded to 256 unique countries. Geographically separated custom
 countries therefore do not inherit an artificially tiny summed-area curve.
 
 ## Configuration, updates and lifecycle
@@ -119,7 +120,7 @@ scoreFactor?: number // unchanged manual input, integer 1..500
   score factor alone does not change policy.
 - Codes must match supported uppercase identifiers exactly. Duplicates are
   normalized to sorted unique codes, not extra sampling weight. More than
-  120 raw entries rejects with `INVALID_LOBBY_SETTINGS`; unknown codes return
+  256 raw entries rejects with `INVALID_LOBBY_SETTINGS`; unknown codes return
   `INVALID_COUNTRY_CODE`. Existing 64KiB HTTP and 16KiB socket limits remain.
 - Omitted/null update `ccList` means no country change; explicit `[]` is the
   existing **world** contract. Reordering/deduplication is not a region change.
