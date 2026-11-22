@@ -89,8 +89,10 @@ type Player = {
   returns `REQUEST_ERROR {command:'start', code:'PLAYERS_NOT_READY', message}`
   before provider work. Normal authorization/active/reservation conflicts retain
   their existing priority. Readiness is rechecked at successful selection commit.
-- **MID-ROUND advancement is not readiness-gated.** It retains the existing
-  administrator/start/provider rules even if a grace-retained member is offline.
+- **MID-ROUND advancement does not use Ready Check.** It uses the separate
+  [powerup decision window](powerups.md): context-bound host start queues until
+  eligible connected choosers finish or the 10s cutoff closes. Offline retained
+  members do not delay that window. Initial/replay readiness remains unchanged.
 - New membership, intentional removal and grace expiry reset everyone's ready
   flag. Lobby settings updates preserve every member's existing ready flag,
   including changes to mode, capacity, attempts, rounds, round time, score factor,
@@ -222,6 +224,8 @@ lifetime; it does not provide process-restart recovery or durable history.
 
 HTTP discovery/creation omit both the answer `location` and `revealedAnswers`;
 authenticated member recovery retains the current/last answer as before and
-adds finalized answers for the journal. Scoring/tie rules and the one bounded
-best-effort completed-game database write remain unchanged. Final guess ordering
+adds finalized answers for the journal. [Powerup state](powerups.md) recovers
+inventory, queued/active effects, done/start status and settlement outcomes;
+Duel ties/neither-valid guesses draw. The one bounded best-effort completed-game
+database write remains unchanged. Final guess ordering
 stays NEW_RESULT -> ROUND_FINISHED -> ROUND_RESULT -> GAME_END.

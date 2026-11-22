@@ -11,6 +11,7 @@
 
 - [Lobby lifecycle and payloads](lobby-lifecycle.md): snapshots, ownership, recovery and persistence
 - [Socket contract](socket-contract.md): readiness, ordering, heartbeat, match identity and archives
+- [Powerups](powerups.md): next-round choices, start barrier, idempotency and Duel settlement
 - [Backend guardrails](backend-guardrails.md): validation, provider failures and token compatibility
 - [Region scoring](region-scoring.md): country catalog and automatic/manual curves
 - [Location selection](location-selection.md): search areas, returned-point bounds and country coverage

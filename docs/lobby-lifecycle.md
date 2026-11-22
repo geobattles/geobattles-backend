@@ -1,10 +1,10 @@
 # Lobby lifecycle and frontend wire contract
 
-The [socket contract](socket-contract.md) specifies readiness, ordering, round time, match identity and journal archives. HTTP uses raw-JWT authorization and WebSockets negotiate `json`.
+The [socket contract](socket-contract.md) specifies readiness, ordering, round time, match identity and journal archives. [Powerups](powerups.md) specifies the separate intermission decision barrier, effect ledger and receipts. HTTP uses raw-JWT authorization and WebSockets negotiate `json`.
 
 ## Exact payload shapes
 
-Notation below describes type shapes. `Record<number, T>` has decimal-string JSON keys. Empty maps are `{}`, empty arrays `[]`. Optional fields are omitted, not `null`.
+Notation below describes type shapes. `Record<number, T>` has decimal-string JSON keys. Empty maps are `{}`, empty arrays `[]`. Optional fields are omitted, not `null`; powerupState's targetRound/closesAt explicitly use null when absent.
 
 ```ts
 type Phase = 'WAITING' | 'PLAYING' | 'MID-ROUND' | 'FINISHED'
@@ -31,9 +31,10 @@ type LobbySnapshot = {
   roundRes: Record<string, Result>;
   timeRemaining: number; // milliseconds, explicitly 0 when expired/non-playing
   powerLog: Powerup[];
+  powerupState?: PowerupState; // member-only, see powerups.md
   location?: Coords; // MEMBER snapshots: absent in WAITING; current/last otherwise
 }
-type PublicLobbySnapshot = Omit<LobbySnapshot, 'location' | 'revealedAnswers'>
+type PublicLobbySnapshot = Omit<LobbySnapshot, 'location' | 'revealedAnswers' | 'powerupState'>
 ```
 
 Public GET `/lobby` returns `Record<string, PublicLobbySnapshot>` keyed by lobby ID. Authenticated POST `/lobby` returns one `PublicLobbySnapshot`; creation does not authorize member recovery. Both HTTP paths omit `location` and `revealedAnswers` in every phase. Authorized member WebSocket snapshots below retain the complete current/last location and all phase/results fields. Individual lobby snapshots are consistent; listing is not one cross-lobby instant. `numPlayers` includes grace-retained members (capacity is membership + new admission reservations, not just connected sockets).
@@ -51,9 +52,15 @@ Server envelopes are `{status, type, seq?, payload?}`. The table lists message-s
 | `GAME_END` | `{gameId: string, results: Record<number,Record<string,Result[]>>, endResults, revealedAnswers, totalResults, round, phase: 'FINISHED'}` |
 | `UPDATED_LOBBY` | `{lobby: LobbySnapshot}` |
 | `LEFT_LOBBY` | `{lobby: LobbySnapshot, user: string}` |
-| `DUEL_FROM` | `{user: string}`, `status: 'WRN'` |
-| `POWERUP_USED` | no payload |
+| `DUEL_FROM` | `{user,gameId,round: affectedRound,effectId}`, `status: 'WRN'` |
+| `POWERUP_USED` | `{gameId,requestId,effect,powerupState,players}` |
+| `POWERUP_READY` | `{gameId,requestId,powerupState}` |
+| `POWERUP_STATE` | `{gameId,round,phase,players,powerupState}` |
 | `CC` | `{cc: string, polygon?: GeoJSON}` |
+
+START_ROUND, ROUND_RESULT and GAME_END additionally carry `powerupState`;
+REJOIN_ROUND carries it through `payload.lobby`. See [powerups](powerups.md)
+for its exact fields, null semantics and context-bound request errors.
 
 Except the noted `WRN` types, these statuses are `OK`. `REJOIN_ROUND` is unicast to a returning member, enqueued **after** that member's `JOINED_LOBBY` in all four phases, including WAITING (round/timeRemaining 0). For a fresh member, use the complete JOINED snapshot. On successful replay `START_ROUND.round` is 1; never infer round by incrementing a client-local counter. Final successful guess `NEW_RESULT` is enqueued before `ROUND_FINISHED`, `ROUND_RESULT`, `GAME_END`. Timer/leave completion has no extra `NEW_RESULT`.
 

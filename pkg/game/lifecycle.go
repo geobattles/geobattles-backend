@@ -98,6 +98,9 @@ func (a *Admission) Join(conn *ws.Conn) {
 		c.CloseWithCode(ws.CloseTryAgainLater, "Admission expired; reconnect")
 		return
 	}
+	// Close an expired decision window before admitting recovered eligibility.
+	// Recovery cannot join a choice set whose original cutoff already passed.
+	l.reconcilePowerupWindowLocked(&e)
 	delete(l.reservations, a.id)
 	a.timer.Stop()
 	if l.emptyTimer != nil {
@@ -119,6 +122,7 @@ func (a *Admission) Join(conn *ws.Conn) {
 	}
 	l.leases[a.id] = &playerLease{client: c, generation: a.generation, present: present}
 	l.selectAdminLocked()
+	l.reconcilePowerupWindowLocked(&e)
 	if !l.hub.RegisterClient(c) {
 		e.close(c)
 	} else {
@@ -127,6 +131,7 @@ func (a *Admission) Join(conn *ws.Conn) {
 			l.sendLocked(&e, c, models.ResponseBase{Status: "OK", Type: "REJOIN_ROUND", Payload: l.resyncLocked()})
 		}
 	}
+	l.launchPowerupStartLocked(&e)
 	l.mu.Unlock()
 	l.applyEffects(e)
 	go c.Write()
@@ -141,6 +146,9 @@ func (l *Lobby) ownsLocked(c *websocket.Client) bool {
 // Invalidate and enqueue feedback in the same transaction, before any newer
 // start can begin. Superseded provider completions must not send another error.
 func (l *Lobby) cancelStartLocked(e *lobbyEffects) {
+	hadPowerStart := l.powerStart != nil
+	wasStarting := l.starting
+	l.powerStart = nil
 	if l.startCancel != nil {
 		l.startCancel()
 		l.startCancel = nil
@@ -153,6 +161,9 @@ func (l *Lobby) cancelStartLocked(e *lobbyEffects) {
 		if initiator != nil && l.ownsLocked(initiator) && !initiator.Closed() {
 			l.errorLocked(e, initiator, "start", "START_CANCELLED")
 		}
+	}
+	if hadPowerStart || wasStarting {
+		l.broadcastPowerupLocked(e)
 	}
 }
 
@@ -186,12 +197,14 @@ func (l *Lobby) clientLost(c *websocket.Client) {
 	l.mu.Lock()
 	if l.ownsLocked(c) {
 		l.cancelStartLocked(&e)
+		l.reconcilePowerupWindowLocked(&e)
 		l.hub.UnregisterClient(c)
 		l.players[c.ID].Connected, l.players[c.ID].Ready = false, false
 		lease := l.leases[c.ID]
 		lease.expires = time.Now().Add(reconnectGrace)
 		lease.grace = time.AfterFunc(reconnectGrace, func() { l.expireLease(c.ID, lease, lease.generation) })
 		l.selectAdminLocked()
+		l.reconcilePowerupWindowLocked(&e)
 		l.broadcastLocked(&e, models.ResponseBase{Status: "OK", Type: "LEFT_LOBBY", Payload: models.ResponsePayload{User: c.ID, Lobby: l.snapshotLocked()}})
 	}
 	l.mu.Unlock()
@@ -200,6 +213,8 @@ func (l *Lobby) clientLost(c *websocket.Client) {
 
 func (l *Lobby) leaveLocked(e *lobbyEffects, c *websocket.Client) {
 	l.cancelStartLocked(e)
+	l.reconcilePowerupWindowLocked(e)
+	l.removePowerupMemberLocked(e, c.ID)
 	l.hub.UnregisterClient(c)
 	delete(l.players, c.ID)
 	delete(l.leases, c.ID)
@@ -213,6 +228,8 @@ func (l *Lobby) expireLease(id string, lease *playerLease, generation uint64) {
 	l.mu.Lock()
 	if p := l.players[id]; !l.closed && l.leases[id] == lease && lease.generation == generation && p != nil && !p.Connected && !time.Now().Before(lease.expires) {
 		l.cancelStartLocked(&e)
+		l.reconcilePowerupWindowLocked(&e)
+		l.removePowerupMemberLocked(&e, id)
 		if a := l.reservations[id]; a != nil && a.previous == lease {
 			a.timer.Stop()
 			delete(l.reservations, id)
@@ -228,6 +245,8 @@ func (l *Lobby) expireLease(id string, lease *playerLease, generation uint64) {
 
 func (l *Lobby) afterRemovalLocked(e *lobbyEffects, id string) {
 	l.resetReadyLocked()
+	l.reconcilePowerupWindowLocked(e)
+	l.broadcastPowerupLocked(e)
 	l.broadcastLocked(e, models.ResponseBase{Status: "OK", Type: "LEFT_LOBBY", Payload: models.ResponsePayload{User: id, Lobby: l.snapshotLocked()}})
 	if len(l.players) == 0 && len(l.reservations) == 0 {
 		l.closeLocked(e)
@@ -256,6 +275,7 @@ func (l *Lobby) closeLocked(e *lobbyEffects) {
 		return
 	}
 	l.closed = true
+	l.stopPowerupWindowLocked()
 	l.cancelStartLocked(e)
 	if l.roundTimer != nil {
 		l.roundTimer.Stop()

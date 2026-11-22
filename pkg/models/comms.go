@@ -10,9 +10,12 @@ type ResponseBase struct {
 }
 
 type RequestErrorPayload struct {
-	Command string `json:"command"`
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Command   string `json:"command"`
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	RequestID string `json:"requestId,omitempty"`
+	GameID    string `json:"gameId,omitempty"`
+	Round     *int   `json:"round,omitempty"`
 }
 
 type ResponsePayload struct {
@@ -31,6 +34,7 @@ type ResponsePayload struct {
 	Phase           string          `json:"phase,omitempty"`
 	CC              string          `json:"cc,omitempty"`
 	PowerLog        interface{}     `json:"powerLog,omitempty"`
+	PowerupState    interface{}     `json:"powerupState,omitempty"`
 	Players         interface{}     `json:"players,omitempty"`
 	Polygon         json.RawMessage `json:"polygon,omitempty"`
 	TimeRemaining   int64           `json:"timeRemaining"`

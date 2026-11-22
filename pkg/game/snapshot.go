@@ -27,6 +27,7 @@ type LobbySnapshot struct {
 	Location        *logic.Coords               `json:"location,omitempty"`
 	TimeRemaining   int64                       `json:"timeRemaining"`
 	PowerLog        []Powerup                   `json:"powerLog"`
+	PowerupState    *PowerupState               `json:"powerupState,omitempty"`
 }
 
 type rejoinPayload struct {
@@ -103,12 +104,15 @@ func (l *Lobby) publicSnapshotLocked() LobbySnapshot {
 	snapshot := l.snapshotLocked()
 	snapshot.Location = nil
 	snapshot.RevealedAnswers = nil
+	snapshot.PowerupState = nil
 	return snapshot
 }
 
 func (l *Lobby) snapshotLocked() LobbySnapshot {
+	power := l.powerupStateLocked()
 	out := LobbySnapshot{
-		ID: l.id, GameID: l.gameID, Admin: l.admin, Conf: cloneConf(*l.conf), NumPlayers: len(l.players),
+		PowerupState: &power,
+		ID:           l.id, GameID: l.gameID, Admin: l.admin, Conf: cloneConf(*l.conf), NumPlayers: len(l.players),
 		Players: l.playersLocked(), CurrentRound: l.round, Round: l.round, Phase: l.phase,
 		Results:         make(map[int]map[string][]Result, len(l.rawResults)),
 		EndResults:      make(map[int]map[string]Result, len(l.endResults)),

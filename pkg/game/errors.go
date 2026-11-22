@@ -8,6 +8,11 @@ import (
 )
 
 var requestErrorMessages = map[string]string{
+	"STALE_POWERUP_CONTEXT":              "These choices belong to another game or round. Refresh the lobby state.",
+	"POWERUP_WINDOW_CLOSED":              "Powerup choices are closed for this round.",
+	"POWERUP_DECISION_DONE":              "Your powerup choices are already locked for this round.",
+	"REQUEST_ID_CONFLICT":                "This request ID was already used for another action.",
+	"POWERUP_LIMIT":                      "The powerup action limit for this match has been reached.",
 	"LOBBY_BUSY":                         "A player is joining. Retry after the connection finishes.",
 	"START_CANCELLED":                    "Round start was cancelled by a membership change. Retry when the lobby is ready.",
 	"PLAYERS_NOT_READY":                  "All lobby members must be connected and ready before starting a new game.",
@@ -56,6 +61,20 @@ func requestError(command, code string) models.ResponseBase {
 		Status: "ERR", Type: "REQUEST_ERROR",
 		Payload: models.RequestErrorPayload{Command: command, Code: code, Message: message},
 	}
+}
+
+func (l *Lobby) powerupErrorLocked(e *lobbyEffects, c *websocket.Client, req ClientReq, code string) {
+	response := requestError(req.Cmd, code)
+	p := response.Payload.(models.RequestErrorPayload)
+	if req.RequestID != nil && validPowerupRequestID(*req.RequestID) {
+		p.RequestID = *req.RequestID
+	}
+	if req.GameID != nil {
+		p.GameID = *req.GameID
+	}
+	p.Round = req.Round
+	response.Payload = p
+	l.sendLocked(e, c, response)
 }
 
 func sendRequestError(c *websocket.Client, command, code string) {
