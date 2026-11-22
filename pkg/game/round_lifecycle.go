@@ -86,6 +86,8 @@ func (l *Lobby) completeStart(work *roundStart) {
 			}
 		}
 		if err != nil {
+			l.powerStart = nil
+			l.broadcastPowerupLocked(&e)
 			l.errorLocked(&e, work.initiator, "start", err.Error())
 		} else {
 			conf := cloneConf(work.conf)
@@ -106,6 +108,7 @@ func (l *Lobby) completeStart(work *roundStart) {
 			l.broadcastLocked(&e, models.ResponseBase{Status: "OK", Type: "START_ROUND", Payload: models.ResponsePayload{
 				GameID: l.gameID, Loc: loc, Players: l.playersLocked(), PowerLog: append([]Powerup{}, l.powerLogs[l.round]...), Round: l.round, Phase: l.phase,
 				TimeRemaining: l.remainingLocked(),
+				PowerupState:  l.powerupStateLocked(),
 			}})
 		}
 	}
@@ -145,12 +148,16 @@ func (l *Lobby) finalizeLocked(e *lobbyEffects, generation uint64) {
 			e.save = l.persistenceSnapshotLocked()
 		}
 	}
+	if l.phase == PhaseMidRound {
+		l.openPowerupWindowLocked()
+	}
 	l.broadcastLocked(e, models.ResponseBase{Status: "WRN", Type: "ROUND_FINISHED"})
 	message := models.ResponsePayload{
 		GameID: l.gameID, Round: l.round, Phase: l.phase, Players: l.playersLocked(),
 		FullRoundRes: copyRaw(l.rawResults[l.round]), RoundRes: copyResults(l.endResults[l.round]),
 		TotalResults: copyResults(l.totalResults), PowerLog: append([]Powerup{}, l.powerLogs[l.round]...),
-		Loc: l.locations[l.round-1],
+		Loc:          l.locations[l.round-1],
+		PowerupState: l.powerupStateLocked(),
 	}
 	if l.conf.Mode == 2 {
 		message.Polygon = append(json.RawMessage(nil), logic.PolyDB[l.currentCC]...)
@@ -161,6 +168,7 @@ func (l *Lobby) finalizeLocked(e *lobbyEffects, generation uint64) {
 		l.broadcastLocked(e, models.ResponseBase{Status: "OK", Type: "GAME_END", Payload: models.ResponsePayload{
 			GameID: l.gameID, AllRes: snapshot.Results, EndResults: snapshot.EndResults,
 			RevealedAnswers: snapshot.RevealedAnswers, TotalResults: snapshot.TotalResults, Round: l.round, Phase: l.phase,
+			PowerupState: l.powerupStateLocked(),
 		}})
 	}
 }

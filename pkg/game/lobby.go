@@ -141,6 +141,10 @@ cycle:
 }
 
 func (l *Lobby) resetResultsLocked() {
+	l.stopPowerupWindowLocked()
+	l.powerWindow = nil
+	l.powerEffects = nil
+	l.powerReceipts = make(map[powerupReceiptKey]powerupReceipt)
 	l.rawResults = make(map[int]map[string][]Result)
 	l.endResults = make(map[int]map[string]*Result)
 	l.totalResults = make(map[string]*Result)
@@ -158,6 +162,12 @@ func (l *Lobby) setupRoundLocked(location logic.Coords, cc string) {
 	l.startTime = time.Now()
 	l.active, l.phase = true, PhasePlaying
 	l.round++
+	l.stopPowerupWindowLocked()
+	for i := range l.powerEffects {
+		if r := &l.powerEffects[i]; r.Round == l.round && r.Status == "QUEUED" {
+			r.Status = "ACTIVE"
+		}
+	}
 	l.rawResults[l.round] = make(map[string][]Result)
 	l.endResults[l.round] = make(map[string]*Result)
 	for id, p := range l.players {

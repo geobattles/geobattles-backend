@@ -4,124 +4,86 @@ import (
 	"errors"
 	"log/slog"
 	"sort"
-
-	"github.com/geobattles/geobattles-backend/pkg/models"
 )
 
-// uses given powerup. adds succesfully used powerup to powerlog
-// Requires l.mu; targets the exact current owning connection.
-func (l *Lobby) usePowerupLocked(e *lobbyEffects, sourceID string, powerup Powerup) error {
-	player := l.players[sourceID]
-	if player == nil || !player.Connected {
-		return errors.New("PLAYER_NOT_IN_LOBBY")
-	}
-	if len(player.Powerups) != 2 || l.powerLogs == nil {
-		return errors.New("INVALID_GAME_STATE")
-	}
-	if l.round == 0 || l.phase == PhaseFinished {
-		return errors.New("GAME_NOT_ACTIVE")
-	}
-	if l.round == l.conf.NumRounds {
-		return errors.New("CANT_USE_LAST_ROUND")
-	}
-
-	powerup.Source = sourceID
-
-	switch powerup.Type {
-	// double points
-	case 0:
-		if !l.players[sourceID].Powerups[0] {
-			return errors.New("NOT_AVAILABLE")
-		}
-		l.players[sourceID].Powerups[0] = false
-		l.powerLogs[l.round+1] = append(l.powerLogs[l.round+1], powerup)
-		return nil
-
-	// duel
-	case 1:
-		if !l.players[sourceID].Powerups[1] {
-			return errors.New("NOT_AVAILABLE")
-		}
-		if target := l.players[powerup.Target]; target == nil || !target.Connected || sourceID == powerup.Target {
-			return errors.New("WRONG_TARGET")
-		}
-		l.players[sourceID].Powerups[1] = false
-		l.powerLogs[l.round+1] = append(l.powerLogs[l.round+1], powerup)
-
-		if lease := l.leases[powerup.Target]; lease != nil {
-			l.sendLocked(e, lease.client, models.ResponseBase{
-				Status: "WRN", Type: "DUEL_FROM", Payload: models.ResponsePayload{User: sourceID},
-			})
-		}
-
-		return nil
-	default:
-		return errors.New("WRONG_TYPE")
-	}
-}
-
-// processes powerups from powerlog. double score is given priority in processing order
+// The active ledger, not the compatibility powerLog, is the settlement authority.
+// Status transitions make a second invocation harmless as well as finalization's
+// existing once-only generation guard.
 func (l *Lobby) processPowerups() error {
-	slog.Info("Processing power", "PowerLogs", l.powerLogs[l.round])
-	// sort powerlogs so that type 0 is processed before others
-	sort.Slice(l.powerLogs[l.round], func(p, q int) bool {
-		return l.powerLogs[l.round][p].Type < l.powerLogs[l.round][q].Type
-	})
-	for _, power := range l.powerLogs[l.round] {
-		slog.Debug("Processing powerup", "Power", power)
-		switch power.Type {
-		case 0:
-			// TODO: dont stack with placement bonus
-			// double points
-			if result, ok := l.endResults[l.round][power.Source]; ok {
-				result.DoubleScore = result.BaseScore
-				l.endResults[l.round][power.Source] = result
+	for i := range l.powerEffects {
+		r := &l.powerEffects[i]
+		if r.Round != l.round || r.Status != "ACTIVE" {
+			continue
+		}
+		source := l.leases[r.Source]
+		if source == nil || source.present != r.sourceMember {
+			r.Status = "CANCELLED"
+			r.Reason = "SOURCE_LEFT"
+			continue
+		}
+		s := l.endResults[l.round][r.Source]
+		if r.Type == 0 {
+			if s != nil {
+				s.DoubleScore = s.BaseScore
 			}
-		case 1:
-			// duel
-			resultSource := l.endResults[l.round][power.Source]
-			resultTarget := l.endResults[l.round][power.Target]
-			// if source player left dont process anything
-			if _, okS := l.players[power.Source]; !okS {
-				slog.Debug("Player left, dont do duel")
-				break
+			r.Status = "APPLIED"
+			continue
+		}
+		target := l.leases[r.Target]
+		if target == nil || target.present != r.targetMember {
+			r.Status = "REFUNDED"
+			r.Reason = "TARGET_LEFT"
+			if p := l.players[r.Source]; p != nil && len(p.Powerups) == 2 {
+				p.Powerups[1] = true
 			}
-			// if target left refund source and dont process anything
-			if _, okT := l.players[power.Target]; !okT {
-				slog.Debug("Player left, dont do duel, refund player")
-				l.players[power.Source].Powerups[1] = true
-				break
-			}
-
-			if resultSource == nil || resultTarget == nil {
-				break
-			}
-
-			switch l.conf.Mode {
-			case 2:
-				// if neither user guessed a country dont apply points
-				if (resultSource.Attempt == 0 || resultSource.CC != "XX") && (resultTarget.Attempt == 0 || resultTarget.CC != "XX") {
-					break
-				}
-				if (resultSource.Attempt == 0 || resultSource.CC != "XX") || (resultTarget.Time <= resultSource.Time && !(resultTarget.Attempt == 0 || resultTarget.CC != "XX")) {
-					resultSource.DuelScore -= 1000
-					resultTarget.DuelScore += 1000
-				} else {
-					resultSource.DuelScore += 1000
-					resultTarget.DuelScore -= 1000
-				}
-			default:
-				if resultSource.Attempt == 0 || (resultTarget.Dist <= resultSource.Dist && resultTarget.Attempt != 0) {
-					resultSource.DuelScore -= 1000
-					resultTarget.DuelScore += 1000
-				} else {
-					resultSource.DuelScore += 1000
-					resultTarget.DuelScore -= 1000
-				}
+			continue
+		}
+		t := l.endResults[l.round][r.Target]
+		winner := duelWinner(l.conf.Mode, s, t)
+		r.Status = "APPLIED"
+		r.Outcome = "DRAW"
+		if winner != 0 && s != nil && t != nil {
+			s.DuelScore += 1000 * winner
+			t.DuelScore -= 1000 * winner
+			if winner > 0 {
+				r.Outcome = "SOURCE_WON"
+			} else {
+				r.Outcome = "TARGET_WON"
 			}
 		}
 	}
 	return nil
+}
+
+// +1 source wins, -1 target wins, 0 draw. A real zero-distance guess is valid.
+func duelWinner(mode int, s, t *Result) int {
+	valid := func(r *Result) bool { return r != nil && r.Attempt > 0 && (mode != 2 || r.CC == "XX") }
+	sv, tv := valid(s), valid(t)
+	if !sv && !tv {
+		return 0
+	}
+	if !tv {
+		return 1
+	}
+	if !sv {
+		return -1
+	}
+	if mode == 2 {
+		if s.Time < t.Time {
+			return 1
+		}
+		if s.Time > t.Time {
+			return -1
+		}
+		return 0
+	}
+	if s.Dist < t.Dist {
+		return 1
+	}
+	if s.Dist > t.Dist {
+		return -1
+	}
+	return 0
 }
 
 // add bonus points based on player placement. first player gets 30% bonus, second 20, third 10

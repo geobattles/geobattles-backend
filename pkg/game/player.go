@@ -15,11 +15,19 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 	var req ClientReq
 	parseErr := json.Unmarshal(message, &req)
 	if parseErr != nil {
-		var command struct {
-			Cmd string `json:"command"`
+		// Recover independently valid envelope fields even when another field
+		// (for example a fractional round) failed typed decoding.
+		var fields map[string]json.RawMessage
+		if json.Unmarshal(message, &fields) == nil {
+			_ = json.Unmarshal(fields["command"], &req.Cmd)
+			_ = json.Unmarshal(fields["gameId"], &req.GameID)
+			_ = json.Unmarshal(fields["requestId"], &req.RequestID)
+			req.Round = nil
+			var round *int
+			if json.Unmarshal(fields["round"], &round) == nil {
+				req.Round = round
+			}
 		}
-		_ = json.Unmarshal(message, &command)
-		req.Cmd = command.Cmd
 	}
 	l, ok := c.Lobby.(*Lobby)
 	if !ok || l == nil {
@@ -40,7 +48,11 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		if errors.Is(parseErr, logic.ErrInvalidLocation) {
 			code = "INVALID_LOCATION"
 		}
-		l.errorLocked(&e, c, req.Cmd, code)
+		if req.Cmd == "use_powerup" || req.Cmd == "powerup_ready" || req.Cmd == "start" {
+			l.powerupErrorLocked(&e, c, req, code)
+		} else {
+			l.errorLocked(&e, c, req.Cmd, code)
+		}
 		l.mu.Unlock()
 		l.applyEffects(e)
 		return
@@ -68,15 +80,20 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		}
 	case "start":
 		var err error
-		selection, err = l.beginStartLocked(c)
-		if err != nil {
-			l.errorLocked(&e, c, req.Cmd, err.Error())
-		}
-	case "use_powerup":
-		if err := l.usePowerupLocked(&e, c.ID, req.Powerup); err != nil {
-			l.errorLocked(&e, c, req.Cmd, err.Error())
+		if l.phase == PhaseMidRound {
+			err = l.requestPowerupStartLocked(&e, c, req)
 		} else {
-			l.sendLocked(&e, c, models.ResponseBase{Status: "OK", Type: "POWERUP_USED"})
+			selection, err = l.beginStartLocked(c)
+			if err == nil {
+				l.broadcastPowerupLocked(&e)
+			}
+		}
+		if err != nil {
+			l.powerupErrorLocked(&e, c, req, err.Error())
+		}
+	case "use_powerup", "powerup_ready":
+		if err := l.powerupCommandLocked(&e, c, req); err != nil {
+			l.powerupErrorLocked(&e, c, req, err.Error())
 		}
 	case "submit_location":
 		// A delayed timer callback cannot admit a guess after the deadline.
@@ -112,6 +129,7 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 	default:
 		l.errorLocked(&e, c, req.Cmd, "INVALID_COMMAND")
 	}
+	l.launchPowerupStartLocked(&e)
 	l.mu.Unlock()
 	l.applyEffects(e)
 	if selection != nil {

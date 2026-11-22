@@ -20,6 +20,7 @@ type lobbyEffects struct {
 	closePeers map[*websocket.Client]peerClose
 	closeLobby bool
 	save       *models.Game
+	selection  *roundStart
 }
 
 func (e *lobbyEffects) close(c *websocket.Client) {
@@ -72,6 +73,9 @@ func (l *Lobby) errorLocked(e *lobbyEffects, c *websocket.Client, command, code 
 // Called only AFTER l.mu is released. No registry/lobby lock nesting, socket
 // close/callback or persistence work inside a game/transport critical section.
 func (l *Lobby) applyEffects(e lobbyEffects) {
+	if e.selection != nil {
+		go l.completeStart(e.selection)
+	}
 	if e.closeLobby {
 		deleteLobbyIfSame(l)
 		l.hub.Close()

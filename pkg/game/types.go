@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 
@@ -13,41 +14,46 @@ import (
 // Registry operations must be performed with mu released. Effects are encoded and
 // nonblocking-enqueued in the transaction; socket closes/DB writes run afterward.
 type Lobby struct {
-	id             string
-	hub            *websocket.Hub
-	mu             sync.Mutex
-	admin          string
-	conf           *LobbyConf
-	players        map[string]*Player
-	locations      []logic.Coords
-	currentCC      string
-	round          int
-	rawResults     map[int]map[string][]Result
-	endResults     map[int]map[string]*Result
-	totalResults   map[string]*Result
-	active         bool
-	finished       map[string]bool
-	ccSize         float64
-	powerLogs      map[int][]Powerup
-	startTime      time.Time
-	roundTimer     *time.Timer
-	deadline       time.Time
-	phase          string
-	gameID         string
-	seq            uint64
-	closed         bool
-	starting       bool
-	generation     uint64
-	roundGen       uint64
-	finalizedGen   uint64
-	startCancel    context.CancelFunc
-	startInitiator *websocket.Client
-	leases         map[string]*playerLease
-	reservations   map[string]*Admission
-	nextLease      uint64
-	nextMember     uint64
-	emptyTimer     *time.Timer
-	persisted      bool
+	id              string
+	hub             *websocket.Hub
+	mu              sync.Mutex
+	admin           string
+	conf            *LobbyConf
+	players         map[string]*Player
+	locations       []logic.Coords
+	currentCC       string
+	round           int
+	rawResults      map[int]map[string][]Result
+	endResults      map[int]map[string]*Result
+	totalResults    map[string]*Result
+	active          bool
+	finished        map[string]bool
+	ccSize          float64
+	powerLogs       map[int][]Powerup
+	startTime       time.Time
+	roundTimer      *time.Timer
+	deadline        time.Time
+	phase           string
+	gameID          string
+	seq             uint64
+	closed          bool
+	starting        bool
+	generation      uint64
+	roundGen        uint64
+	finalizedGen    uint64
+	startCancel     context.CancelFunc
+	startInitiator  *websocket.Client
+	leases          map[string]*playerLease
+	reservations    map[string]*Admission
+	nextLease       uint64
+	nextMember      uint64
+	emptyTimer      *time.Timer
+	persisted       bool
+	powerWindow     *powerupWindow
+	powerEffects    []powerupRecord
+	powerReceipts   map[powerupReceiptKey]powerupReceipt
+	powerGeneration uint64
+	powerStart      *websocket.Client
 }
 
 const (
@@ -111,9 +117,12 @@ type Powerup struct {
 }
 
 type ClientReq struct {
-	Cmd     string        `json:"command"`
-	Ready   *bool         `json:"ready,omitempty"`
-	Loc     *logic.Coords `json:"location,omitempty"`
-	Conf    LobbyConf     `json:"conf,omitempty"`
-	Powerup Powerup       `json:"powerup,omitempty"`
+	Cmd       string          `json:"command"`
+	Ready     *bool           `json:"ready,omitempty"`
+	Loc       *logic.Coords   `json:"location,omitempty"`
+	Conf      LobbyConf       `json:"conf,omitempty"`
+	Powerup   json.RawMessage `json:"powerup,omitempty"`
+	GameID    *string         `json:"gameId,omitempty"`
+	Round     *int            `json:"round,omitempty"`
+	RequestID *string         `json:"requestId,omitempty"`
 }
