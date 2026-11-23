@@ -170,31 +170,14 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	claims, err := auth.ValidateRefreshToken(req.RefreshToken)
-	if err != nil {
+	tokenPair, err := auth.RotateRefreshToken(r.Context(), req.RefreshToken)
+	if errors.Is(err, auth.ErrRefreshRejected) {
 		ERROR(w, http.StatusUnauthorized, err)
 		return
 	}
-
-	tokenID := claims.ID
-	userID := claims.Subject
-
-	// Revoke the old token
-	if err := auth.InvalidateRefreshToken(tokenID); err != nil {
-		ERROR(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	// Get user details to generate new token pair
-	var user models.User
-	if err := db.DB.First(&user, "id = ?", userID).Error; err != nil {
-		ERROR(w, http.StatusUnauthorized, errors.New("account unavailable; sign in again"))
-		return
-	}
-
-	tokenPair, err := auth.CreateTokenPair(userID, user.UserName, user.DisplayName, user.IsGuest)
 	if err != nil {
-		ERROR(w, http.StatusInternalServerError, err)
+		slog.Warn("Token refresh unavailable")
+		ERROR(w, http.StatusServiceUnavailable, errors.New("Token refresh unavailable"))
 		return
 	}
 

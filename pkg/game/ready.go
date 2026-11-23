@@ -29,14 +29,15 @@ func (l *Lobby) resetReadyLocked() {
 }
 
 func (l *Lobby) allReadyLocked() bool {
-	if len(l.players) == 0 {
-		return false
-	}
+	connected := 0
 	for id, p := range l.players {
-		lease := l.leases[id]
-		if !p.Connected || !p.Ready || lease == nil || lease.client == nil || lease.client.Closed() {
+		if !p.Connected || !l.liveLeaseLocked(id) {
+			continue
+		}
+		if !p.Ready {
 			return false
 		}
+		connected++
 	}
-	return true
+	return connected != 0
 }

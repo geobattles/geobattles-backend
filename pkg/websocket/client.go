@@ -20,7 +20,8 @@ const (
 )
 
 type commandMsg struct {
-	Cmd string `json:"command"`
+	Cmd   string `json:"command"`
+	Probe uint32 `json:"probe,omitempty"`
 }
 
 // Identity, callbacks and lobby reference are immutable after construction.
@@ -122,6 +123,7 @@ func (c *Client) Read() {
 	c.conn.SetPongHandler(func(string) error { return refreshDeadline() })
 	// Acknowledge peer close from the common bounded close path, not twice.
 	c.conn.SetCloseHandler(func(int, string) error { return nil })
+	var nextProbe time.Time
 	for {
 		kind, message, err := c.conn.ReadMessage()
 		if err != nil {
@@ -147,6 +149,12 @@ func (c *Client) Read() {
 		if json.Unmarshal(message, &cmd) == nil && cmd.Cmd == "pong" {
 			if refreshDeadline() != nil {
 				return
+			}
+			if now := time.Now(); cmd.Probe != 0 && !now.Before(nextProbe) {
+				// Bound opt-in responses independently of client input cadence.
+				nextProbe = now.Add(time.Second)
+				reply, _ := json.Marshal(commandMsg{Cmd: "heartbeat_ack", Probe: cmd.Probe})
+				c.Enqueue(reply)
 			}
 			continue
 		}

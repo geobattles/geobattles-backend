@@ -42,7 +42,7 @@ func ListLobbies() map[string]LobbySnapshot {
 	out := make(map[string]LobbySnapshot, len(lobbies))
 	for _, l := range lobbies {
 		l.mu.Lock()
-		if !l.closed {
+		if !l.closed && !l.idleExpiredLocked(time.Now()) {
 			out[l.id] = l.publicSnapshotLocked()
 		}
 		l.mu.Unlock()
@@ -50,12 +50,12 @@ func ListLobbies() map[string]LobbySnapshot {
 	return out
 }
 
-func CreateLobby(conf LobbyConf) (LobbySnapshot, error) {
+func CreateLobby(conf LobbyConf, creator string) (LobbySnapshot, error) {
 	c, size, err := normalizeConf(conf)
 	if err != nil {
 		return LobbySnapshot{}, err
 	}
-	l := &Lobby{hub: websocket.NewHub(), players: make(map[string]*Player),
+	l := &Lobby{creator: creator, hub: websocket.NewHub(), players: make(map[string]*Player),
 		leases: make(map[string]*playerLease), reservations: make(map[string]*Admission),
 		ccSize: size, phase: PhaseWaiting}
 	l.conf = &c

@@ -21,14 +21,16 @@ runtime captures. Country Battle is not completed.
 - The server still sends `{"command":"ping"}`; legacy clients can reply with
   `{"command":"pong"}`. It additionally sends RFC6455 control pings every 3s;
   browsers answer those without JavaScript. Either control pong or JSON pong
-  refreshes the 10s read deadline. Heartbeats carry no seq.
+  refreshes the 10s read deadline. A JSON pong with a positive numeric `probe`
+  opts into a `{"command":"heartbeat_ack","probe":...}` reply for browser latency
+  sampling. Heartbeats carry no seq.
 - Readers accept JSON **text** frames, with a 16KiB per-message limit, and no unbounded inbound
   work queue. Writers alone write data frames, using a 5s write deadline and a
   private 64-event queue. A full queue detaches the peer instead of dropping an
   event and continuing a stale stream.
 - Close sends a best-effort control frame with a 250ms deadline, then closes the
   underlying connection; callbacks execute once and outside transport/game
-  locks. `1000` is used for the explicit leave command and acknowledgements of
+  locks. `1000` is used for explicit exit commands and acknowledgements of
   normal peer close, `1001` for ordinary transport teardown, `1003` for binary
   commands, `1009` for Gorilla's oversize rejection, and `1013` for a slow peer
   or an upgrade whose admission expired. Delivery of a close frame is not
@@ -71,7 +73,7 @@ flags. No `regionMode` or Advanced-specific socket command is introduced.
 type SetReady = { command: 'setReady'; ready: boolean }
 type Player = {
   name: string; connected: boolean; ready: boolean; color: string
-  powerups?: boolean[]; lives?: number
+  away?: boolean; powerups?: boolean[]; lives?: number
 }
 ```
 
@@ -84,22 +86,22 @@ type Player = {
   returns `INVALID_REQUEST`. Other validation/error conventions are unchanged.
 - setReady is accepted only in `WAITING` and `FINISHED`. During selection it
   returns `ROUND_STARTING`; during a game it returns `GAME_IN_PROGRESS`.
-- An administrator's initial start or replay start requires **every retained
-  member** to be connected, ready and have a live owning lease; otherwise it
+- An administrator’s initial start or replay start requires at least one live
+  member and readiness from **every live member**; otherwise it
   returns `REQUEST_ERROR {command:'start', code:'PLAYERS_NOT_READY', message}`
   before provider work. Normal authorization/active/reservation conflicts retain
   their existing priority. Readiness is rechecked at successful selection commit.
 - **MID-ROUND advancement does not use Ready Check.** It uses the separate
   [powerup decision window](powerups.md): context-bound host start queues until
   eligible connected choosers finish or the 10s cutoff closes. Offline retained
-  members do not delay that window. Initial/replay readiness remains unchanged.
-- New membership, intentional removal and grace expiry reset everyone's ready
+  members do not delay that window.
+- New membership and permanent removal by command reset everyone’s ready
   flag. Lobby settings updates preserve every member's existing ready flag,
   including changes to mode, capacity, attempts, rounds, round time, score factor,
   country list, powerups, placement bonus and dynamic lives. No-op and title-only
   updates also preserve readiness. The existing numeric omitted/zero no-update
   meanings, settings validation and start gates remain unchanged.
-- Transient loss clears only that member's ready flag. Recovery is **not** an
+- Transport loss or resumable leave clears only that member’s ready flag. Recovery is **not** an
   automatic ready acknowledgement and leaves that member unready; it does not
   reset the other members. This preserves the distinction between connection
   loss and membership removal.
@@ -189,36 +191,44 @@ lifetime; it does not provide process-restart recovery or durable history.
 
 ## Ownership, host handoff and recovery
 
-- Identity and capacity are reserved before upgrade for at most 10s; commit
-  rechecks the exact reservation, absolute deadline and previous grace lease.
-  A connected or pending duplicate gets HTTP409 `ALREADY_CONNECTED` without
-  taking over the existing socket. Other existing admission codes/statuses remain.
-  Failed/expired upgrades roll back their own reservation only.
-- A membership receives a strictly increasing successful-join ordinal. Recovery
-  retains it; intentional leave/expiry followed by fresh admission does not.
-  On host loss/removal, choose the **longest-present currently connected member**
-  by that ordinal (identity lexical tie-break). Closed/unavailable clients cannot
-  be chosen. A returning former host does not reclaim admin from a live host.
-  With no live member the admin field is empty until somebody returns.
-- Unannounced loss retains membership, color/lives/powerups/results for **30s
-  from server detection**, including the last socket. Detection uses the 10s
-  heartbeat read deadline; network-failure-to-expiry can therefore be longer
-  than 30s. The round clock continues. A disconnected unfinished player remains
-  eligible until expiry/deadline. Explicit `disconnect` removes membership
-  immediately and only closes that exact socket.
+- Identity and capacity are reserved before upgrade for at most 10s. Commit
+  rechecks the exact reservation, deadlines and previous seat. A connected or
+  pending duplicate gets HTTP 409 `ALREADY_CONNECTED` and the old socket keeps
+  its lease. Failed upgrades roll back only their own reservation.
+- Authenticated `GET /lobby/admission?id=<code>` is a no-store advisory check for
+  the calling identity. It returns `{code, retained?, retryAfterMs?}` with no
+  roster, scores, answers or reservation. `ADMISSION_PENDING` distinguishes an
+  upgrade still in flight. `OK`, `ROUND_STARTING`, `ALREADY_CONNECTED`,
+  `REJOIN_EXPIRED`, `GAME_IN_PROGRESS`, `LOBBY_FULL`, and `LOBBY_NOT_FOUND`
+  cover the other outcomes. Only the upgrade can admit a player.
+- The authenticated creator ID belongs to the lobby. The longest-present live
+  member fills a vacant host slot, and the creator reclaims `admin` on any
+  successful return. Other returning members leave a live admin in place. A
+  room with no live members has an empty `admin` field.
+- Transport loss and the `leave` command keep the player’s seat and join order.
+  A resumable leave broadcasts `connected:false, away:true`. Transport loss
+  broadcasts `connected:false`. The clock continues. A lost connection can
+  delay early completion for up to 30s from detection, during which time the
+  player can come back and finish their guesses. Deliberate leave immediately
+  stops blocking early completion.
+- Seats remain claimable through an in-progress match while the room has live
+  members. In WAITING or FINISHED the seat times out 90s after departure.
+  A successful replay removes absent seats before starting the new match. With
+  everyone absent the room expires after 90s. `disconnect` still permanently
+  removes membership and closes its exact socket.
 - JOINED_LOBBY is always enqueued before REJOIN_ROUND for a recovering member,
   including WAITING/FINISHED. The existing complete snapshots restore phase,
-  authoritative round, players (now ready), raw/best/total results, powerups,
+  authoritative round, players (including readiness), raw/best/total results, powerups,
   finalized answer archive, current/last location and remaining milliseconds,
   including explicit zero. Apply
   replacement state; do not increment round or add the totals again.
-- Loss/leave/expiry/disposal cancels pending provider work and invalidates its
+- Loss, exit commands and disposal cancel pending provider work and invalidates its
   generation. An open exact initiating socket receives START_CANCELLED before
   a newer start can begin. A stale completion cannot commit/reset results or
   resurrect a disposed lobby. Exact lease/generation checks make late callbacks
   from an old socket harmless after recovery.
-- After the last retained membership leaves/expires (and any admission resolves),
-  dispose the lobby, stop its round/grace/admission/empty timers, cancel selection,
+- After the idle cutoff or last retained seat is removed and admissions resolve,
+  dispose the lobby, stop its round, seat, admission and idle timers, cancel selection,
   close its hub and remove only that exact registry entry. Never-joined lobbies
   expire after 30s. There is no process-restart recovery or global rate/lobby cap.
 

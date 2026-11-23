@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"time"
@@ -10,9 +11,12 @@ import (
 	"github.com/geobattles/geobattles-backend/pkg/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 var signingKey string
+
+var ErrRefreshRejected = errors.New("refresh token invalid or expired")
 
 const (
 	accessTokenValidity  = time.Minute * 15   // 15 minutes
@@ -53,6 +57,10 @@ func Configure(key string) error {
 
 // create jwt with user id and expiry
 func CreateTokenPair(uID string, userName string, displayName string, isGuest bool) (TokenPair, error) {
+	return createTokenPair(db.DB, uID, userName, displayName, isGuest)
+}
+
+func createTokenPair(store *gorm.DB, uID string, userName string, displayName string, isGuest bool) (TokenPair, error) {
 	accessExpiry := time.Now().UTC().Add(accessTokenValidity)
 	accessToken, err := createAccessToken(uID, userName, displayName, isGuest, accessExpiry)
 	if err != nil {
@@ -67,7 +75,7 @@ func CreateTokenPair(uID string, userName string, displayName string, isGuest bo
 	}
 
 	// store refresh token in database
-	if err := storeRefreshToken(tokenID, uID, refreshExpiry); err != nil {
+	if err := storeRefreshToken(store, tokenID, uID, refreshExpiry); err != nil {
 		return TokenPair{}, err
 	}
 
@@ -154,42 +162,63 @@ func ValidateAccessToken(token string) (*AccessClaims, error) {
 }
 
 // validate jwt, check with db if token is revoken and return claims in valid
-func ValidateRefreshToken(token string) (*RefreshClaims, error) {
+func parseRefreshToken(token string) (*RefreshClaims, error) {
 	if signingKey == "" {
 		return nil, errors.New("auth is not configured")
 	}
-	parsedToken, err := jwt.ParseWithClaims(token, &RefreshClaims{}, func(t *jwt.Token) (interface{}, error) {
+	parsed, err := jwt.ParseWithClaims(token, &RefreshClaims{}, func(t *jwt.Token) (interface{}, error) {
 		return []byte(signingKey), nil
 	}, jwt.WithLeeway(time.Second*10), jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
-
-	if err != nil {
-		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, errors.New("refresh token expired")
-		}
-		return nil, errors.New("invalid refresh token")
+	if err != nil || parsed == nil || !parsed.Valid {
+		return nil, ErrRefreshRejected
 	}
-	if parsedToken == nil || !parsedToken.Valid {
-		return nil, errors.New("invalid refresh token")
-	}
-	claims, ok := parsedToken.Claims.(*RefreshClaims)
+	claims, ok := parsed.Claims.(*RefreshClaims)
 	if !ok || claims == nil || claims.Subject == "" || claims.ID == "" || claims.TokenUse != refreshPurpose {
-		return nil, errors.New("invalid token claims")
+		return nil, ErrRefreshRejected
 	}
-	if db.DB == nil {
-		return nil, errors.New("refresh validation unavailable")
-	}
-
-	var storedToken models.RefreshToken
-	if result := db.DB.First(&storedToken, "id = ? AND user_id = ? AND revoked = false AND expires_at > ?", claims.ID, claims.Subject, time.Now().UTC().Unix()); result.Error != nil {
-		return nil, errors.New("invalid or revoked token")
-	}
-
 	return claims, nil
 }
 
-// Store refresh token in database
-func storeRefreshToken(tokenID string, uID string, expiry time.Time) error {
+// RotateRefreshToken consumes exactly one valid token. A failed lookup or write
+// rolls back revocation so a temporary database failure leaves it retryable.
+func RotateRefreshToken(ctx context.Context, token string) (TokenPair, error) {
+	claims, err := parseRefreshToken(token)
+	if err != nil {
+		return TokenPair{}, err
+	}
 	if db.DB == nil {
+		return TokenPair{}, errors.New("token storage unavailable")
+	}
+	var pair TokenPair
+	err = db.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&models.RefreshToken{}).
+			Where("id = ? AND user_id = ? AND revoked = false AND expires_at > ?", claims.ID, claims.Subject, time.Now().UTC().Unix()).
+			Update("revoked", true)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return ErrRefreshRejected
+		}
+		var user models.User
+		if err := tx.First(&user, "id = ?", claims.Subject).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrRefreshRejected
+			}
+			return err
+		}
+		var issueErr error
+		pair, issueErr = createTokenPair(tx, user.ID, user.UserName, user.DisplayName, user.IsGuest)
+		return issueErr
+	})
+	if err != nil {
+		return TokenPair{}, err
+	}
+	return pair, nil
+}
+
+func storeRefreshToken(store *gorm.DB, tokenID string, uID string, expiry time.Time) error {
+	if store == nil {
 		return errors.New("token storage unavailable")
 	}
 	token := models.RefreshToken{
@@ -200,29 +229,9 @@ func storeRefreshToken(tokenID string, uID string, expiry time.Time) error {
 		CreatedAt: time.Now().UTC().Unix(),
 	}
 
-	if err := db.DB.Create(&token).Error; err != nil {
+	if err := store.Create(&token).Error; err != nil {
 		slog.Error("Error storing refresh token")
 		return errors.New("error storing refresh token")
-	}
-
-	return nil
-}
-
-// Invalidate a specific refresh token by its ID
-func InvalidateRefreshToken(tokenID string) error {
-	if db.DB == nil {
-		return errors.New("token storage unavailable")
-	}
-	result := db.DB.Model(&models.RefreshToken{}).
-		Where("id = ? AND revoked = false", tokenID).
-		Update("revoked", true)
-
-	if result.Error != nil {
-		slog.Error("Error invalidating refresh token")
-		return errors.New("failed to invalidate token")
-	}
-	if result.RowsAffected != 1 {
-		return errors.New("invalid or revoked token")
 	}
 
 	return nil

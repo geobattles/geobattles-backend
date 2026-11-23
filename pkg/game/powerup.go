@@ -94,8 +94,12 @@ func (l *Lobby) processBonus() error {
 		return errors.New("BONUS_DISABLED")
 	}
 	var playerOrder []string
-	for name := range l.endResults[l.round] {
-		playerOrder = append(playerOrder, name)
+	for id := range l.endResults[l.round] {
+		// Retaining an absent seat in the results must not inflate placement
+		// bonuses for rounds the player never entered.
+		if l.roundEntrants[id] {
+			playerOrder = append(playerOrder, id)
+		}
 	}
 	sort.SliceStable(playerOrder, func(i, j int) bool {
 		iEmpty := l.endResults[l.round][playerOrder[i]].Attempt == 0

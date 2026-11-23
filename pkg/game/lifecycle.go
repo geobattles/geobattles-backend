@@ -11,6 +11,7 @@ import (
 
 const (
 	reconnectGrace = 30 * time.Second
+	returnWindow   = 90 * time.Second
 	admissionWait  = 10 * time.Second
 )
 
@@ -26,30 +27,52 @@ type Admission struct {
 	timer      *time.Timer // owned by lobby.mu
 }
 
-func ReserveAdmission(lobbyID, id, name string) (*Admission, error) {
+// AdmissionStatus is advisory and carries no game or other player data.
+type AdmissionStatus struct {
+	Code         string `json:"code"`
+	Retained     bool   `json:"retained,omitempty"`
+	RetryAfterMs int64  `json:"retryAfterMs,omitempty"`
+}
+
+func CheckAdmission(lobbyID, id string) AdmissionStatus {
 	l := lookupLobby(lobbyID)
 	if l == nil {
-		return nil, errors.New("LOBBY_NOT_FOUND")
+		return AdmissionStatus{Code: "LOBBY_NOT_FOUND"}
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.closed {
-		return nil, errors.New("LOBBY_NOT_FOUND")
+	return l.admissionStatusLocked(id, time.Now())
+}
+
+func (l *Lobby) idleExpiredLocked(now time.Time) bool {
+	return !l.idleDeadline.IsZero() && !now.Before(l.idleDeadline)
+}
+
+func (l *Lobby) seatExpiredLocked(lease *playerLease, now time.Time) bool {
+	return l.phase != PhasePlaying && l.phase != PhaseMidRound && !lease.expires.IsZero() && !now.Before(lease.expires)
+}
+
+func (l *Lobby) admissionStatusLocked(id string, now time.Time) AdmissionStatus {
+	if l.closed || l.idleExpiredLocked(now) {
+		return AdmissionStatus{Code: "LOBBY_NOT_FOUND"}
 	}
-	if l.starting {
-		return nil, errors.New("ROUND_STARTING")
-	}
-	if l.reservations[id] != nil || (l.players[id] != nil && l.players[id].Connected) {
-		return nil, errors.New("ALREADY_CONNECTED")
-	}
-	now := time.Now()
 	previous := l.leases[id]
-	if previous != nil && !previous.expires.IsZero() && !now.Before(previous.expires) {
-		return nil, errors.New("REJOIN_EXPIRED")
+	retained := previous != nil && !l.seatExpiredLocked(previous, now)
+	if l.starting {
+		return AdmissionStatus{Code: "ROUND_STARTING", Retained: retained}
 	}
-	if l.players[id] == nil {
+	if pending := l.reservations[id]; pending != nil {
+		return AdmissionStatus{Code: "ADMISSION_PENDING", Retained: retained, RetryAfterMs: max(0, pending.deadline.Sub(now).Milliseconds())}
+	}
+	if p := l.players[id]; p != nil && p.Connected {
+		return AdmissionStatus{Code: "ALREADY_CONNECTED", Retained: true}
+	}
+	if previous != nil && !retained {
+		return AdmissionStatus{Code: "REJOIN_EXPIRED"}
+	}
+	if !retained {
 		if l.phase != PhaseWaiting && l.phase != PhaseFinished {
-			return nil, errors.New("GAME_IN_PROGRESS")
+			return AdmissionStatus{Code: "GAME_IN_PROGRESS"}
 		}
 		occupied := len(l.players)
 		for _, reservation := range l.reservations {
@@ -58,11 +81,28 @@ func ReserveAdmission(lobbyID, id, name string) (*Admission, error) {
 			}
 		}
 		if occupied >= l.conf.MaxPlayers {
-			return nil, errors.New("LOBBY_FULL")
+			return AdmissionStatus{Code: "LOBBY_FULL"}
 		}
 	}
+	return AdmissionStatus{Code: "OK", Retained: retained}
+}
+
+func ReserveAdmission(lobbyID, id, name string) (*Admission, error) {
+	l := lookupLobby(lobbyID)
+	if l == nil {
+		return nil, errors.New("LOBBY_NOT_FOUND")
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := time.Now()
+	if status := l.admissionStatusLocked(id, now); status.Code != "OK" {
+		if status.Code == "ADMISSION_PENDING" {
+			return nil, errors.New("ALREADY_CONNECTED") // preserve the upgrade contract
+		}
+		return nil, errors.New(status.Code)
+	}
 	l.nextLease++
-	a := &Admission{lobby: l, id: id, name: name, generation: l.nextLease, previous: previous, deadline: now.Add(admissionWait)}
+	a := &Admission{lobby: l, id: id, name: name, generation: l.nextLease, previous: l.leases[id], deadline: now.Add(admissionWait)}
 	l.reservations[id] = a
 	a.timer = time.AfterFunc(time.Until(a.deadline), a.Cancel)
 	return a, nil
@@ -91,8 +131,8 @@ func (a *Admission) Join(conn *ws.Conn) {
 	var e lobbyEffects
 	l.mu.Lock()
 	now := time.Now()
-	if l.closed || l.starting || l.reservations[a.id] != a || l.leases[a.id] != a.previous ||
-		!now.Before(a.deadline) || (a.previous != nil && !now.Before(a.previous.expires)) {
+	if l.closed || l.idleExpiredLocked(now) || l.starting || l.reservations[a.id] != a || l.leases[a.id] != a.previous ||
+		!now.Before(a.deadline) || (a.previous != nil && l.seatExpiredLocked(a.previous, now)) {
 		l.mu.Unlock()
 		a.Cancel()
 		c.CloseWithCode(ws.CloseTryAgainLater, "Admission expired; reconnect")
@@ -107,13 +147,14 @@ func (a *Admission) Join(conn *ws.Conn) {
 		l.emptyTimer.Stop()
 		l.emptyTimer = nil
 	}
+	l.clearIdleLocked()
 	returning := a.previous != nil
 	var present uint64
 	if returning {
-		a.previous.grace.Stop()
+		a.previous.stopTimers()
 		present = a.previous.present
 		p := l.players[a.id]
-		p.Connected, p.Name, p.Ready = true, a.name, false
+		p.Connected, p.Name, p.Ready, p.Away = true, a.name, false, false
 	} else {
 		l.nextMember++
 		present = l.nextMember
@@ -121,7 +162,14 @@ func (a *Admission) Join(conn *ws.Conn) {
 		l.resetReadyLocked()
 	}
 	l.leases[a.id] = &playerLease{client: c, generation: a.generation, present: present}
+	if l.active && now.Before(l.deadline) {
+		l.roundEntrants[a.id] = true
+	}
+	previousAdmin := l.admin
 	l.selectAdminLocked()
+	if previousAdmin != l.admin && l.powerStart != nil {
+		l.cancelStartLocked(&e)
+	}
 	l.reconcilePowerupWindowLocked(&e)
 	if !l.hub.RegisterClient(c) {
 		e.close(c)
@@ -168,6 +216,10 @@ func (l *Lobby) cancelStartLocked(e *lobbyEffects) {
 }
 
 func (l *Lobby) selectAdminLocked() {
+	if p := l.players[l.creator]; p != nil && p.Connected && l.liveLeaseLocked(l.creator) {
+		l.admin = l.creator
+		return
+	}
 	if p := l.players[l.admin]; p != nil && p.Connected && l.liveLeaseLocked(l.admin) {
 		return
 	}
@@ -190,69 +242,141 @@ func (l *Lobby) liveLeaseLocked(id string) bool {
 	return lease != nil && lease.client != nil && !lease.client.Closed()
 }
 
-// A transport loss is NOT the explicit disconnect command. Preserve membership,
-// lives and results even for the last socket, with the round clock still running.
+func (lease *playerLease) stopTimers() {
+	if lease.grace != nil {
+		lease.grace.Stop()
+	}
+	if lease.seatTimer != nil {
+		lease.seatTimer.Stop()
+	}
+}
+
 func (l *Lobby) clientLost(c *websocket.Client) {
 	var e lobbyEffects
 	l.mu.Lock()
 	if l.ownsLocked(c) {
-		l.cancelStartLocked(&e)
-		l.reconcilePowerupWindowLocked(&e)
-		l.hub.UnregisterClient(c)
-		l.players[c.ID].Connected, l.players[c.ID].Ready = false, false
-		lease := l.leases[c.ID]
-		lease.expires = time.Now().Add(reconnectGrace)
-		lease.grace = time.AfterFunc(reconnectGrace, func() { l.expireLease(c.ID, lease, lease.generation) })
-		l.selectAdminLocked()
-		l.reconcilePowerupWindowLocked(&e)
-		l.broadcastLocked(&e, models.ResponseBase{Status: "OK", Type: "LEFT_LOBBY", Payload: models.ResponsePayload{User: c.ID, Lobby: l.snapshotLocked()}})
+		l.retainSeatLocked(&e, c, false)
 	}
 	l.mu.Unlock()
 	l.applyEffects(e)
+}
+
+// Both exits preserve the exact match membership. A deliberate exit stops
+// holding up round completion immediately; a network loss gets a short grace.
+func (l *Lobby) retainSeatLocked(e *lobbyEffects, c *websocket.Client, away bool) {
+	l.cancelStartLocked(e)
+	l.reconcilePowerupWindowLocked(e)
+	l.hub.UnregisterClient(c)
+	p := l.players[c.ID]
+	p.Connected, p.Ready, p.Away = false, false, away
+	id := c.ID
+	lease := l.leases[id]
+	lease.client = nil
+	now := time.Now()
+	lease.expires = now.Add(returnWindow)
+	if away {
+		e.closeWith(c, ws.CloseNormalClosure, "Left lobby with a returnable seat")
+	} else if l.phase == PhasePlaying {
+		lease.blocksUntil = now.Add(reconnectGrace)
+		lease.grace = time.AfterFunc(time.Until(lease.blocksUntil), func() {
+			var effects lobbyEffects
+			l.mu.Lock()
+			if l.leases[id] == lease {
+				l.maybeFinishLocked(&effects)
+			}
+			l.mu.Unlock()
+			l.applyEffects(effects)
+		})
+	}
+	l.scheduleSeatExpiryLocked(id, lease)
+	l.selectAdminLocked()
+	l.updateIdleLocked()
+	l.reconcilePowerupWindowLocked(e)
+	l.broadcastLocked(e, models.ResponseBase{Status: "OK", Type: "LEFT_LOBBY", Payload: models.ResponsePayload{User: c.ID, Lobby: l.snapshotLocked()}})
+	l.maybeFinishLocked(e)
+}
+
+func (l *Lobby) scheduleSeatExpiryLocked(id string, lease *playerLease) {
+	if lease.seatTimer != nil {
+		lease.seatTimer.Stop()
+	}
+	lease.seatTimer = time.AfterFunc(time.Until(lease.expires), func() {
+		var e lobbyEffects
+		l.mu.Lock()
+		if p := l.players[id]; !l.closed && l.leases[id] == lease && p != nil && !p.Connected && l.seatExpiredLocked(lease, time.Now()) {
+			l.removeMemberLocked(&e, id)
+			l.afterRemovalLocked(&e, id)
+		}
+		l.mu.Unlock()
+		l.applyEffects(e)
+	})
+}
+
+func (l *Lobby) removeMemberLocked(e *lobbyEffects, id string) {
+	l.removePowerupMemberLocked(e, id)
+	if lease := l.leases[id]; lease != nil {
+		lease.stopTimers()
+	}
+	if pending := l.reservations[id]; pending != nil {
+		pending.timer.Stop()
+		delete(l.reservations, id)
+	}
+	delete(l.players, id)
+	delete(l.leases, id)
 }
 
 func (l *Lobby) leaveLocked(e *lobbyEffects, c *websocket.Client) {
 	l.cancelStartLocked(e)
 	l.reconcilePowerupWindowLocked(e)
-	l.removePowerupMemberLocked(e, c.ID)
 	l.hub.UnregisterClient(c)
-	delete(l.players, c.ID)
-	delete(l.leases, c.ID)
-	l.selectAdminLocked()
+	l.removeMemberLocked(e, c.ID)
+	l.resetReadyLocked()
 	e.closeWith(c, ws.CloseNormalClosure, "Left lobby")
 	l.afterRemovalLocked(e, c.ID)
 }
 
-func (l *Lobby) expireLease(id string, lease *playerLease, generation uint64) {
-	var e lobbyEffects
-	l.mu.Lock()
-	if p := l.players[id]; !l.closed && l.leases[id] == lease && lease.generation == generation && p != nil && !p.Connected && !time.Now().Before(lease.expires) {
-		l.cancelStartLocked(&e)
-		l.reconcilePowerupWindowLocked(&e)
-		l.removePowerupMemberLocked(&e, id)
-		if a := l.reservations[id]; a != nil && a.previous == lease {
-			a.timer.Stop()
-			delete(l.reservations, id)
-		}
-		delete(l.players, id)
-		delete(l.leases, id)
-		l.selectAdminLocked()
-		l.afterRemovalLocked(&e, id)
+func (l *Lobby) maybeFinishLocked(e *lobbyEffects) {
+	if !l.closed && l.active && l.allFinishedLocked() {
+		l.finalizeLocked(e, l.roundGen)
 	}
-	l.mu.Unlock()
-	l.applyEffects(e)
 }
 
 func (l *Lobby) afterRemovalLocked(e *lobbyEffects, id string) {
-	l.resetReadyLocked()
+	l.selectAdminLocked()
 	l.reconcilePowerupWindowLocked(e)
 	l.broadcastPowerupLocked(e)
 	l.broadcastLocked(e, models.ResponseBase{Status: "OK", Type: "LEFT_LOBBY", Payload: models.ResponsePayload{User: id, Lobby: l.snapshotLocked()}})
 	if len(l.players) == 0 && len(l.reservations) == 0 {
 		l.closeLocked(e)
-	} else if l.active && l.allFinishedLocked() {
-		l.finalizeLocked(e, l.roundGen)
+		return
 	}
+	l.updateIdleLocked()
+	l.maybeFinishLocked(e)
+}
+
+func (l *Lobby) clearIdleLocked() {
+	if l.idleTimer != nil {
+		l.idleTimer.Stop()
+		l.idleTimer = nil
+	}
+	l.idleDeadline = time.Time{}
+}
+
+func (l *Lobby) updateIdleLocked() {
+	if l.admin != "" || l.idleTimer != nil {
+		return
+	}
+	deadline := time.Now().Add(returnWindow)
+	l.idleDeadline = deadline
+	l.idleTimer = time.AfterFunc(time.Until(deadline), func() {
+		var e lobbyEffects
+		l.mu.Lock()
+		if l.idleDeadline == deadline {
+			l.closeLocked(&e)
+		}
+		l.mu.Unlock()
+		l.applyEffects(e)
+	})
 }
 
 func (l *Lobby) expireEmpty() {
@@ -284,10 +408,9 @@ func (l *Lobby) closeLocked(e *lobbyEffects) {
 		l.emptyTimer.Stop()
 		l.emptyTimer = nil
 	}
+	l.clearIdleLocked()
 	for _, lease := range l.leases {
-		if lease.grace != nil {
-			lease.grace.Stop()
-		}
+		lease.stopTimers()
 	}
 	for _, a := range l.reservations {
 		a.timer.Stop()
