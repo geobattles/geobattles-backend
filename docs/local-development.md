@@ -30,7 +30,7 @@ Configuration/JWT initialization happens in explicit startup, before database mi
 
 ## Maps-enabled manual play
 
-After restricted keys are configured and API use is approved:
+For a requested manual gameplay or Android PWA play check, use both configured, restricted Maps keys. For the standard backend on port 8080, run:
 
 ```bash
 make dev-maps
