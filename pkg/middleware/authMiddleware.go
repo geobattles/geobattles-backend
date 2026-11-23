@@ -16,7 +16,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// CORS
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, *")
 		if r.Method == "OPTIONS" {
 			return
 		}

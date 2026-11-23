@@ -64,6 +64,8 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		return
 	}
 	switch req.Cmd {
+	case "leave":
+		l.retainSeatLocked(&e, c, true)
 	case "disconnect":
 		l.leaveLocked(&e, c)
 	case "setReady":

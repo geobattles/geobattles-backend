@@ -95,6 +95,11 @@ func (l *Lobby) completeStart(work *roundStart) {
 			// Retain the last completed summary through failed/cancelled replay
 			// selection; reset only at this successful commit point.
 			if l.phase == PhaseFinished {
+				for id, player := range l.players {
+					if !player.Connected {
+						l.removeMemberLocked(&e, id)
+					}
+				}
 				l.resetResultsLocked()
 			}
 			if work.newGame {
@@ -142,6 +147,11 @@ func (l *Lobby) finalizeLocked(e *lobbyEffects, generation uint64) {
 	l.phase = PhaseMidRound
 	if l.round >= l.conf.NumRounds {
 		l.phase = PhaseFinished
+		for id, player := range l.players {
+			if !player.Connected {
+				l.scheduleSeatExpiryLocked(id, l.leases[id])
+			}
+		}
 		l.resetReadyLocked()
 		if !l.persisted {
 			l.persisted = true

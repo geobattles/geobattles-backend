@@ -17,6 +17,7 @@ type Lobby struct {
 	id              string
 	hub             *websocket.Hub
 	mu              sync.Mutex
+	creator         string
 	admin           string
 	conf            *LobbyConf
 	players         map[string]*Player
@@ -28,6 +29,7 @@ type Lobby struct {
 	totalResults    map[string]*Result
 	active          bool
 	finished        map[string]bool
+	roundEntrants   map[string]bool
 	ccSize          float64
 	powerLogs       map[int][]Powerup
 	startTime       time.Time
@@ -48,6 +50,8 @@ type Lobby struct {
 	nextLease       uint64
 	nextMember      uint64
 	emptyTimer      *time.Timer
+	idleTimer       *time.Timer
+	idleDeadline    time.Time
 	persisted       bool
 	powerWindow     *powerupWindow
 	powerEffects    []powerupRecord
@@ -64,11 +68,13 @@ const (
 )
 
 type playerLease struct {
-	client     *websocket.Client
-	generation uint64
-	present    uint64 // successful membership order; preserved through recovery
-	grace      *time.Timer
-	expires    time.Time
+	client      *websocket.Client
+	generation  uint64
+	present     uint64 // successful membership order; preserved through recovery
+	grace       *time.Timer
+	seatTimer   *time.Timer
+	blocksUntil time.Time
+	expires     time.Time
 }
 
 type LobbyConf struct {
@@ -91,6 +97,7 @@ type Player struct {
 	Name      string `json:"name"`
 	Connected bool   `json:"connected"`
 	Ready     bool   `json:"ready"`
+	Away      bool   `json:"away,omitempty"`
 	Color     string `json:"color"`
 	Powerups  []bool `json:"powerups,omitempty"`
 	Lives     int    `json:"lives,omitempty"`

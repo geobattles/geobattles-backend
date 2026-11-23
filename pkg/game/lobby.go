@@ -157,6 +157,7 @@ func (l *Lobby) resetResultsLocked() {
 
 func (l *Lobby) setupRoundLocked(location logic.Coords, cc string) {
 	l.finished = make(map[string]bool)
+	l.roundEntrants = make(map[string]bool)
 	l.locations = append(l.locations, location)
 	l.currentCC = cc
 	l.startTime = time.Now()
@@ -171,6 +172,9 @@ func (l *Lobby) setupRoundLocked(location logic.Coords, cc string) {
 	l.rawResults[l.round] = make(map[string][]Result)
 	l.endResults[l.round] = make(map[string]*Result)
 	for id, p := range l.players {
+		if p.Connected && l.liveLeaseLocked(id) {
+			l.roundEntrants[id] = true
+		}
 		l.endResults[l.round][id] = &Result{}
 		if l.round == 1 {
 			l.totalResults[id] = &Result{}
@@ -184,18 +188,22 @@ func (l *Lobby) setupRoundLocked(location logic.Coords, cc string) {
 	}
 }
 
-// Unannounced-disconnected members stay eligible throughout their grace lease.
-// An empty set is NOT evidence that everybody finished (closure handles it).
+// Away seats stay eligible to return, but only a recent network loss can
+// delay early completion. An empty room lets the normal round clock run.
 func (l *Lobby) allFinishedLocked() bool {
-	if len(l.players) == 0 {
-		return false
-	}
-	for id := range l.players {
+	hasLivePlayer := false
+	now := time.Now()
+	for id, player := range l.players {
+		if player.Connected && l.liveLeaseLocked(id) {
+			hasLivePlayer = true
+		} else if lease := l.leases[id]; lease == nil || !now.Before(lease.blocksUntil) {
+			continue
+		}
 		if !l.finished[id] {
 			return false
 		}
 	}
-	return true
+	return hasLivePlayer
 }
 
 func scoreDistance(x float64, a float64) int {

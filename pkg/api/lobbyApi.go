@@ -19,7 +19,11 @@ func ServeGetLobby(w http.ResponseWriter, r *http.Request) {
 }
 
 func ServeCreateLobby(w http.ResponseWriter, r *http.Request) {
-	// w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	uid, ok := r.Context().Value(UidKey).(string)
+	if !ok || uid == "" {
+		ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
+		return
+	}
 
 	var lobbyConf game.LobbyConf
 	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
@@ -34,7 +38,7 @@ func ServeCreateLobby(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	lobby, err := game.CreateLobby(lobbyConf)
+	lobby, err := game.CreateLobby(lobbyConf, uid)
 	if err != nil {
 		ERROR(w, http.StatusBadRequest, err)
 		return
@@ -50,6 +54,18 @@ func ServeDeleteLobby(w http.ResponseWriter, r *http.Request) {
 	slog.Warn("!! Delete lobby NOT implemented!!", "lobbyId", id)
 
 	w.WriteHeader(http.StatusOK)
+}
+
+// ServeLobbyAdmission reports only the caller's eligibility. The socket
+// handshake still reserves and rechecks capacity and the exact membership.
+func ServeLobbyAdmission(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	uid, ok := r.Context().Value(UidKey).(string)
+	if !ok || uid == "" {
+		ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
+		return
+	}
+	JSON(w, http.StatusOK, game.CheckAdmission(r.URL.Query().Get("id"), uid))
 }
 
 func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
