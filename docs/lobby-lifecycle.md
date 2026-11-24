@@ -97,7 +97,7 @@ Location work uses a captured context/config and reserved generation outside loc
 ## Operational limits
 
 - Recovery is single-process and in-memory. Country Battle remains unfinished; historical stored results are not backfilled.
-- Public discovery includes player/guess/result information but neither answer field. Authorized member snapshots still include the current/last answer; this is not an anti-cheat boundary.
+- The legacy public list includes player, guess and result information. The directory summary below omits all three. Authorized member snapshots include the current or last answer.
 - Bounded means existing per-game player/round/attempt limits and per-peer 64-event queues, not global lobby/rate limits. A slow peer reconnects via snapshot; there is no durable event replay. JSON copying/encoding remains inside the lobby transaction and can become costly near maximum history limits.
 - Persistence is at-most-once attempted per completed in-memory game, not guaranteed durable delivery; DB failure/timeouts are logged safely with no automatic retry. Process exit loses retained state.
 - Compile success is not multiplayer/provider/database/concurrency acceptance; exercise the intended release pair within the approved runtime scope.
@@ -116,7 +116,8 @@ own rooms. Responses use private, no-store caching and vary by Authorization.
 `GET /lobby/admission?id=…`. A successful new admission has no retained flag.
 The WebSocket handshake makes the final decision.
 
-The original `GET /lobby` remains available for older clients, the socket smoke
-suite, and the browser suite's public-lobby inspection. Roll out the additive
+The original `GET /lobby` remains available for older clients, the frontend
+socket's legacy admission fallback, the socket smoke suite, and the browser
+suite's public-lobby inspection. Roll out the additive
 backend routes before the frontend. Retire the legacy response separately
 after those consumers have migrated.
