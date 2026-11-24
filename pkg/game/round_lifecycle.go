@@ -14,6 +14,7 @@ import (
 
 type roundStart struct {
 	generation uint64
+	round      int
 	newGame    bool
 	initiator  *websocket.Client
 	conf       LobbyConf
@@ -53,13 +54,17 @@ func (l *Lobby) beginStartLocked(c *websocket.Client) (*roundStart, error) {
 	l.startInitiator = c
 	l.starting = true
 	l.generation++
-	return &roundStart{generation: l.generation, newGame: newGame, initiator: c, conf: conf, countries: append([]string{}, conf.CCList...), ccSize: size, ctx: ctx}, nil
+	round := l.round + 1
+	if newGame {
+		round = 1
+	}
+	return &roundStart{generation: l.generation, round: round, newGame: newGame, initiator: c, conf: conf, countries: append([]string{}, conf.CCList...), ccSize: size, ctx: ctx}, nil
 }
 
 // The single reserved selection runs outside all locks. The reader remains free
 // to process explicit leave, and transport loss can cancel the provider context.
 func (l *Lobby) completeStart(work *roundStart) {
-	loc, cc, err := logic.RndLocationContext(work.ctx, work.countries, work.ccSize)
+	loc, cc, err := work.location()
 	var e lobbyEffects
 	l.mu.Lock()
 	live := !l.closed && l.starting && l.generation == work.generation &&
