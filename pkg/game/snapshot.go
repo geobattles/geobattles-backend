@@ -98,8 +98,8 @@ func (l *Lobby) remainingLocked() int64 {
 	return max(0, time.Until(l.deadline).Milliseconds())
 }
 
-// publicSnapshotLocked preserves discovery state without exposing answers.
-// Both HTTP paths use this projection; member WebSocket snapshots remain full.
+// publicSnapshotLocked preserves the legacy list and create response shapes.
+// The directory builds its smaller projection directly from the live room.
 func (l *Lobby) publicSnapshotLocked() LobbySnapshot {
 	snapshot := l.snapshotLocked()
 	snapshot.Location = nil

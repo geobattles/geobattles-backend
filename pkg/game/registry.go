@@ -30,15 +30,19 @@ func deleteLobbyIfSame(l *Lobby) {
 	registry.Unlock()
 }
 
-// ListLobbies preserves the ID-keyed HTTP shape, not live registry/state pointers.
-// It is a set of individually consistent snapshots, not a global transaction.
-func ListLobbies() map[string]LobbySnapshot {
+func registeredLobbies() []*Lobby {
 	registry.Lock()
 	lobbies := make([]*Lobby, 0, len(registry.lobbies))
 	for _, l := range registry.lobbies {
 		lobbies = append(lobbies, l)
 	}
 	registry.Unlock()
+	return lobbies
+}
+
+// ListLobbies preserves the legacy ID-keyed HTTP shape.
+func ListLobbies() map[string]LobbySnapshot {
+	lobbies := registeredLobbies()
 	out := make(map[string]LobbySnapshot, len(lobbies))
 	for _, l := range lobbies {
 		l.mu.Lock()

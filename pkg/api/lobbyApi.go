@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/gorilla/mux"
+
 	"github.com/geobattles/geobattles-backend/pkg/game"
 	"github.com/geobattles/geobattles-backend/pkg/websocket"
 )
@@ -16,6 +18,21 @@ func ServeGetLobby(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(game.ListLobbies())
 	slog.Debug("Sent lobby list")
+}
+
+func ServeLobbyDirectory(w http.ResponseWriter, r *http.Request) {
+	caller, _ := r.Context().Value(UidKey).(string)
+	JSON(w, http.StatusOK, game.LobbyDirectory(caller))
+}
+
+func ServeFindLobby(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	row, ok := game.FindLobbySummary(mux.Vars(r)["code"])
+	if !ok {
+		JSON(w, http.StatusNotFound, game.AdmissionStatus{Code: "LOBBY_NOT_FOUND"})
+		return
+	}
+	JSON(w, http.StatusOK, row)
 }
 
 func ServeCreateLobby(w http.ResponseWriter, r *http.Request) {

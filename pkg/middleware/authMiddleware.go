@@ -10,6 +10,20 @@ import (
 	"github.com/geobattles/geobattles-backend/pkg/auth"
 )
 
+// OptionalAuth serves public summaries and authenticates any supplied identity.
+func OptionalAuth(next http.HandlerFunc) http.HandlerFunc {
+	public, authenticated := Cors(next), AuthMiddleware(next)
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "private, no-store")
+		w.Header().Add("Vary", "Authorization")
+		if r.Method == http.MethodOptions || r.Header.Get("Authorization") != "" {
+			authenticated(w, r)
+			return
+		}
+		public(w, r)
+	}
+}
+
 // authorization middleware. handles cors and validates jwt token
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

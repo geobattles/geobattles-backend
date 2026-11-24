@@ -52,6 +52,26 @@ func (l *Lobby) seatExpiredLocked(lease *playerLease, now time.Time) bool {
 	return l.phase != PhasePlaying && l.phase != PhaseMidRound && !lease.expires.IsZero() && !now.Before(lease.expires)
 }
 
+func (l *Lobby) occupiedSeatsLocked() int {
+	occupied := len(l.players)
+	for _, reservation := range l.reservations {
+		if reservation.previous == nil {
+			occupied++
+		}
+	}
+	return occupied
+}
+
+func (l *Lobby) newPlayerStatusLocked(occupied int) string {
+	if l.phase != PhaseWaiting && l.phase != PhaseFinished {
+		return "GAME_IN_PROGRESS"
+	}
+	if occupied >= l.conf.MaxPlayers {
+		return "LOBBY_FULL"
+	}
+	return "OK"
+}
+
 func (l *Lobby) admissionStatusLocked(id string, now time.Time) AdmissionStatus {
 	if l.closed || l.idleExpiredLocked(now) {
 		return AdmissionStatus{Code: "LOBBY_NOT_FOUND"}
@@ -71,18 +91,7 @@ func (l *Lobby) admissionStatusLocked(id string, now time.Time) AdmissionStatus 
 		return AdmissionStatus{Code: "REJOIN_EXPIRED"}
 	}
 	if !retained {
-		if l.phase != PhaseWaiting && l.phase != PhaseFinished {
-			return AdmissionStatus{Code: "GAME_IN_PROGRESS"}
-		}
-		occupied := len(l.players)
-		for _, reservation := range l.reservations {
-			if reservation.previous == nil {
-				occupied++
-			}
-		}
-		if occupied >= l.conf.MaxPlayers {
-			return AdmissionStatus{Code: "LOBBY_FULL"}
-		}
+		return AdmissionStatus{Code: l.newPlayerStatusLocked(l.occupiedSeatsLocked())}
 	}
 	return AdmissionStatus{Code: "OK", Retained: retained}
 }

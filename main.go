@@ -36,6 +36,8 @@ func setupRoutes(r *mux.Router, diagnostics *api.Diagnostics) {
 	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeCreateLobby)).Methods("POST", "OPTIONS") // create lobby
 	r.HandleFunc("/lobby", middleware.AuthMiddleware(api.ServeDeleteLobby)).Methods("DELETE")          // delete lobby
 	r.HandleFunc("/lobby/admission", middleware.AuthMiddleware(api.ServeLobbyAdmission)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/lobby/directory", middleware.OptionalAuth(api.ServeLobbyDirectory)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/lobby/directory/{code}", middleware.Cors(api.ServeFindLobby)).Methods("GET", "OPTIONS")
 	r.HandleFunc("/lobbySocket", middleware.SocketAuthMiddleware(api.ServeLobbySocket))
 }
 

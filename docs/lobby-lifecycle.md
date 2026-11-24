@@ -101,3 +101,22 @@ Location work uses a captured context/config and reserved generation outside loc
 - Bounded means existing per-game player/round/attempt limits and per-peer 64-event queues, not global lobby/rate limits. A slow peer reconnects via snapshot; there is no durable event replay. JSON copying/encoding remains inside the lobby transaction and can become costly near maximum history limits.
 - Persistence is at-most-once attempted per completed in-memory game, not guaranteed durable delivery; DB failure/timeouts are logged safely with no automatic retry. Process exit loses retained state.
 - Compile success is not multiplayer/provider/database/concurrency acceptance; exercise the intended release pair within the approved runtime scope.
+
+## Directory and return eligibility
+
+`GET /lobby/directory` returns summaries keyed by room code. Each row contains
+`ID`, `name`, optional `hostName`, `phase`, `currentRound`, `numRounds`,
+`connected`, `occupied`, `maxPlayers`, `openToNew`, and optional `starting`.
+Occupied seats include disconnected members and in-flight new admissions. A
+raw JWT in the Authorization header adds `retained: true` only to the caller's
+own rooms. Responses use private, no-store caching and vary by Authorization.
+
+`GET /lobby/directory/{code}` returns one public row, or HTTP 404 with
+`{"code":"LOBBY_NOT_FOUND"}`. Home verifies its saved code using authenticated
+`GET /lobby/admission?id=…`. A successful new admission has no retained flag.
+The WebSocket handshake makes the final decision.
+
+The original `GET /lobby` remains available for older clients, the socket smoke
+suite, and the browser suite's public-lobby inspection. Roll out the additive
+backend routes before the frontend. Retire the legacy response separately
+after those consumers have migrated.
