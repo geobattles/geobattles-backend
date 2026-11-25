@@ -104,26 +104,21 @@ func (l *Lobby) remainingLocked() int64 {
 	return max(0, time.Until(l.deadline).Milliseconds())
 }
 
-// publicSnapshotLocked preserves the legacy list and create response shapes.
-// The directory builds its smaller projection directly from the live room.
+// publicSnapshotLocked preserves the legacy discovery fields and JSON shape.
+// Match results are available only through the appropriate socket audience.
 func (l *Lobby) publicSnapshotLocked() LobbySnapshot {
-	snapshot := l.snapshotLocked()
-	snapshot.Location = nil
-	snapshot.MatchRoster = nil
-	snapshot.RevealedAnswers = nil
-	snapshot.PowerupState = nil
-	snapshot.PowerLog = nil
-	snapshot.OpenToSpectators = l.canOfferSpectatingLocked() && l.occupiedSpectatorsLocked() < maxSpectators
+	snapshot := LobbySnapshot{
+		ID: l.id, GameID: l.gameID, Admin: l.admin, Conf: cloneConf(*l.conf), NumPlayers: len(l.players),
+		Players: l.playersLocked(), CurrentRound: l.round, Round: l.round, Phase: l.phase,
+		TimeRemaining: l.remainingLocked(), EndedEarly: l.endedEarly,
+		OpenToSpectators: l.canOfferSpectatingLocked() && l.occupiedSpectatorsLocked() < maxSpectators,
+		Results:          map[int]map[string][]Result{}, EndResults: map[int]map[string]Result{}, TotalResults: map[string]Result{},
+		FullRoundRes: map[string][]Result{}, RoundRes: map[string]Result{},
+	}
 	for id, player := range snapshot.Players {
 		player.Powerups, player.Lives = nil, 0
 		player.RematchSeat = false
 		snapshot.Players[id] = player
-	}
-	if l.phase == PhasePlaying {
-		delete(snapshot.Results, l.round)
-		delete(snapshot.EndResults, l.round)
-		clear(snapshot.FullRoundRes)
-		clear(snapshot.RoundRes)
 	}
 	return snapshot
 }

@@ -137,7 +137,7 @@ Location work uses a captured context/config and reserved generation outside loc
 ## Operational limits
 
 - Recovery is single-process and in-memory. Country Battle remains unfinished; historical stored results are not backfilled.
-- The legacy public list retains player and completed score information. The directory uses counts and room metadata. Player socket snapshots include the current or last answer.
+- The legacy public list retains discovery metadata and its player roster for older clients. Score and guess fields stay empty. The directory uses counts and room metadata. Player socket snapshots include the current or last answer.
 - Bounded means existing per-game player/round/attempt limits and per-peer 64-event queues, not global lobby/rate limits. A slow peer reconnects via snapshot; there is no durable event replay. JSON copying/encoding remains inside the lobby transaction and can become costly near maximum history limits.
 - Persistence is at-most-once attempted per completed in-memory game, not guaranteed durable delivery; DB failure/timeouts are logged safely with no automatic retry. Process exit loses retained state.
 - Compile success is not multiplayer/provider/database/concurrency acceptance; exercise the intended release pair within the approved runtime scope.

@@ -88,5 +88,7 @@ func TestDirectorySizeIndependentOfHistory(t *testing.T) {
 	if !bytes.Equal(empty, full) {
 		t.Fatal("match history changed the directory payload")
 	}
-	t.Logf("one-room JSON, 0 vs 20 archived rounds: directory %d / %d bytes; legacy %d / %d bytes", len(empty), len(full), len(legacyEmpty), len(legacy()))
+	if !bytes.Equal(legacyEmpty, legacy()) {
+		t.Fatal("match history changed the legacy lobby list payload")
+	}
 }
