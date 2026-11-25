@@ -101,10 +101,11 @@ type Player = {
   country list, powerups, placement bonus and dynamic lives. No-op and title-only
   updates also preserve readiness. The existing numeric omitted/zero no-update
   meanings, settings validation and start gates remain unchanged.
-- Transport loss or resumable leave clears only that member’s ready flag. Recovery is **not** an
-  automatic ready acknowledgement and leaves that member unready; it does not
-  reset the other members. This preserves the distinction between connection
-  loss and membership removal.
+- Transport loss preserves confirmed readiness in `WAITING` and `FINISHED`
+  through the retained seat window. A temporarily disconnected ready player
+  can still recover their seat if the host starts the next game. An explicit
+  resumable leave clears that player's readiness. Newly promoted spectators
+  confirm readiness for the rematch.
 - Final game completion clears all ready flags before the final ROUND_RESULT
   players are copied. A FINISHED recovery snapshot therefore has unready players
   until they explicitly acknowledge a replay. Ready Check never resets lives,
@@ -209,13 +210,18 @@ lifetime; it does not provide process-restart recovery or durable history.
   A resumable leave broadcasts `connected:false, away:true`. Transport loss
   broadcasts `connected:false`. The clock continues. A lost connection can
   delay early completion for up to 30s from detection, during which time the
-  player can come back and finish their guesses. Deliberate leave immediately
-  stops blocking early completion.
+  player can come back and finish their guesses. That grace applies to the
+  round they entered. Deliberate leave immediately stops blocking completion.
 - Seats remain claimable through an in-progress match while the room has live
   members. In WAITING or FINISHED the seat times out 90s after departure.
-  A successful replay removes absent seats before starting the new match. With
-  everyone absent the room expires after 90s. `disconnect` still permanently
+  A successful replay removes offline seats that did not confirm readiness.
+  With everyone absent the room expires after 90s. `disconnect` permanently
   removes membership and closes its exact socket.
+- Per-round score maps omit players who never entered that round. Active
+  players who made no guess still have a zero-attempt row. Cumulative standings
+  include everyone who entered at least one round, with their points intact.
+  The member-only `matchRoster` archives the display name and color for each of
+  those players independently of lobby membership.
 - JOINED_LOBBY is always enqueued before REJOIN_ROUND for a recovering member,
   including WAITING/FINISHED. The existing complete snapshots restore phase,
   authoritative round, players (including readiness), raw/best/total results, powerups,

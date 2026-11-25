@@ -10,6 +10,8 @@ import (
 // Status transitions make a second invocation harmless as well as finalization's
 // existing once-only generation guard.
 func (l *Lobby) processPowerups() error {
+	rows := l.endResults[l.round]
+	logChanged := false
 	for i := range l.powerEffects {
 		r := &l.powerEffects[i]
 		if r.Round != l.round || r.Status != "ACTIVE" {
@@ -19,30 +21,32 @@ func (l *Lobby) processPowerups() error {
 		if source == nil || source.present != r.sourceMember {
 			r.Status = "CANCELLED"
 			r.Reason = "SOURCE_LEFT"
+			logChanged = true
 			continue
 		}
-		s := l.endResults[l.round][r.Source]
-		if r.Type == 0 {
-			if s != nil {
-				s.DoubleScore = s.BaseScore
+		if r.Type == 1 {
+			if target := l.leases[r.Target]; target == nil || target.present != r.targetMember {
+				l.refundPowerupLocked(r, "TARGET_LEFT")
+				logChanged = true
+				continue
 			}
-			r.Status = "APPLIED"
+		}
+		s, t := rows[r.Source], rows[r.Target]
+		if s == nil || (r.Type == 1 && t == nil) {
+			// The seat can still return in a later round. No points transfer
+			// when a powerup's owner or opponent missed this round entirely.
+			l.refundPowerupLocked(r, "")
+			logChanged = true
 			continue
 		}
-		target := l.leases[r.Target]
-		if target == nil || target.present != r.targetMember {
-			r.Status = "REFUNDED"
-			r.Reason = "TARGET_LEFT"
-			if p := l.players[r.Source]; p != nil && len(p.Powerups) == 2 {
-				p.Powerups[1] = true
-			}
-			continue
-		}
-		t := l.endResults[l.round][r.Target]
-		winner := duelWinner(l.conf.Mode, s, t)
 		r.Status = "APPLIED"
+		if r.Type == 0 {
+			s.DoubleScore = s.BaseScore
+			continue
+		}
+		winner := duelWinner(l.conf.Mode, s, t)
 		r.Outcome = "DRAW"
-		if winner != 0 && s != nil && t != nil {
+		if winner != 0 {
 			s.DuelScore += 1000 * winner
 			t.DuelScore -= 1000 * winner
 			if winner > 0 {
@@ -51,6 +55,9 @@ func (l *Lobby) processPowerups() error {
 				r.Outcome = "TARGET_WON"
 			}
 		}
+	}
+	if logChanged {
+		l.rebuildPowerLogLocked()
 	}
 	return nil
 }
@@ -95,11 +102,7 @@ func (l *Lobby) processBonus() error {
 	}
 	var playerOrder []string
 	for id := range l.endResults[l.round] {
-		// Retaining an absent seat in the results must not inflate placement
-		// bonuses for rounds the player never entered.
-		if l.roundEntrants[id] {
-			playerOrder = append(playerOrder, id)
-		}
+		playerOrder = append(playerOrder, id)
 	}
 	sort.SliceStable(playerOrder, func(i, j int) bool {
 		iEmpty := l.endResults[l.round][playerOrder[i]].Attempt == 0

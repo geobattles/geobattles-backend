@@ -145,12 +145,12 @@ func TestAdmissionAtCutoffDoesNotStrandQueuedStart(t *testing.T) {
 		}
 	}
 	// Use the ordinary close path and stop the recovery timer it creates.
-	peer.Close()
-	srv.Close()
 	l.mu.Lock()
 	c := l.leases["b"].client
 	l.mu.Unlock()
 	c.Close()
+	peer.Close()
+	srv.Close()
 	l.mu.Lock()
 	if lease := l.leases["b"]; lease != nil && lease.grace != nil {
 		lease.grace.Stop()
@@ -348,9 +348,8 @@ func TestTransientDisconnectPreservesDuelAndOldLeaseCannotSpend(t *testing.T) {
 		t.Fatal(err)
 	}
 	l.clientLost(l.leases["b"].client)
-	if lease := l.leases["b"]; lease.grace != nil {
-		defer lease.grace.Stop()
-	}
+	lease := l.leases["b"]
+	defer lease.stopTimers()
 	if l.players["a"].Powerups[1] || l.powerEffects[0].Status != "QUEUED" {
 		t.Fatal("transient loss refunded duel")
 	}
@@ -359,10 +358,24 @@ func TestTransientDisconnectPreservesDuelAndOldLeaseCannotSpend(t *testing.T) {
 	var e lobbyEffects
 	requireCode(t, l.powerupCommandLocked(&e, old, choice("old-lease", 0, "")), "PLAYER_NOT_IN_LOBBY")
 	l.setupRoundLocked(logic.Coords{}, "")
+	if l.endResults[2]["b"] != nil {
+		t.Fatal("an offline seat started the round with a score row")
+	}
+	lease.blocksUntil = time.Now().Add(reconnectGrace)
+	l.finished["a"], l.finished["c"] = true, true
+	if !l.allFinishedLocked() {
+		t.Fatal("a previous round's reconnect grace held open a round the player never entered")
+	}
+	lease.client = websocket.NewClient("b", "b", l.hub, nil, l, PlayerMessageHandler, nil)
+	l.players["b"].Connected = true
+	l.enterRoundLocked("b", l.players["b"])
+	if l.allFinishedLocked() {
+		t.Fatal("a returning player could not finish their guesses")
+	}
 	l.endResults[2]["b"] = &Result{Attempt: 1, Dist: 0}
 	_ = l.processPowerups()
 	if l.powerEffects[0].Outcome != "TARGET_WON" {
-		t.Fatal("retained offline target lost valid guess")
+		t.Fatal("returning target lost valid guess")
 	}
 }
 

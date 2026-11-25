@@ -5,18 +5,20 @@ import "time"
 // LobbySummary contains only the fields used to discover a room. Retained is
 // specific to the authenticated caller and is omitted from public responses.
 type LobbySummary struct {
-	ID           string `json:"ID"`
-	Name         string `json:"name"`
-	HostName     string `json:"hostName,omitempty"`
-	Phase        string `json:"phase"`
-	CurrentRound int    `json:"currentRound"`
-	NumRounds    int    `json:"numRounds"`
-	Connected    int    `json:"connected"`
-	Occupied     int    `json:"occupied"`
-	MaxPlayers   int    `json:"maxPlayers"`
-	Starting     bool   `json:"starting,omitempty"`
-	OpenToNew    bool   `json:"openToNew"`
-	Retained     bool   `json:"retained,omitempty"`
+	ID               string `json:"ID"`
+	Name             string `json:"name"`
+	HostName         string `json:"hostName,omitempty"`
+	Phase            string `json:"phase"`
+	CurrentRound     int    `json:"currentRound"`
+	NumRounds        int    `json:"numRounds"`
+	Connected        int    `json:"connected"`
+	Occupied         int    `json:"occupied"`
+	MaxPlayers       int    `json:"maxPlayers"`
+	Starting         bool   `json:"starting,omitempty"`
+	OpenToNew        bool   `json:"openToNew"`
+	OpenToSpectators bool   `json:"openToSpectators,omitempty"`
+	Retained         bool   `json:"retained,omitempty"`
+	Spectating       bool   `json:"spectating,omitempty"`
 }
 
 func (l *Lobby) summary(caller string) (LobbySummary, bool) {
@@ -30,7 +32,8 @@ func (l *Lobby) summary(caller string) (LobbySummary, bool) {
 	s := LobbySummary{
 		ID: l.id, Name: l.conf.Name, Phase: l.phase, CurrentRound: l.round, NumRounds: l.conf.NumRounds,
 		Occupied: occupied, MaxPlayers: l.conf.MaxPlayers, Starting: l.starting,
-		OpenToNew: !l.starting && l.newPlayerStatusLocked(occupied) == "OK",
+		OpenToNew:        !l.starting && l.newPlayerStatusLocked(occupied) == "OK",
+		OpenToSpectators: l.canOfferSpectatingLocked() && l.occupiedSpectatorsLocked() < maxSpectators,
 	}
 	if host := l.players[l.admin]; host != nil {
 		s.HostName = host.Name
@@ -41,7 +44,8 @@ func (l *Lobby) summary(caller string) (LobbySummary, bool) {
 		}
 	}
 	if lease := l.leases[caller]; caller != "" && lease != nil {
-		s.Retained = !l.seatExpiredLocked(lease, now)
+		s.Retained = !l.seatExpiredLocked(caller, lease, now)
+		s.Spectating = s.Retained && l.isSpectatorLocked(caller)
 	}
 	return s, true
 }

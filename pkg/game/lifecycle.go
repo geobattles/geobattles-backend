@@ -23,6 +23,7 @@ type Admission struct {
 	name       string
 	generation uint64
 	previous   *playerLease
+	spectating bool
 	deadline   time.Time
 	timer      *time.Timer // owned by lobby.mu
 }
@@ -31,31 +32,32 @@ type Admission struct {
 type AdmissionStatus struct {
 	Code         string `json:"code"`
 	Retained     bool   `json:"retained,omitempty"`
+	Spectating   bool   `json:"spectating,omitempty"`
 	RetryAfterMs int64  `json:"retryAfterMs,omitempty"`
 }
 
-func CheckAdmission(lobbyID, id string) AdmissionStatus {
+func CheckAdmission(lobbyID, id string, allowSpectating bool) AdmissionStatus {
 	l := lookupLobby(lobbyID)
 	if l == nil {
 		return AdmissionStatus{Code: "LOBBY_NOT_FOUND"}
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return l.admissionStatusLocked(id, time.Now())
+	return l.admissionStatusLocked(id, time.Now(), allowSpectating)
 }
 
 func (l *Lobby) idleExpiredLocked(now time.Time) bool {
 	return !l.idleDeadline.IsZero() && !now.Before(l.idleDeadline)
 }
 
-func (l *Lobby) seatExpiredLocked(lease *playerLease, now time.Time) bool {
-	return l.phase != PhasePlaying && l.phase != PhaseMidRound && !lease.expires.IsZero() && !now.Before(lease.expires)
+func (l *Lobby) seatExpiredLocked(id string, lease *playerLease, now time.Time) bool {
+	return (l.isSpectatorLocked(id) || !l.matchInProgressLocked()) && !lease.expires.IsZero() && !now.Before(lease.expires)
 }
 
 func (l *Lobby) occupiedSeatsLocked() int {
 	occupied := len(l.players)
 	for _, reservation := range l.reservations {
-		if reservation.previous == nil {
+		if !reservation.spectating && reservation.previous == nil {
 			occupied++
 		}
 	}
@@ -72,31 +74,43 @@ func (l *Lobby) newPlayerStatusLocked(occupied int) string {
 	return "OK"
 }
 
-func (l *Lobby) admissionStatusLocked(id string, now time.Time) AdmissionStatus {
+func (l *Lobby) admissionStatusLocked(id string, now time.Time, allowSpectating bool) AdmissionStatus {
 	if l.closed || l.idleExpiredLocked(now) {
 		return AdmissionStatus{Code: "LOBBY_NOT_FOUND"}
 	}
 	previous := l.leases[id]
-	retained := previous != nil && !l.seatExpiredLocked(previous, now)
-	if l.starting {
-		return AdmissionStatus{Code: "ROUND_STARTING", Retained: retained}
-	}
+	retained := previous != nil && !l.seatExpiredLocked(id, previous, now)
 	if pending := l.reservations[id]; pending != nil {
 		return AdmissionStatus{Code: "ADMISSION_PENDING", Retained: retained, RetryAfterMs: max(0, pending.deadline.Sub(now).Milliseconds())}
 	}
-	if p := l.players[id]; p != nil && p.Connected {
+	if retained && (l.liveLeaseLocked(id) || (l.players[id] != nil && l.players[id].Connected)) {
 		return AdmissionStatus{Code: "ALREADY_CONNECTED", Retained: true}
 	}
 	if previous != nil && !retained {
 		return AdmissionStatus{Code: "REJOIN_EXPIRED"}
 	}
-	if !retained {
-		return AdmissionStatus{Code: l.newPlayerStatusLocked(l.occupiedSeatsLocked())}
+	if retained && l.isSpectatorLocked(id) {
+		if !allowSpectating {
+			return AdmissionStatus{Code: "GAME_IN_PROGRESS"}
+		}
+		return AdmissionStatus{Code: "OK", Retained: true, Spectating: true}
 	}
-	return AdmissionStatus{Code: "OK", Retained: retained}
+	if !retained && allowSpectating && l.canOfferSpectatingLocked() {
+		if l.occupiedSpectatorsLocked() >= maxSpectators {
+			return AdmissionStatus{Code: "SPECTATORS_FULL"}
+		}
+		return AdmissionStatus{Code: "OK", Spectating: true}
+	}
+	if l.starting {
+		return AdmissionStatus{Code: "ROUND_STARTING", Retained: retained}
+	}
+	if retained {
+		return AdmissionStatus{Code: "OK", Retained: true}
+	}
+	return AdmissionStatus{Code: l.newPlayerStatusLocked(l.occupiedSeatsLocked())}
 }
 
-func ReserveAdmission(lobbyID, id, name string) (*Admission, error) {
+func ReserveAdmission(lobbyID, id, name string, allowSpectating bool) (*Admission, error) {
 	l := lookupLobby(lobbyID)
 	if l == nil {
 		return nil, errors.New("LOBBY_NOT_FOUND")
@@ -104,14 +118,15 @@ func ReserveAdmission(lobbyID, id, name string) (*Admission, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := time.Now()
-	if status := l.admissionStatusLocked(id, now); status.Code != "OK" {
+	status := l.admissionStatusLocked(id, now, allowSpectating)
+	if status.Code != "OK" {
 		if status.Code == "ADMISSION_PENDING" {
 			return nil, errors.New("ALREADY_CONNECTED") // preserve the upgrade contract
 		}
 		return nil, errors.New(status.Code)
 	}
 	l.nextLease++
-	a := &Admission{lobby: l, id: id, name: name, generation: l.nextLease, previous: l.leases[id], deadline: now.Add(admissionWait)}
+	a := &Admission{lobby: l, id: id, name: name, generation: l.nextLease, previous: l.leases[id], spectating: status.Spectating, deadline: now.Add(admissionWait)}
 	l.reservations[id] = a
 	a.timer = time.AfterFunc(time.Until(a.deadline), a.Cancel)
 	return a, nil
@@ -124,7 +139,7 @@ func (a *Admission) Cancel() {
 	if l.reservations[a.id] == a {
 		delete(l.reservations, a.id)
 		a.timer.Stop()
-		if len(l.players) == 0 && len(l.reservations) == 0 && l.emptyTimer == nil {
+		if len(l.players) == 0 && len(l.spectators) == 0 && len(l.reservations) == 0 && l.emptyTimer == nil {
 			l.closeLocked(&e)
 		}
 	}
@@ -140,11 +155,19 @@ func (a *Admission) Join(conn *ws.Conn) {
 	var e lobbyEffects
 	l.mu.Lock()
 	now := time.Now()
-	if l.closed || l.idleExpiredLocked(now) || l.starting || l.reservations[a.id] != a || l.leases[a.id] != a.previous ||
-		!now.Before(a.deadline) || (a.previous != nil && l.seatExpiredLocked(a.previous, now)) {
+	if l.closed || l.idleExpiredLocked(now) || (l.starting && !a.spectating) || l.reservations[a.id] != a || l.leases[a.id] != a.previous ||
+		!now.Before(a.deadline) || (a.previous != nil && l.seatExpiredLocked(a.id, a.previous, now)) {
 		l.mu.Unlock()
 		a.Cancel()
 		c.CloseWithCode(ws.CloseTryAgainLater, "Admission expired; reconnect")
+		return
+	}
+	if a.spectating {
+		l.joinSpectatorLocked(&e, a, c)
+		l.mu.Unlock()
+		l.applyEffects(e)
+		go c.Write()
+		go c.Read()
 		return
 	}
 	// Close an expired decision window before admitting recovered eligibility.
@@ -163,7 +186,7 @@ func (a *Admission) Join(conn *ws.Conn) {
 		a.previous.stopTimers()
 		present = a.previous.present
 		p := l.players[a.id]
-		p.Connected, p.Name, p.Ready, p.Away = true, a.name, false, false
+		p.Connected, p.Name, p.Away = true, a.name, false
 	} else {
 		l.nextMember++
 		present = l.nextMember
@@ -171,9 +194,6 @@ func (a *Admission) Join(conn *ws.Conn) {
 		l.resetReadyLocked()
 	}
 	l.leases[a.id] = &playerLease{client: c, generation: a.generation, present: present}
-	if l.active && now.Before(l.deadline) {
-		l.roundEntrants[a.id] = true
-	}
 	previousAdmin := l.admin
 	l.selectAdminLocked()
 	if previousAdmin != l.admin && l.powerStart != nil {
@@ -183,12 +203,19 @@ func (a *Admission) Join(conn *ws.Conn) {
 	if !l.hub.RegisterClient(c) {
 		e.close(c)
 	} else {
+		if l.active && time.Now().Before(l.deadline) {
+			l.enterRoundLocked(a.id, l.players[a.id])
+		} else if l.totalResults[a.id] != nil {
+			l.rememberCompetitorLocked(a.id, l.players[a.id])
+		}
 		l.broadcastLocked(&e, models.ResponseBase{Status: "OK", Type: "JOINED_LOBBY", Payload: models.ResponsePayload{Lobby: l.snapshotLocked(), User: a.id}})
 		if returning {
 			l.sendLocked(&e, c, models.ResponseBase{Status: "OK", Type: "REJOIN_ROUND", Payload: l.resyncLocked()})
 		}
+		l.maybeFinishLocked(&e)
 	}
 	l.launchPowerupStartLocked(&e)
+	l.publishSpectatorsLocked(&e)
 	l.mu.Unlock()
 	l.applyEffects(e)
 	go c.Write()
@@ -197,7 +224,10 @@ func (a *Admission) Join(conn *ws.Conn) {
 
 func (l *Lobby) ownsLocked(c *websocket.Client) bool {
 	lease := l.leases[c.ID]
-	return !l.closed && lease != nil && lease.client == c && l.players[c.ID] != nil && l.players[c.ID].Connected
+	if l.closed || lease == nil || lease.client != c {
+		return false
+	}
+	return l.isSpectatorLocked(c.ID) || (l.players[c.ID] != nil && l.players[c.ID].Connected)
 }
 
 // Invalidate and enqueue feedback in the same transaction, before any newer
@@ -264,7 +294,11 @@ func (l *Lobby) clientLost(c *websocket.Client) {
 	var e lobbyEffects
 	l.mu.Lock()
 	if l.ownsLocked(c) {
-		l.retainSeatLocked(&e, c, false)
+		if l.isSpectatorLocked(c.ID) {
+			l.leaveSpectatorLocked(&e, c, false)
+		} else {
+			l.retainSeatLocked(&e, c, false)
+		}
 	}
 	l.mu.Unlock()
 	l.applyEffects(e)
@@ -273,11 +307,16 @@ func (l *Lobby) clientLost(c *websocket.Client) {
 // Both exits preserve the exact match membership. A deliberate exit stops
 // holding up round completion immediately; a network loss gets a short grace.
 func (l *Lobby) retainSeatLocked(e *lobbyEffects, c *websocket.Client, away bool) {
-	l.cancelStartLocked(e)
+	if away || l.matchInProgressLocked() || l.startInitiator == c || !l.players[c.ID].Ready {
+		l.cancelStartLocked(e)
+	}
 	l.reconcilePowerupWindowLocked(e)
 	l.hub.UnregisterClient(c)
 	p := l.players[c.ID]
-	p.Connected, p.Ready, p.Away = false, false, away
+	p.Connected, p.Away = false, away
+	if away || l.matchInProgressLocked() {
+		p.Ready = false
+	}
 	id := c.ID
 	lease := l.leases[id]
 	lease.client = nil
@@ -303,6 +342,7 @@ func (l *Lobby) retainSeatLocked(e *lobbyEffects, c *websocket.Client, away bool
 	l.reconcilePowerupWindowLocked(e)
 	l.broadcastLocked(e, models.ResponseBase{Status: "OK", Type: "LEFT_LOBBY", Payload: models.ResponsePayload{User: c.ID, Lobby: l.snapshotLocked()}})
 	l.maybeFinishLocked(e)
+	l.publishSpectatorsLocked(e)
 }
 
 func (l *Lobby) scheduleSeatExpiryLocked(id string, lease *playerLease) {
@@ -312,9 +352,13 @@ func (l *Lobby) scheduleSeatExpiryLocked(id string, lease *playerLease) {
 	lease.seatTimer = time.AfterFunc(time.Until(lease.expires), func() {
 		var e lobbyEffects
 		l.mu.Lock()
-		if p := l.players[id]; !l.closed && l.leases[id] == lease && p != nil && !p.Connected && l.seatExpiredLocked(lease, time.Now()) {
-			l.removeMemberLocked(&e, id)
-			l.afterRemovalLocked(&e, id)
+		if !l.closed && l.leases[id] == lease && lease.client == nil && l.seatExpiredLocked(id, lease, time.Now()) {
+			if l.isSpectatorLocked(id) {
+				l.removeSpectatorLocked(id)
+			} else {
+				l.removeMemberLocked(&e, id)
+				l.afterRemovalLocked(&e, id)
+			}
 		}
 		l.mu.Unlock()
 		l.applyEffects(e)
@@ -355,12 +399,18 @@ func (l *Lobby) afterRemovalLocked(e *lobbyEffects, id string) {
 	l.reconcilePowerupWindowLocked(e)
 	l.broadcastPowerupLocked(e)
 	l.broadcastLocked(e, models.ResponseBase{Status: "OK", Type: "LEFT_LOBBY", Payload: models.ResponsePayload{User: id, Lobby: l.snapshotLocked()}})
-	if len(l.players) == 0 && len(l.reservations) == 0 {
+	if len(l.players) == 0 && len(l.spectators) == 0 && len(l.reservations) == 0 {
 		l.closeLocked(e)
 		return
 	}
+	if len(l.players) == 0 && l.matchInProgressLocked() && len(l.spectators) > 0 {
+		l.endMatchEarlyLocked(e)
+		return
+	}
+	l.publishPromotionsLocked(e)
 	l.updateIdleLocked()
 	l.maybeFinishLocked(e)
+	l.publishSpectatorsLocked(e)
 }
 
 func (l *Lobby) clearIdleLocked() {
@@ -395,7 +445,7 @@ func (l *Lobby) expireEmpty() {
 		// The initial wait is spent. Pending admissions now own the empty
 		// lobby's lifetime; the last Cancel must be able to close it.
 		l.emptyTimer = nil
-		if len(l.players) == 0 && len(l.reservations) == 0 {
+		if len(l.players) == 0 && len(l.spectators) == 0 && len(l.reservations) == 0 {
 			l.closeLocked(&e)
 		}
 	}

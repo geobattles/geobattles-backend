@@ -34,7 +34,7 @@ func TestDirectorySeats(t *testing.T) {
 	delete(l.reservations, "guest")
 	lease.expires = time.Now().Add(-time.Second)
 	row, ok := l.summary("guest")
-	if !ok || row.Retained || l.admissionStatusLocked("guest", time.Now()).Code != "REJOIN_EXPIRED" {
+	if !ok || row.Retained || l.admissionStatusLocked("guest", time.Now(), false).Code != "REJOIN_EXPIRED" {
 		t.Fatal("expired seat in a live waiting room")
 	}
 	l.phase = PhasePlaying

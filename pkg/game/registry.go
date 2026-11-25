@@ -59,7 +59,7 @@ func CreateLobby(conf LobbyConf, creator string) (LobbySnapshot, error) {
 	if err != nil {
 		return LobbySnapshot{}, err
 	}
-	l := &Lobby{creator: creator, hub: websocket.NewHub(), players: make(map[string]*Player),
+	l := &Lobby{creator: creator, hub: websocket.NewHub(), players: make(map[string]*Player), spectators: make(map[string]string),
 		leases: make(map[string]*playerLease), reservations: make(map[string]*Admission),
 		ccSize: size, phase: PhaseWaiting}
 	l.conf = &c

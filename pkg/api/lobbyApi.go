@@ -82,12 +82,13 @@ func ServeLobbyAdmission(w http.ResponseWriter, r *http.Request) {
 		ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 		return
 	}
-	JSON(w, http.StatusOK, game.CheckAdmission(r.URL.Query().Get("id"), uid))
+	query := r.URL.Query()
+	JSON(w, http.StatusOK, game.CheckAdmission(query.Get("id"), uid, query.Get("spectate") == "1"))
 }
 
 func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 	// Added query parameter reader for id of lobby
-	lobbyID := r.URL.Query().Get("id")
+	query := r.URL.Query()
 
 	ctx := r.Context()
 	uid, hasID := ctx.Value(UidKey).(string)
@@ -97,7 +98,7 @@ func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	admission, err := game.ReserveAdmission(lobbyID, uid, displayName)
+	admission, err := game.ReserveAdmission(query.Get("id"), uid, displayName, query.Get("spectate") == "1")
 	if err != nil {
 		status := http.StatusConflict
 		if err.Error() == "LOBBY_NOT_FOUND" {

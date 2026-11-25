@@ -35,10 +35,13 @@ func (h *Hub) UnregisterClient(c *Client) {
 // Broadcast enqueues one immutable encoded event per peer in caller order.
 // A full/closed peer is returned for disconnection AFTER the game lock is released;
 // it is never allowed to keep consuming a stream with an omitted event.
-func (h *Hub) Broadcast(message []byte) (slow []*Client) {
+func (h *Hub) Broadcast(message []byte, includes func(*Client) bool) (slow []*Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for c := range h.clients {
+		if !includes(c) {
+			continue
+		}
 		if !c.tryEnqueue(message) {
 			delete(h.clients, c)
 			slow = append(slow, c)

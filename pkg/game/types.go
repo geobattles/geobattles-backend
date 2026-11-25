@@ -21,6 +21,8 @@ type Lobby struct {
 	admin           string
 	conf            *LobbyConf
 	players         map[string]*Player
+	spectators      map[string]string         // name; transport and expiry use the shared leases
+	matchRoster     map[string]playerIdentity // name/color retained for results
 	locations       []logic.Coords
 	currentCC       string
 	round           int
@@ -29,7 +31,6 @@ type Lobby struct {
 	totalResults    map[string]*Result
 	active          bool
 	finished        map[string]bool
-	roundEntrants   map[string]bool
 	ccSize          float64
 	powerLogs       map[int][]Powerup
 	startTime       time.Time
@@ -53,6 +54,7 @@ type Lobby struct {
 	idleTimer       *time.Timer
 	idleDeadline    time.Time
 	persisted       bool
+	endedEarly      bool
 	powerWindow     *powerupWindow
 	powerEffects    []powerupRecord
 	powerReceipts   map[powerupReceiptKey]powerupReceipt
@@ -94,13 +96,19 @@ type LobbyConf struct {
 }
 
 type Player struct {
-	Name      string `json:"name"`
-	Connected bool   `json:"connected"`
-	Ready     bool   `json:"ready"`
-	Away      bool   `json:"away,omitempty"`
-	Color     string `json:"color"`
-	Powerups  []bool `json:"powerups,omitempty"`
-	Lives     int    `json:"lives,omitempty"`
+	Name        string `json:"name"`
+	Connected   bool   `json:"connected"`
+	Ready       bool   `json:"ready"`
+	RematchSeat bool   `json:"rematchSeat,omitempty"`
+	Away        bool   `json:"away,omitempty"`
+	Color       string `json:"color"`
+	Powerups    []bool `json:"powerups,omitempty"`
+	Lives       int    `json:"lives,omitempty"`
+}
+
+type playerIdentity struct {
+	Name  string `json:"name"`
+	Color string `json:"color"`
 }
 
 type Result struct {

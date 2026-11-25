@@ -20,6 +20,7 @@ type RequestErrorPayload struct {
 
 type ResponsePayload struct {
 	GameID          string          `json:"gameId,omitempty"`
+	EndedEarly      bool            `json:"endedEarly,omitempty"`
 	Lobby           interface{}     `json:"lobby,omitempty"`
 	Loc             interface{}     `json:"location,omitempty"`
 	User            string          `json:"user,omitempty"`
