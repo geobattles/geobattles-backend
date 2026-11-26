@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/gorilla/mux"
+
 	"github.com/geobattles/geobattles-backend/pkg/game"
 	"github.com/geobattles/geobattles-backend/pkg/websocket"
 )
@@ -16,6 +18,21 @@ func ServeGetLobby(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(game.ListLobbies())
 	slog.Debug("Sent lobby list")
+}
+
+func ServeLobbyDirectory(w http.ResponseWriter, r *http.Request) {
+	caller, _ := r.Context().Value(UidKey).(string)
+	JSON(w, http.StatusOK, game.LobbyDirectory(caller))
+}
+
+func ServeFindLobby(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	row, ok := game.FindLobbySummary(mux.Vars(r)["code"])
+	if !ok {
+		JSON(w, http.StatusNotFound, game.AdmissionStatus{Code: "LOBBY_NOT_FOUND"})
+		return
+	}
+	JSON(w, http.StatusOK, row)
 }
 
 func ServeCreateLobby(w http.ResponseWriter, r *http.Request) {
@@ -65,12 +82,13 @@ func ServeLobbyAdmission(w http.ResponseWriter, r *http.Request) {
 		ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 		return
 	}
-	JSON(w, http.StatusOK, game.CheckAdmission(r.URL.Query().Get("id"), uid))
+	query := r.URL.Query()
+	JSON(w, http.StatusOK, game.CheckAdmission(query.Get("id"), uid, query.Get("spectate") == "1"))
 }
 
 func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 	// Added query parameter reader for id of lobby
-	lobbyID := r.URL.Query().Get("id")
+	query := r.URL.Query()
 
 	ctx := r.Context()
 	uid, hasID := ctx.Value(UidKey).(string)
@@ -80,7 +98,7 @@ func ServeLobbySocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	admission, err := game.ReserveAdmission(lobbyID, uid, displayName)
+	admission, err := game.ReserveAdmission(query.Get("id"), uid, displayName, query.Get("spectate") == "1")
 	if err != nil {
 		status := http.StatusConflict
 		if err.Error() == "LOBBY_NOT_FOUND" {

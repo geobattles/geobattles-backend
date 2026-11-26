@@ -58,7 +58,7 @@ func (l *Lobby) updateConfLocked(clientID string, c LobbyConf) error {
 	if l.starting || (l.phase != PhaseWaiting && l.phase != PhaseFinished) {
 		return errors.New("GAME_IN_PROGRESS")
 	}
-	if len(l.reservations) != 0 {
+	if l.hasPlayerReservationsLocked() {
 		return errors.New("LOBBY_BUSY")
 	}
 	if err := ValidateLobbyConf(c); err != nil {
@@ -151,13 +151,14 @@ func (l *Lobby) resetResultsLocked() {
 	l.powerLogs = make(map[int][]Powerup)
 	l.locations = make([]logic.Coords, 0, l.conf.NumRounds)
 	l.finished = make(map[string]bool)
+	l.matchRoster = nil
 	l.round = 0
 	l.persisted = false
+	l.endedEarly = false
 }
 
 func (l *Lobby) setupRoundLocked(location logic.Coords, cc string) {
 	l.finished = make(map[string]bool)
-	l.roundEntrants = make(map[string]bool)
 	l.locations = append(l.locations, location)
 	l.currentCC = cc
 	l.startTime = time.Now()
@@ -173,11 +174,10 @@ func (l *Lobby) setupRoundLocked(location logic.Coords, cc string) {
 	l.endResults[l.round] = make(map[string]*Result)
 	for id, p := range l.players {
 		if p.Connected && l.liveLeaseLocked(id) {
-			l.roundEntrants[id] = true
+			l.enterRoundLocked(id, p)
 		}
-		l.endResults[l.round][id] = &Result{}
 		if l.round == 1 {
-			l.totalResults[id] = &Result{}
+			p.RematchSeat = false
 			p.Powerups = append([]bool{}, (*l.conf.Powerups)...)
 			p.Lives = l.conf.NumAttempt
 		} else if *l.conf.DynLives {
@@ -188,15 +188,39 @@ func (l *Lobby) setupRoundLocked(location logic.Coords, cc string) {
 	}
 }
 
-// Away seats stay eligible to return, but only a recent network loss can
-// delay early completion. An empty room lets the normal round clock run.
+// Create score rows when a player enters. A reconnect can join the current
+// round or resume an existing row without changing its guesses or score.
+func (l *Lobby) enterRoundLocked(id string, player *Player) {
+	if l.endResults[l.round][id] == nil {
+		l.endResults[l.round][id] = &Result{}
+	}
+	if l.totalResults[id] == nil {
+		l.totalResults[id] = &Result{}
+	}
+	l.rememberCompetitorLocked(id, player)
+}
+
+func (l *Lobby) rememberCompetitorLocked(id string, player *Player) {
+	if l.matchRoster == nil {
+		l.matchRoster = make(map[string]playerIdentity)
+	}
+	l.matchRoster[id] = playerIdentity{Name: player.Name, Color: player.Color}
+}
+
+// Only entrants can hold the round open. Keep a closing socket eligible for
+// its reconnect grace until the loss callback records it. With no live
+// players, let the normal round clock run.
 func (l *Lobby) allFinishedLocked() bool {
 	hasLivePlayer := false
 	now := time.Now()
-	for id, player := range l.players {
-		if player.Connected && l.liveLeaseLocked(id) {
-			hasLivePlayer = true
-		} else if lease := l.leases[id]; lease == nil || !now.Before(lease.blocksUntil) {
+	for id := range l.endResults[l.round] {
+		player, lease := l.players[id], l.leases[id]
+		if player == nil || lease == nil {
+			continue
+		}
+		if player.Connected && lease.client != nil {
+			hasLivePlayer = hasLivePlayer || !lease.client.Closed()
+		} else if !now.Before(lease.blocksUntil) {
 			continue
 		}
 		if !l.finished[id] {

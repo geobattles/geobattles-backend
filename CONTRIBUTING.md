@@ -21,6 +21,17 @@ Without Make, use `./scripts/check.sh`. Checks cover shell syntax, module integr
 
 **Application unit tests and new test frameworks remain opt-in.** The frontend repository provides separate socket integration and browser E2E tooling. Run it only with approved isolated local services, keyless by default; Maps-backed checks need explicit spending scope and a budget. This is not blanket permission for application unit tests or race-test jobs. Static success is not behavioral, concurrency, integration or security acceptance.
 
+## Multiplayer checks
+
+CI runs the existing game-rule suite with `go test -mod=readonly ./pkg/game`.
+On pull requests, a separate workflow checks out the candidate backend and
+a pinned frontend commit and runs one complete two-player match in Chromium.
+For local reproduction on Linux or WSL, put the repositories side by side
+and run `npm run test:e2e:match` from `geo-frontend`, with Docker and the
+pinned Go and Node/npm toolchains available. The runner owns a temporary
+database, uses the compile-time `matchfixture` location provider, and prints
+both revisions. The normal backend uses the configured Street View provider.
+
 ## Optional devcontainer
 
 The checked-in VS Code devcontainer pins Go 1.27.4 and includes Bash, Git and Make. It runs non-root and downloads modules after creation, without starting services or forwarding ports. Run `make check` in its terminal.

@@ -14,6 +14,7 @@ import (
 
 type roundStart struct {
 	generation uint64
+	round      int
 	newGame    bool
 	initiator  *websocket.Client
 	conf       LobbyConf
@@ -32,7 +33,7 @@ func (l *Lobby) beginStartLocked(c *websocket.Client) (*roundStart, error) {
 	if l.starting {
 		return nil, errors.New("ROUND_STARTING")
 	}
-	if len(l.reservations) != 0 {
+	if l.hasPlayerReservationsLocked() {
 		return nil, errors.New("LOBBY_BUSY")
 	}
 	if l.phase != PhaseFinished && (l.round < 0 || l.round >= l.conf.NumRounds) {
@@ -53,13 +54,17 @@ func (l *Lobby) beginStartLocked(c *websocket.Client) (*roundStart, error) {
 	l.startInitiator = c
 	l.starting = true
 	l.generation++
-	return &roundStart{generation: l.generation, newGame: newGame, initiator: c, conf: conf, countries: append([]string{}, conf.CCList...), ccSize: size, ctx: ctx}, nil
+	round := l.round + 1
+	if newGame {
+		round = 1
+	}
+	return &roundStart{generation: l.generation, round: round, newGame: newGame, initiator: c, conf: conf, countries: append([]string{}, conf.CCList...), ccSize: size, ctx: ctx}, nil
 }
 
 // The single reserved selection runs outside all locks. The reader remains free
 // to process explicit leave, and transport loss can cancel the provider context.
 func (l *Lobby) completeStart(work *roundStart) {
-	loc, cc, err := logic.RndLocationContext(work.ctx, work.countries, work.ccSize)
+	loc, cc, err := work.location()
 	var e lobbyEffects
 	l.mu.Lock()
 	live := !l.closed && l.starting && l.generation == work.generation &&
@@ -96,7 +101,7 @@ func (l *Lobby) completeStart(work *roundStart) {
 			// selection; reset only at this successful commit point.
 			if l.phase == PhaseFinished {
 				for id, player := range l.players {
-					if !player.Connected {
+					if !player.Connected && !player.Ready {
 						l.removeMemberLocked(&e, id)
 					}
 				}
@@ -115,6 +120,7 @@ func (l *Lobby) completeStart(work *roundStart) {
 				TimeRemaining: l.remainingLocked(),
 				PowerupState:  l.powerupStateLocked(),
 			}})
+			l.publishSpectatorsLocked(&e)
 		}
 	}
 	l.mu.Unlock()
@@ -145,20 +151,9 @@ func (l *Lobby) finalizeLocked(e *lobbyEffects, generation uint64) {
 	_ = l.processPowerups()
 	_ = l.processTotal()
 	l.phase = PhaseMidRound
-	if l.round >= l.conf.NumRounds {
-		l.phase = PhaseFinished
-		for id, player := range l.players {
-			if !player.Connected {
-				l.scheduleSeatExpiryLocked(id, l.leases[id])
-			}
-		}
-		l.resetReadyLocked()
-		if !l.persisted {
-			l.persisted = true
-			e.save = l.persistenceSnapshotLocked()
-		}
-	}
-	if l.phase == PhaseMidRound {
+	if l.round >= l.conf.NumRounds || l.endedEarly {
+		l.finishMatchLocked(e)
+	} else {
 		l.openPowerupWindowLocked()
 	}
 	l.broadcastLocked(e, models.ResponseBase{Status: "WRN", Type: "ROUND_FINISHED"})
@@ -174,11 +169,52 @@ func (l *Lobby) finalizeLocked(e *lobbyEffects, generation uint64) {
 	}
 	l.broadcastLocked(e, models.ResponseBase{Status: "OK", Type: "ROUND_RESULT", Payload: message})
 	if l.phase == PhaseFinished {
-		snapshot := l.snapshotLocked()
-		l.broadcastLocked(e, models.ResponseBase{Status: "OK", Type: "GAME_END", Payload: models.ResponsePayload{
-			GameID: l.gameID, AllRes: snapshot.Results, EndResults: snapshot.EndResults,
-			RevealedAnswers: snapshot.RevealedAnswers, TotalResults: snapshot.TotalResults, Round: l.round, Phase: l.phase,
-			PowerupState: l.powerupStateLocked(),
-		}})
+		l.publishMatchEndLocked(e)
+	} else {
+		l.publishSpectatorsLocked(e)
 	}
+}
+
+func (l *Lobby) endMatchEarlyLocked(e *lobbyEffects) {
+	l.endedEarly = true
+	l.stopPowerupWindowLocked()
+	l.startInitiator = nil
+	l.cancelStartLocked(e)
+	if l.active {
+		l.finalizeLocked(e, l.roundGen)
+		return
+	}
+	l.finishMatchLocked(e)
+	l.publishMatchEndLocked(e)
+}
+
+func (l *Lobby) finishMatchLocked(e *lobbyEffects) {
+	l.phase = PhaseFinished
+	for i := range l.powerEffects {
+		if l.powerEffects[i].Status == "QUEUED" {
+			l.powerEffects[i].Status = "CANCELLED"
+		}
+	}
+	for id, player := range l.players {
+		if !player.Connected {
+			l.scheduleSeatExpiryLocked(id, l.leases[id])
+		}
+	}
+	l.resetReadyLocked()
+	if !l.persisted {
+		l.persisted = true
+		e.save = l.persistenceSnapshotLocked()
+	}
+}
+
+func (l *Lobby) publishMatchEndLocked(e *lobbyEffects) {
+	snapshot := l.snapshotLocked()
+	l.broadcastLocked(e, models.ResponseBase{Status: "OK", Type: "GAME_END", Payload: models.ResponsePayload{
+		GameID: l.gameID, AllRes: snapshot.Results, EndResults: snapshot.EndResults,
+		RevealedAnswers: snapshot.RevealedAnswers, TotalResults: snapshot.TotalResults, Round: l.round, Phase: l.phase,
+		PowerupState: l.powerupStateLocked(), EndedEarly: l.endedEarly, Players: snapshot.Players,
+	}})
+	l.publishPromotionsLocked(e)
+	l.updateIdleLocked()
+	l.publishSpectatorsLocked(e)
 }

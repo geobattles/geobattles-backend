@@ -43,6 +43,16 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 		c.Close()
 		return
 	}
+	if l.isSpectatorLocked(c.ID) {
+		if parseErr == nil && (req.Cmd == "leave" || req.Cmd == "disconnect") {
+			l.leaveSpectatorLocked(&e, c, true)
+		} else {
+			l.errorLocked(&e, c, req.Cmd, "SPECTATOR_READ_ONLY")
+		}
+		l.mu.Unlock()
+		l.applyEffects(e)
+		return
+	}
 	if parseErr != nil {
 		code := "INVALID_REQUEST"
 		if errors.Is(parseErr, logic.ErrInvalidLocation) {
@@ -79,6 +89,16 @@ func PlayerMessageHandler(c *websocket.Client, message []byte) {
 			l.errorLocked(&e, c, req.Cmd, err.Error())
 		} else {
 			l.broadcastLocked(&e, models.ResponseBase{Status: "OK", Type: "UPDATED_LOBBY", Payload: models.ResponsePayload{Lobby: l.snapshotLocked()}})
+			l.publishPromotionsLocked(&e)
+			l.publishSpectatorsLocked(&e)
+		}
+	case "end_game":
+		if c.ID != l.admin {
+			l.errorLocked(&e, c, req.Cmd, "NOT_ADMIN")
+		} else if !l.matchInProgressLocked() || req.GameID == nil || *req.GameID != l.gameID || req.Round == nil || *req.Round != l.round {
+			l.errorLocked(&e, c, req.Cmd, "STALE_MATCH_CONTEXT")
+		} else {
+			l.endMatchEarlyLocked(&e)
 		}
 	case "start":
 		var err error

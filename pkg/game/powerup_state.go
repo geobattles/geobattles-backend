@@ -322,7 +322,7 @@ func (l *Lobby) requestPowerupStartLocked(e *lobbyEffects, c *websocket.Client, 
 	if l.starting || l.powerStart == c {
 		return nil
 	}
-	if len(l.reservations) != 0 {
+	if l.hasPlayerReservationsLocked() {
 		return errors.New("LOBBY_BUSY")
 	}
 	l.powerStart = c
@@ -460,16 +460,20 @@ func (l *Lobby) removePowerupMemberLocked(e *lobbyEffects, id string) {
 			r.Status = "CANCELLED"
 			r.Reason = "SOURCE_LEFT"
 		} else if r.Type == 1 && r.Target == id && r.targetMember == lease.present {
-			r.Status = "REFUNDED"
-			r.Reason = "TARGET_LEFT"
-			if source := l.leases[r.Source]; source != nil && source.present == r.sourceMember {
-				if p := l.players[r.Source]; p != nil && len(p.Powerups) == 2 {
-					p.Powerups[1] = true
-				}
-			}
+			l.refundPowerupLocked(r, "TARGET_LEFT")
 		}
 	}
 	l.rebuildPowerLogLocked()
+}
+
+func (l *Lobby) refundPowerupLocked(r *powerupRecord, reason string) {
+	r.Status = "REFUNDED"
+	r.Reason = reason
+	if source := l.leases[r.Source]; source != nil && source.present == r.sourceMember {
+		if p := l.players[r.Source]; p != nil && len(p.Powerups) == 2 {
+			p.Powerups[r.Type] = true
+		}
+	}
 }
 
 func (l *Lobby) rebuildPowerLogLocked() {

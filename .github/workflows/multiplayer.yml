@@ -1,0 +1,21 @@
+name: Multiplayer match
+on: [pull_request]
+permissions:
+  contents: read
+jobs:
+  match:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: geo-backend
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: geobattles/geobattles-frontend
+          ref: b3fe7c766e5a1ccbf8b622f45095e606711afceb
+          path: geo-frontend
+          persist-credentials: false
+      - uses: ./geo-frontend/.github/actions/check-match

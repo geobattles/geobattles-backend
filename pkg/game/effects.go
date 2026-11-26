@@ -38,6 +38,10 @@ func (e *lobbyEffects) closeWith(c *websocket.Client, code int, reason string) {
 // Encode under the transaction, then only immutable bytes cross transport.
 // Queue failure is a disconnect, not a silently lost state transition.
 func (l *Lobby) broadcastLocked(e *lobbyEffects, message models.ResponseBase) {
+	l.broadcastFrameLocked(e, message, func(c *websocket.Client) bool { return l.players[c.ID] != nil })
+}
+
+func (l *Lobby) broadcastFrameLocked(e *lobbyEffects, message models.ResponseBase, includes func(*websocket.Client) bool) {
 	if l.closed {
 		return
 	}
@@ -49,12 +53,21 @@ func (l *Lobby) broadcastLocked(e *lobbyEffects, message models.ResponseBase) {
 		l.closeLocked(e)
 		return
 	}
-	for _, c := range l.hub.Broadcast(encoded) {
+	for _, c := range l.hub.Broadcast(encoded, includes) {
 		e.close(c)
 	}
 }
 
 func (l *Lobby) sendLocked(e *lobbyEffects, c *websocket.Client, message models.ResponseBase) {
+	if c != nil && l.players[c.ID] == nil && message.Status != "ERR" {
+		return
+	}
+	l.sendFrameLocked(e, c, message)
+}
+
+// The spectator projection is the only non-error unicast that bypasses the
+// player audience. New event types remain player-only by default.
+func (l *Lobby) sendFrameLocked(e *lobbyEffects, c *websocket.Client, message models.ResponseBase) {
 	if c == nil || l.closed {
 		return
 	}

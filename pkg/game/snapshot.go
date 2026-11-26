@@ -1,6 +1,7 @@
 package game
 
 import (
+	"maps"
 	"time"
 
 	"github.com/geobattles/geobattles-backend/pkg/logic"
@@ -9,25 +10,30 @@ import (
 // DTOs contain only detached values. Never put *Lobby, live players, config,
 // result maps, polygon byte slices or slice backing arrays into a payload.
 type LobbySnapshot struct {
-	ID              string                      `json:"ID"`
-	GameID          string                      `json:"gameId,omitempty"`
-	Admin           string                      `json:"admin"`
-	Conf            LobbyConf                   `json:"conf"`
-	NumPlayers      int                         `json:"numPlayers"`
-	Players         map[string]Player           `json:"playerList"`
-	CurrentRound    int                         `json:"currentRound"`
-	Results         map[int]map[string][]Result `json:"results"`
-	EndResults      map[int]map[string]Result   `json:"endResults"`
-	RevealedAnswers map[int]logic.Coords        `json:"revealedAnswers,omitempty"`
-	TotalResults    map[string]Result           `json:"totalResults"`
-	Phase           string                      `json:"phase"`
-	Round           int                         `json:"round"`
-	FullRoundRes    map[string][]Result         `json:"fullroundRes"`
-	RoundRes        map[string]Result           `json:"roundRes"`
-	Location        *logic.Coords               `json:"location,omitempty"`
-	TimeRemaining   int64                       `json:"timeRemaining"`
-	PowerLog        []Powerup                   `json:"powerLog"`
-	PowerupState    *PowerupState               `json:"powerupState,omitempty"`
+	ID               string                      `json:"ID"`
+	GameID           string                      `json:"gameId,omitempty"`
+	Spectating       bool                        `json:"spectating,omitempty"`
+	SpectatorCount   int                         `json:"spectatorCount,omitempty"`
+	OpenToSpectators bool                        `json:"openToSpectators,omitempty"`
+	EndedEarly       bool                        `json:"endedEarly,omitempty"`
+	Admin            string                      `json:"admin"`
+	Conf             LobbyConf                   `json:"conf"`
+	NumPlayers       int                         `json:"numPlayers"`
+	Players          map[string]Player           `json:"playerList"`
+	MatchRoster      map[string]playerIdentity   `json:"matchRoster,omitempty"`
+	CurrentRound     int                         `json:"currentRound"`
+	Results          map[int]map[string][]Result `json:"results"`
+	EndResults       map[int]map[string]Result   `json:"endResults"`
+	RevealedAnswers  map[int]logic.Coords        `json:"revealedAnswers,omitempty"`
+	TotalResults     map[string]Result           `json:"totalResults"`
+	Phase            string                      `json:"phase"`
+	Round            int                         `json:"round"`
+	FullRoundRes     map[string][]Result         `json:"fullroundRes"`
+	RoundRes         map[string]Result           `json:"roundRes"`
+	Location         *logic.Coords               `json:"location,omitempty"`
+	TimeRemaining    int64                       `json:"timeRemaining"`
+	PowerLog         []Powerup                   `json:"powerLog"`
+	PowerupState     *PowerupState               `json:"powerupState,omitempty"`
 }
 
 type rejoinPayload struct {
@@ -98,13 +104,22 @@ func (l *Lobby) remainingLocked() int64 {
 	return max(0, time.Until(l.deadline).Milliseconds())
 }
 
-// publicSnapshotLocked preserves discovery state without exposing answers.
-// Both HTTP paths use this projection; member WebSocket snapshots remain full.
+// publicSnapshotLocked preserves the legacy discovery fields and JSON shape.
+// Match results are available only through the appropriate socket audience.
 func (l *Lobby) publicSnapshotLocked() LobbySnapshot {
-	snapshot := l.snapshotLocked()
-	snapshot.Location = nil
-	snapshot.RevealedAnswers = nil
-	snapshot.PowerupState = nil
+	snapshot := LobbySnapshot{
+		ID: l.id, GameID: l.gameID, Admin: l.admin, Conf: cloneConf(*l.conf), NumPlayers: len(l.players),
+		Players: l.playersLocked(), CurrentRound: l.round, Round: l.round, Phase: l.phase,
+		TimeRemaining: l.remainingLocked(), EndedEarly: l.endedEarly,
+		OpenToSpectators: l.canOfferSpectatingLocked() && l.occupiedSpectatorsLocked() < maxSpectators,
+		Results:          map[int]map[string][]Result{}, EndResults: map[int]map[string]Result{}, TotalResults: map[string]Result{},
+		FullRoundRes: map[string][]Result{}, RoundRes: map[string]Result{},
+	}
+	for id, player := range snapshot.Players {
+		player.Powerups, player.Lives = nil, 0
+		player.RematchSeat = false
+		snapshot.Players[id] = player
+	}
 	return snapshot
 }
 
@@ -112,8 +127,9 @@ func (l *Lobby) snapshotLocked() LobbySnapshot {
 	power := l.powerupStateLocked()
 	out := LobbySnapshot{
 		PowerupState: &power,
-		ID:           l.id, GameID: l.gameID, Admin: l.admin, Conf: cloneConf(*l.conf), NumPlayers: len(l.players),
+		ID:           l.id, GameID: l.gameID, Admin: l.admin, Conf: cloneConf(*l.conf), NumPlayers: len(l.players), EndedEarly: l.endedEarly,
 		Players: l.playersLocked(), CurrentRound: l.round, Round: l.round, Phase: l.phase,
+		MatchRoster:     maps.Clone(l.matchRoster),
 		Results:         make(map[int]map[string][]Result, len(l.rawResults)),
 		EndResults:      make(map[int]map[string]Result, len(l.endResults)),
 		RevealedAnswers: make(map[int]logic.Coords, len(l.endResults)),

@@ -90,6 +90,10 @@ slot. Refunded/cancelled records remain in the bounded ledger.
   member. Permanent target removal promptly refunds a retained source's unresolved
   Duel once. Membership generations prevent a fresh admission of the same ID from
   inheriting prior effects. Settled effects never refund/reverse on later leave.
+- If a retained player misses the entire target round, settlement refunds an
+  unused Double Score or Duel to its owner without changing any points. This
+  `REFUNDED` effect omits `reason`. Rejoining before the round closes keeps the
+  effect eligible for normal settlement.
 - Refund cannot reopen a closed window or undo a done choice. An unlocked source
   can use a refunded item again only while the original window remains open.
   Final-round effects settle before GAME_END.
